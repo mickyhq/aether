@@ -33,6 +33,7 @@ const blockedUntil = new Map<string, number>()
 let lastUpstreamTime = 0
 const MIN_SPACING_MS = 300
 const DEFAULT_RETRY_AFTER_SECONDS = 15 * 60
+const DEPLOYED_API_ORIGIN = 'https://aether-five-rose.vercel.app'
 
 function scheduleUpstream(url: string): Promise<UpstreamResult> {
   const provider = new URL(url).origin
@@ -238,7 +239,13 @@ function localWeatherApi(): Plugin {
     }
 
     try {
-      const result = await scheduleUpstream(`${upstreamEndpoint}?${canonicalQuery}`)
+      let result = await scheduleUpstream(`${upstreamEndpoint}?${canonicalQuery}`)
+
+      if (result.status === 429) {
+        result = await scheduleUpstream(
+          `${DEPLOYED_API_ORIGIN}${requestUrl.pathname}?${canonicalQuery}`
+        )
+      }
 
       if (result.status >= 200 && result.status < 300) {
         const freshness = requestUrl.pathname === '/api/air-quality'
