@@ -5,6 +5,12 @@ import { AetherMap } from './components/AetherMap'
 import { MapWeatherTooltip } from './components/MapWeatherTooltip'
 import { WeatherDashboard } from './components/WeatherDashboard'
 import { defaultCity } from './data/cityCatalog'
+import {
+  AIR_QUALITY_REFRESH_INTERVAL,
+  fetchAirQualityMapSamples,
+  getCachedAirQualityMapSamples,
+  interpolateAirQualityAt
+} from './services/airQuality'
 import { searchCity } from './services/geocoding'
 import { fetchOpenMeteoForecast } from './services/openMeteo'
 import {
@@ -19,6 +25,7 @@ import { translateWeather } from './weather/translateWeather'
 import type {
   MapWeatherPointer,
   WeatherConfig,
+  AirQualityMapSample,
   WeatherLocation,
   WeatherMapSample,
   WeatherMode,
@@ -55,7 +62,16 @@ export default function App() {
   const mapWeatherMode = useDeferredValue(weatherMode)
   const [viewport, setViewport] = useState<WeatherViewport | null>(null)
   const [mapSamples, setMapSamples] = useState<WeatherMapSample[]>([])
+  const [airQualitySamples, setAirQualitySamples] = useState<AirQualityMapSample[]>([])
   const [pointerWeather, setPointerWeather] = useState<MapWeatherPointer | null>(null)
+  const selectedAirQuality = useMemo(
+    () => interpolateAirQualityAt(
+      selectedLocation.latitude,
+      selectedLocation.longitude,
+      airQualitySamples
+    ),
+    [airQualitySamples, selectedLocation]
+  )
   const displayedSamples = useMemo(() => {
     if (mapSamples.length > 0 || !weather) {
       return mapSamples
@@ -179,6 +195,53 @@ export default function App() {
     }
   }, [viewport])
 
+  useEffect(() => {
+    if (!viewport) {
+      return
+    }
+
+    let cancelled = false
+    let loading = false
+
+    setAirQualitySamples(getCachedAirQualityMapSamples(viewport))
+
+    const refreshAirQuality = async () => {
+      if (loading) {
+        return
+      }
+
+      loading = true
+
+      try {
+        const samples = await fetchAirQualityMapSamples(viewport)
+
+        if (!cancelled) {
+          setAirQualitySamples(samples)
+        }
+      } finally {
+        loading = false
+      }
+    }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshAirQuality()
+      }
+    }
+    const timeout = window.setTimeout(refreshAirQuality, 180)
+    const interval = window.setInterval(refreshAirQuality, AIR_QUALITY_REFRESH_INTERVAL)
+
+    window.addEventListener('online', refreshWhenVisible)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+      window.clearInterval(interval)
+      window.removeEventListener('online', refreshWhenVisible)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [viewport])
+
   async function handleCitySearch(query: string) {
     try {
       setStatus('Searching city')
@@ -197,6 +260,7 @@ export default function App() {
           location={selectedLocation}
           mode={mapWeatherMode}
           samples={displayedSamples}
+          airQualitySamples={airQualitySamples}
           onViewportChange={handleViewportChange}
           onPointerWeatherChange={handlePointerWeatherChange}
         />
@@ -208,6 +272,7 @@ export default function App() {
         />
         <WeatherDashboard
           weather={weather}
+          airQuality={selectedAirQuality}
           status={status}
           mode={weatherMode}
           onModeChange={setWeatherMode}

@@ -3,12 +3,21 @@ import { useEffect, useRef } from 'react'
 import { WeatherMapAnimation } from '../map/WeatherMapAnimation'
 import { WeatherRadarLayer } from '../map/WeatherRadarLayer'
 import { interpolateWeatherAt } from '../services/weatherGrid'
-import type { MapWeatherPointer, WeatherLocation, WeatherMapSample, WeatherMode, WeatherViewport } from '../types/weather'
+import { interpolateAirQualityAt } from '../services/airQuality'
+import type {
+  AirQualityMapSample,
+  MapWeatherPointer,
+  WeatherLocation,
+  WeatherMapSample,
+  WeatherMode,
+  WeatherViewport
+} from '../types/weather'
 
 type AetherMapProps = {
   location: WeatherLocation
   mode: WeatherMode
   samples: WeatherMapSample[]
+  airQualitySamples: AirQualityMapSample[]
   onViewportChange: (viewport: WeatherViewport) => void
   onPointerWeatherChange: (reading: MapWeatherPointer | null) => void
 }
@@ -17,6 +26,7 @@ export function AetherMap({
   location,
   mode,
   samples,
+  airQualitySamples,
   onViewportChange,
   onPointerWeatherChange
 }: AetherMapProps) {
@@ -27,6 +37,7 @@ export function AetherMap({
   const animationRef = useRef<WeatherMapAnimation | null>(null)
   const radarRef = useRef<WeatherRadarLayer | null>(null)
   const samplesRef = useRef(samples)
+  const airQualitySamplesRef = useRef(airQualitySamples)
   const pointerCallbackRef = useRef(onPointerWeatherChange)
   const pointerRefreshRef = useRef<() => void>(() => {})
   const lastPointerRef = useRef<{
@@ -42,6 +53,11 @@ export function AetherMap({
     samplesRef.current = samples
     pointerRefreshRef.current()
   }, [samples])
+
+  useEffect(() => {
+    airQualitySamplesRef.current = airQualitySamples
+    pointerRefreshRef.current()
+  }, [airQualitySamples])
 
   useEffect(() => {
     pointerCallbackRef.current = onPointerWeatherChange
@@ -64,6 +80,9 @@ export function AetherMap({
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map)
+    map.attributionControl.addAttribution(
+      'Weather <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> · Air quality <a href="https://atmosphere.copernicus.eu/" target="_blank">CAMS</a>'
+    )
     badgeLayerRef.current = L.layerGroup().addTo(map)
     const animation = new WeatherMapAnimation(map, elementRef.current)
     animation.start()
@@ -109,11 +128,17 @@ export function AetherMap({
       }
 
       const size = map.getSize()
+      const airQuality = interpolateAirQualityAt(
+        pointer.latitude,
+        pointer.longitude,
+        airQualitySamplesRef.current
+      )
 
       pointerCallbackRef.current({
         ...reading,
+        ...(airQuality ?? {}),
         screenX: Math.max(12, Math.min(pointer.x + 16, size.x - 206)),
-        screenY: Math.max(12, Math.min(pointer.y + 16, size.y - 142))
+        screenY: Math.max(12, Math.min(pointer.y + 16, size.y - 172))
       })
     }
     const handleMouseMove = (event: L.LeafletMouseEvent) => {
@@ -191,6 +216,10 @@ export function AetherMap({
 
     badgeLayer.clearLayers()
 
+    if (mode === 'air-quality') {
+      return
+    }
+
     for (const sample of samples.filter(sample => sample.showBadge !== false)) {
       const marker = L.marker([sample.latitude, sample.longitude], {
         interactive: false,
@@ -207,9 +236,9 @@ export function AetherMap({
   }, [samples, mode])
 
   useEffect(() => {
-    animationRef.current?.setData(samples, mode)
+    animationRef.current?.setData(samples, mode, airQualitySamples)
     radarRef.current?.setMode(mode)
-  }, [samples, mode])
+  }, [airQualitySamples, samples, mode])
 
   return <div ref={elementRef} className="aether-map" aria-label="Global weather map" />
 }

@@ -1,4 +1,5 @@
 import AirIcon from '@mui/icons-material/Air'
+import BlurOnIcon from '@mui/icons-material/BlurOn'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import type { MapWeatherPointer } from '../types/weather'
@@ -41,6 +42,15 @@ export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
         <WaterDropIcon />
         <span>{reading.precipitation.toFixed(1)} mm</span>
       </div>
+
+      {reading.europeanAqi !== undefined && (
+        <div className="map-weather-tooltip-row">
+          <BlurOnIcon />
+          <span>
+            AQI {Math.round(reading.europeanAqi)} · PM2.5 {reading.pm2_5?.toFixed(1)} µg/m³
+          </span>
+        </div>
+      )}
     </aside>
   )
 }

@@ -1,5 +1,5 @@
 import L from 'leaflet'
-import type { WeatherMapSample, WeatherMode } from '../types/weather'
+import type { AirQualityMapSample, WeatherMapSample, WeatherMode } from '../types/weather'
 
 type Particle = {
   x: number
@@ -12,6 +12,12 @@ type Particle = {
 
 type ProjectedSample = {
   sample: WeatherMapSample
+  x: number
+  y: number
+}
+
+type ProjectedAirQualitySample = {
+  sample: AirQualityMapSample
   x: number
   y: number
 }
@@ -42,7 +48,11 @@ export class WeatherMapAnimation {
   private temperatureCanvas = document.createElement('canvas')
   private temperatureContext: CanvasRenderingContext2D
   private temperatureTextureDirty = true
+  private airQualityCanvas = document.createElement('canvas')
+  private airQualityContext: CanvasRenderingContext2D
+  private airQualityTextureDirty = true
   private samples: WeatherMapSample[] = []
+  private airQualitySamples: AirQualityMapSample[] = []
   private mode: WeatherMode = 'temperature'
   private particles: Particle[]
   private lightning: LightningSegment[] = []
@@ -71,8 +81,15 @@ export class WeatherMapAnimation {
       throw new Error('Weather temperature canvas unavailable')
     }
 
+    const airQualityContext = this.airQualityCanvas.getContext('2d')
+
+    if (!airQualityContext) {
+      throw new Error('Air quality canvas unavailable')
+    }
+
     this.context = context
     this.temperatureContext = temperatureContext
+    this.airQualityContext = airQualityContext
     this.particles = Array.from({ length: PARTICLE_COUNT }, () => ({
       x: 0,
       y: 0,
@@ -99,19 +116,29 @@ export class WeatherMapAnimation {
     this.canvas.remove()
   }
 
-  setData(samples: WeatherMapSample[], mode: WeatherMode) {
+  setData(
+    samples: WeatherMapSample[],
+    mode: WeatherMode,
+    airQualitySamples: AirQualityMapSample[]
+  ) {
     const samplesChanged = samples !== this.samples
+    const airQualityChanged = airQualitySamples !== this.airQualitySamples
 
-    if (mode !== this.mode || samplesChanged) {
+    if (mode !== this.mode || samplesChanged || airQualityChanged) {
       this.resetParticles()
       this.lightning = []
     }
 
     this.samples = samples
+    this.airQualitySamples = airQualitySamples
     this.mode = mode
 
     if (samplesChanged) {
       this.temperatureTextureDirty = true
+    }
+
+    if (airQualityChanged) {
+      this.airQualityTextureDirty = true
     }
 
     if (this.reducedMotion) {
@@ -122,6 +149,7 @@ export class WeatherMapAnimation {
   invalidate() {
     this.resetParticles()
     this.temperatureTextureDirty = true
+    this.airQualityTextureDirty = true
 
     if (this.reducedMotion) {
       this.resize()
@@ -154,11 +182,31 @@ export class WeatherMapAnimation {
     this.canvas.style.height = `${this.height}px`
     this.context.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0)
     this.temperatureTextureDirty = true
+    this.airQualityTextureDirty = true
     this.resetParticles()
   }
 
   private render(deltaTime: number, time: number) {
     this.context.clearRect(0, 0, this.width, this.height)
+
+    if (this.mode === 'air-quality') {
+      if (this.airQualitySamples.length === 0) {
+        return
+      }
+
+      const projectedAirQuality = this.airQualitySamples.map(sample => {
+        const point = this.map.latLngToContainerPoint([sample.latitude, sample.longitude])
+
+        return {
+          sample,
+          x: point.x,
+          y: point.y
+        }
+      })
+
+      this.drawAirQuality(projectedAirQuality, time)
+      return
+    }
 
     if (this.samples.length === 0) {
       return
@@ -263,6 +311,79 @@ export class WeatherMapAnimation {
     this.context.fillText(`${Math.round(minTemperature)}°C`, x, y + 29)
     this.context.textAlign = 'right'
     this.context.fillText(`${Math.round(maxTemperature)}°C`, x + legendWidth, y + 29)
+  }
+
+  private drawAirQuality(samples: ProjectedAirQualitySample[], time: number) {
+    if (this.airQualityTextureDirty) {
+      this.renderAirQualityTexture(samples)
+    }
+
+    const pulse = this.reducedMotion ? 0 : Math.sin(time * 0.35) * 0.02
+
+    this.context.save()
+    this.context.globalAlpha = 0.7 + pulse
+    this.context.imageSmoothingEnabled = true
+    this.context.drawImage(this.airQualityCanvas, 0, 0, this.width, this.height)
+    this.context.restore()
+    this.drawAirQualityLegend(samples)
+  }
+
+  private renderAirQualityTexture(samples: ProjectedAirQualitySample[]) {
+    const scale = 8
+    const width = Math.max(1, Math.ceil(this.width / scale))
+    const height = Math.max(1, Math.ceil(this.height / scale))
+
+    this.airQualityCanvas.width = width
+    this.airQualityCanvas.height = height
+
+    const image = this.airQualityContext.createImageData(width, height)
+
+    for (let row = 0; row < height; row += 1) {
+      const screenY = (row + 0.5) * this.height / height
+
+      for (let column = 0; column < width; column += 1) {
+        const screenX = (column + 0.5) * this.width / width
+        const airQuality = interpolateAirQuality(screenX, screenY, samples)
+        const color = airQualityColor(airQuality)
+        const offset = (row * width + column) * 4
+
+        image.data[offset] = color.r
+        image.data[offset + 1] = color.g
+        image.data[offset + 2] = color.b
+        image.data[offset + 3] = 255
+      }
+    }
+
+    this.airQualityContext.putImageData(image, 0, 0)
+    this.airQualityTextureDirty = false
+  }
+
+  private drawAirQualityLegend(samples: ProjectedAirQualitySample[]) {
+    const values = samples.map(({ sample }) => sample.europeanAqi)
+    const minimum = Math.min(...values)
+    const maximum = Math.max(...values)
+    const legendWidth = Math.min(440, this.width - 48)
+    const x = (this.width - legendWidth) / 2
+    const y = this.height - 34
+    const gradient = this.context.createLinearGradient(x, 0, x + legendWidth, 0)
+
+    for (let step = 0; step <= 10; step += 1) {
+      const color = airQualityColor(step * 10)
+      gradient.addColorStop(step / 10, `rgb(${color.r}, ${color.g}, ${color.b})`)
+    }
+
+    this.context.fillStyle = 'rgba(4, 10, 15, 0.76)'
+    this.context.beginPath()
+    this.context.roundRect(x - 12, y - 10, legendWidth + 24, 42, 8)
+    this.context.fill()
+    this.context.fillStyle = gradient
+    this.context.fillRect(x, y, legendWidth, 12)
+    this.context.fillStyle = 'rgba(247, 252, 255, 0.94)'
+    this.context.font = '700 12px Inter, system-ui, sans-serif'
+    this.context.textAlign = 'left'
+    this.context.fillText(`Good · ${Math.round(minimum)}`, x, y + 29)
+    this.context.textAlign = 'right'
+    this.context.fillText(`${Math.round(maximum)} · Very poor`, x + legendWidth, y + 29)
   }
 
   private drawWind(samples: ProjectedSample[], deltaTime: number) {
@@ -583,6 +704,92 @@ function interpolateTemperature(x: number, y: number, samples: ProjectedSample[]
     temperature2 * weight2 +
     temperature3 * weight3
   ) / totalWeight
+}
+
+function interpolateAirQuality(
+  x: number,
+  y: number,
+  samples: ProjectedAirQualitySample[]
+) {
+  let distance0 = Number.POSITIVE_INFINITY
+  let distance1 = Number.POSITIVE_INFINITY
+  let distance2 = Number.POSITIVE_INFINITY
+  let distance3 = Number.POSITIVE_INFINITY
+  let value0 = 0
+  let value1 = 0
+  let value2 = 0
+  let value3 = 0
+
+  for (const projected of samples) {
+    const deltaX = projected.x - x
+    const deltaY = projected.y - y
+    const distance = deltaX * deltaX + deltaY * deltaY
+    const value = projected.sample.europeanAqi
+
+    if (distance < distance0) {
+      distance3 = distance2
+      value3 = value2
+      distance2 = distance1
+      value2 = value1
+      distance1 = distance0
+      value1 = value0
+      distance0 = distance
+      value0 = value
+    } else if (distance < distance1) {
+      distance3 = distance2
+      value3 = value2
+      distance2 = distance1
+      value2 = value1
+      distance1 = distance
+      value1 = value
+    } else if (distance < distance2) {
+      distance3 = distance2
+      value3 = value2
+      distance2 = distance
+      value2 = value
+    } else if (distance < distance3) {
+      distance3 = distance
+      value3 = value
+    }
+  }
+
+  if (distance0 < 1) {
+    return value0
+  }
+
+  const weight0 = 1 / (distance0 + 400)
+  const weight1 = 1 / (distance1 + 400)
+  const weight2 = 1 / (distance2 + 400)
+  const weight3 = 1 / (distance3 + 400)
+  const totalWeight = weight0 + weight1 + weight2 + weight3
+
+  return (
+    value0 * weight0 +
+    value1 * weight1 +
+    value2 * weight2 +
+    value3 * weight3
+  ) / totalWeight
+}
+
+function airQualityColor(airQuality: number) {
+  const stops = [
+    { value: 0, r: 50, g: 205, b: 115 },
+    { value: 20, r: 105, g: 220, b: 105 },
+    { value: 40, r: 245, g: 220, b: 70 },
+    { value: 60, r: 255, g: 155, b: 55 },
+    { value: 80, r: 245, g: 75, b: 70 },
+    { value: 100, r: 150, g: 45, b: 155 }
+  ]
+  const upperIndex = stops.findIndex(stop => stop.value >= airQuality)
+  const upper = stops[upperIndex === -1 ? stops.length - 1 : Math.max(upperIndex, 1)]
+  const lower = stops[upperIndex === -1 ? stops.length - 2 : Math.max(upperIndex - 1, 0)]
+  const amount = Math.min(1, Math.max(0, (airQuality - lower.value) / (upper.value - lower.value)))
+
+  return {
+    r: Math.round(lower.r + (upper.r - lower.r) * amount),
+    g: Math.round(lower.g + (upper.g - lower.g) * amount),
+    b: Math.round(lower.b + (upper.b - lower.b) * amount)
+  }
 }
 
 function temperatureColor(temperature: number) {

@@ -34,6 +34,14 @@ let persistentCachePromise: Promise<void> | null = null
 
 export const WEATHER_REFRESH_INTERVAL = FRESHNESS
 
+export function getVisibleWeatherGrid(viewport: WeatherViewport): WeatherLocation[] {
+  return buildVisibleGrid(viewport).map(point => ({
+    label: point.label,
+    latitude: point.latitude,
+    longitude: point.longitude
+  }))
+}
+
 export async function fetchWeatherMapSamples(viewport: WeatherViewport) {
   await loadPersistentCache()
 

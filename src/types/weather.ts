@@ -46,7 +46,21 @@ export type OpenMeteoResponse = {
   hourly: OpenMeteoHourly
 }
 
-export type WeatherMode = 'temperature' | 'wind' | 'precipitation' | 'storm'
+export type OpenMeteoAirQualityCurrent = {
+  european_aqi: number
+  pm2_5: number
+  pm10: number
+  nitrogen_dioxide: number
+  ozone: number
+}
+
+export type OpenMeteoAirQualityResponse = {
+  latitude: number
+  longitude: number
+  current: OpenMeteoAirQualityCurrent
+}
+
+export type WeatherMode = 'temperature' | 'wind' | 'precipitation' | 'storm' | 'air-quality'
 
 export type WeatherEvolutionFrame = {
   time: string
@@ -96,6 +110,19 @@ export type WeatherMapSample = {
   isThunderstorm: boolean
 }
 
+export type AirQualityMapSample = {
+  latitude: number
+  longitude: number
+  updatedAt: number
+  europeanAqi: number
+  pm2_5: number
+  pm10: number
+  nitrogenDioxide: number
+  ozone: number
+}
+
+export type AirQualityReading = Omit<AirQualityMapSample, 'updatedAt'>
+
 export type MapWeatherPointer = {
   screenX: number
   screenY: number
@@ -107,4 +134,9 @@ export type MapWeatherPointer = {
   windAngle: number
   cloudOpacity: number
   isThunderstorm: boolean
+  europeanAqi?: number
+  pm2_5?: number
+  pm10?: number
+  nitrogenDioxide?: number
+  ozone?: number
 }

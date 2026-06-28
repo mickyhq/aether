@@ -346,6 +346,10 @@ body {
   gap: 7px;
 }
 
+.metric:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .metric {
   display: grid;
   grid-template-columns: 25px minmax(0, 1fr);

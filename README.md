@@ -8,6 +8,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, L
 
 - Animated wind particles colored by speed
 - Interpolated temperature layer and legend
+- European AQI layer with PM2.5 readings
 - Animated precipitation radar
 - Storm and lightning effects
 - Weather values at the mouse position
@@ -20,10 +21,11 @@ Aether is an interactive full-screen weather map built with React, TypeScript, L
 ## Data sources
 
 - [Open-Meteo](https://open-meteo.com/) supplies modeled temperature, wind, precipitation, cloud, and storm data.
+- [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/) supplies modeled air-quality data through the Open-Meteo Air Quality API.
 - [RainViewer](https://www.rainviewer.com/api.html) supplies precipitation radar tiles.
 - [OpenStreetMap](https://www.openstreetmap.org/) supplies the base map.
 
-Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). RainViewer requires attribution and its free API is intended for personal, educational, and small-scale community use. OpenStreetMap tiles must follow the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). Air-quality data requires attribution to both CAMS and Open-Meteo. RainViewer requires attribution and its free API is intended for personal, educational, and small-scale community use. OpenStreetMap tiles must follow the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
 For a commercial or high-traffic deployment, review every provider's current terms and use production-grade map and radar providers where needed.
 

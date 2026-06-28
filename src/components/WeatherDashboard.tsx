@@ -1,19 +1,27 @@
 import AirIcon from '@mui/icons-material/Air'
+import BlurOnIcon from '@mui/icons-material/BlurOn'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
 import ThunderstormIcon from '@mui/icons-material/Thunderstorm'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import { Box, Chip, Stack, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
-import type { WeatherConfig, WeatherMode } from '../types/weather'
+import type { AirQualityReading, WeatherConfig, WeatherMode } from '../types/weather'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
+  airQuality: AirQualityReading | null
   status: string
   mode: WeatherMode
   onModeChange: (mode: WeatherMode) => void
 }
 
-export function WeatherDashboard({ weather, status, mode, onModeChange }: WeatherDashboardProps) {
+export function WeatherDashboard({
+  weather,
+  airQuality,
+  status,
+  mode,
+  onModeChange
+}: WeatherDashboardProps) {
   return (
     <Box className="weather-panel">
       <Stack spacing={1.25}>
@@ -57,6 +65,13 @@ export function WeatherDashboard({ weather, status, mode, onModeChange }: Weathe
             value={weather?.isThunderstorm ? 'Yes' : 'No'}
             selected={mode === 'storm'}
             onClick={() => onModeChange('storm')}
+          />
+          <Metric
+            icon={<BlurOnIcon />}
+            label="Air quality"
+            value={formatAirQuality(airQuality)}
+            selected={mode === 'air-quality'}
+            onClick={() => onModeChange('air-quality')}
           />
         </Stack>
       </Stack>
@@ -102,4 +117,8 @@ function formatWind(weather: WeatherConfig | null) {
 
 function formatPrecipitation(weather: WeatherConfig | null) {
   return weather ? `${weather.precipitation.toFixed(1)} mm` : '--'
+}
+
+function formatAirQuality(airQuality: AirQualityReading | null) {
+  return airQuality ? `AQI ${Math.round(airQuality.europeanAqi)}` : '--'
 }

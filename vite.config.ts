@@ -25,7 +25,13 @@ function localWeatherApi(): Plugin {
   ) => {
     const requestUrl = new URL(request.url ?? '/', 'http://localhost')
 
-    if (requestUrl.pathname !== '/api/weather') {
+    const upstreamEndpoint = requestUrl.pathname === '/api/weather'
+      ? 'https://api.open-meteo.com/v1/forecast'
+      : requestUrl.pathname === '/api/air-quality'
+        ? 'https://air-quality-api.open-meteo.com/v1/air-quality'
+        : null
+
+    if (!upstreamEndpoint) {
       next()
       return
     }
@@ -47,7 +53,7 @@ function localWeatherApi(): Plugin {
 
     try {
       const upstream = await fetch(
-        `https://api.open-meteo.com/v1/forecast${requestUrl.search}`,
+        `${upstreamEndpoint}${requestUrl.search}`,
         {
           headers: {
             Accept: 'application/json',
@@ -58,11 +64,14 @@ function localWeatherApi(): Plugin {
       const body = await upstream.text()
 
       if (upstream.ok) {
+        const freshness = requestUrl.pathname === '/api/air-quality'
+          ? 60 * 60 * 1000
+          : 5 * 60 * 1000
         const record = {
           body,
           contentType: upstream.headers.get('content-type') ?? 'application/json',
-          expiresAt: now + 5 * 60 * 1000,
-          staleUntil: now + 6 * 60 * 60 * 1000
+          expiresAt: now + freshness,
+          staleUntil: now + 24 * 60 * 60 * 1000
         }
 
         cache.set(key, record)
