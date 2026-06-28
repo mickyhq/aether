@@ -5,7 +5,7 @@ import ThunderstormIcon from '@mui/icons-material/Thunderstorm'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import { Box, Chip, Stack, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
-import type { AirQualityReading, WeatherConfig, WeatherMode } from '../types/weather'
+import type { AirQualityReading, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
@@ -74,7 +74,139 @@ export function WeatherDashboard({
             onClick={() => onModeChange('air-quality')}
           />
         </Stack>
+
+        {weather?.evolution.length ? (
+          <HourlyForecast frames={weather.evolution} />
+        ) : null}
       </Stack>
+    </Box>
+  )
+}
+
+function HourlyForecast({ frames }: { frames: WeatherEvolutionFrame[] }) {
+  const visibleFrames = frames.slice(0, 12)
+  const chartHeight = 52
+  const chartWidth = visibleFrames.length * 24
+
+  const temperatures = visibleFrames.map(f => f.temperature)
+  const minTemp = Math.min(...temperatures)
+  const maxTemp = Math.max(...temperatures)
+  const tempRange = maxTemp - minTemp || 1
+
+  const precipitations = visibleFrames.map(f => f.precipitation)
+  const maxPrecip = Math.max(...precipitations, 0.5)
+
+  const tempPoints = visibleFrames
+    .map((frame, index) => {
+      const x = index * 24 + 12
+      const y = 8 + (1 - (frame.temperature - minTemp) / tempRange) * (chartHeight - 24)
+      return `${x},${y}`
+    })
+    .join(' ')
+
+  const precipBars = visibleFrames
+    .map((frame, index) => {
+      const barHeight = Math.max(0, (frame.precipitation / maxPrecip) * (chartHeight - 16))
+      const x = index * 24
+      return barHeight > 0
+        ? `<rect x="${x + 6}" y="${chartHeight - barHeight}" width="12" height="${barHeight}" rx="2" fill="rgba(90,170,255,0.35)" />`
+        : ''
+    })
+    .join('')
+
+  const timeLabels = visibleFrames
+    .map((frame, index) => {
+      if (index % 3 !== 0) return ''
+      const hour = new Date(frame.time).getHours()
+      const x = index * 24 + 12
+      return `<text x="${x}" y="${chartHeight + 14}" text-anchor="middle" fill="rgba(230,247,255,0.55)" font-size="9" font-weight="600">${hour}h</text>`
+    })
+    .join('')
+
+  return (
+    <Box className="hourly-forecast">
+      <Typography variant="caption" className="hourly-forecast-label">
+        12-hour forecast
+      </Typography>
+      <Box className="hourly-forecast-chart">
+        <svg
+          viewBox={`0 0 ${chartWidth} ${chartHeight + 22}`}
+          width={chartWidth}
+          height={chartHeight + 22}
+          preserveAspectRatio="xMinYMid meet"
+          aria-label="12-hour temperature and precipitation forecast"
+        >
+          <defs>
+            <linearGradient id="forecast-temp-line" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8fe5ff" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#ff955f" stopOpacity="0.7" />
+            </linearGradient>
+            <linearGradient id="forecast-temp-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8fe5ff" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#ff955f" stopOpacity="0.06" />
+            </linearGradient>
+          </defs>
+
+          {/* Precipitation bars */}
+          <g dangerouslySetInnerHTML={{ __html: precipBars }} />
+
+          {/* Temperature area fill */}
+          <polygon
+            points={`0,${chartHeight} ${tempPoints} ${chartWidth},${chartHeight}`}
+            fill="url(#forecast-temp-fill)"
+          />
+
+          {/* Temperature line */}
+          <polyline
+            points={tempPoints}
+            fill="none"
+            stroke="url(#forecast-temp-line)"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Temperature dots */}
+          {visibleFrames.map((frame, index) => {
+            const x = index * 24 + 12
+            const y = 8 + (1 - (frame.temperature - minTemp) / tempRange) * (chartHeight - 24)
+            return (
+              <circle
+                key={index}
+                cx={x}
+                cy={y}
+                r="2.5"
+                fill="#f7fcff"
+                stroke="#071014"
+                strokeWidth="0.8"
+              />
+            )
+          })}
+
+          {/* Time labels */}
+          <g dangerouslySetInnerHTML={{ __html: timeLabels }} />
+
+          {/* High / low labels */}
+          <text
+            x="2"
+            y="10"
+            fill="rgba(230,247,255,0.62)"
+            font-size="9"
+            font-weight="700"
+          >
+            {Math.round(maxTemp)}°
+          </text>
+          <text
+            x="2"
+            y={chartHeight - 4}
+            fill="rgba(230,247,255,0.48)"
+            font-size="9"
+            font-weight="600"
+          >
+            {Math.round(minTemp)}°
+          </text>
+        </svg>
+      </Box>
     </Box>
   )
 }
