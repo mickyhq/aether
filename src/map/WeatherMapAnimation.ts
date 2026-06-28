@@ -55,6 +55,18 @@ const JET_STREAM_COLORS = [
   '#ff83c8',
   '#fff4ff'
 ]
+const JET_STREAM_OUTLINE_COLORS = [
+  '#39d5ff',
+  '#85f08f',
+  '#ffb454',
+  '#ff62c7'
+]
+const JET_STREAM_NAMES = [
+  'N polar',
+  'N subtropical',
+  'S subtropical',
+  'S polar'
+]
 
 export class WeatherMapAnimation {
   private map: L.Map
@@ -518,8 +530,11 @@ export class WeatherMapAnimation {
       PARTICLE_COUNT,
       Math.round(260 + averageSpeed * 1.4)
     )
-    const paths = JET_STREAM_COLORS.map(() => new Path2D())
-    const usedBuckets = new Set<number>()
+    const paths = JET_STREAM_OUTLINE_COLORS.map(() => (
+      JET_STREAM_COLORS.map(() => new Path2D())
+    ))
+    const usedPaths: Array<{ stream: number, bucket: number }> = []
+    const usedPathKeys = new Set<string>()
 
     this.context.save()
     this.context.lineCap = 'round'
@@ -554,20 +569,28 @@ export class WeatherMapAnimation {
           Math.floor((field.speed - 60) / 40)
         )
       )
-      const path = paths[bucket]
+      const stream = jetStreamBandAt(location.lat)
+      const path = paths[stream][bucket]
+      const pathKey = `${stream}:${bucket}`
 
-      usedBuckets.add(bucket)
+      if (!usedPathKeys.has(pathKey)) {
+        usedPathKeys.add(pathKey)
+        usedPaths.push({ stream, bucket })
+      }
+
       path.moveTo(particle.x - field.x * tail, particle.y - field.y * tail)
       path.lineTo(particle.x, particle.y)
     }
 
-    for (const bucket of usedBuckets) {
+    for (const { stream, bucket } of usedPaths) {
       this.context.lineWidth = 7
-      this.context.strokeStyle = 'rgba(18, 6, 45, 0.52)'
-      this.context.stroke(paths[bucket])
+      this.context.globalAlpha = 0.72
+      this.context.strokeStyle = JET_STREAM_OUTLINE_COLORS[stream]
+      this.context.stroke(paths[stream][bucket])
       this.context.lineWidth = 2.1
+      this.context.globalAlpha = 1
       this.context.strokeStyle = JET_STREAM_COLORS[bucket]
-      this.context.stroke(paths[bucket])
+      this.context.stroke(paths[stream][bucket])
     }
 
     this.context.restore()
@@ -589,8 +612,21 @@ export class WeatherMapAnimation {
 
     this.context.fillStyle = 'rgba(10, 5, 28, 0.8)'
     this.context.beginPath()
-    this.context.roundRect(x - 12, y - 10, legendWidth + 24, 42, 8)
+    this.context.roundRect(x - 12, y - 27, legendWidth + 24, 59, 8)
     this.context.fill()
+
+    this.context.font = '700 9px Inter, system-ui, sans-serif'
+    this.context.textAlign = 'center'
+
+    for (let index = 0; index < JET_STREAM_NAMES.length; index += 1) {
+      this.context.fillStyle = JET_STREAM_OUTLINE_COLORS[index]
+      this.context.fillText(
+        JET_STREAM_NAMES[index],
+        x + legendWidth * (index + 0.5) / JET_STREAM_NAMES.length,
+        y - 10
+      )
+    }
+
     this.context.fillStyle = gradient
     this.context.fillRect(x, y, legendWidth, 12)
     this.context.fillStyle = 'rgba(247, 252, 255, 0.96)'
@@ -807,6 +843,22 @@ function jetStreamFieldAt(
     y: -northward / length,
     speed
   }
+}
+
+function jetStreamBandAt(latitude: number) {
+  if (latitude >= 45) {
+    return 0
+  }
+
+  if (latitude >= 0) {
+    return 1
+  }
+
+  if (latitude > -45) {
+    return 2
+  }
+
+  return 3
 }
 
 function windVector(angle: number) {

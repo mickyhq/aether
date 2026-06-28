@@ -9,7 +9,8 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 ## Features
 
 - Animated wind particles colored by speed
-- Animated 250 hPa jet-stream layer
+- Zoom-independent animated 250 hPa jet-stream layer
+- Distinct outlines for the northern and southern polar and subtropical jets
 - Interpolated temperature layer and legend
 - European AQI layer with PM2.5 readings
 - Animated precipitation radar
@@ -33,6 +34,19 @@ Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license)
 
 For a commercial or high-traffic deployment, review every provider's current terms and use production-grade map and radar providers where needed.
 
+## Jet Stream layer
+
+The Jet Stream layer uses its own data and animation pipeline. It requests wind speed and direction at 250 hPa from Open-Meteo, converts meteorological “wind from” bearings into eastward and northward vectors, and interpolates those vectors using geographic distance.
+
+Jet Stream samples stay fixed while the camera zooms. This keeps the wind field and direction stable instead of rebuilding them from screen-space distances at every zoom level. Panning to a new area loads a new geographic sample grid.
+
+Particle colors have two meanings:
+
+- The inner color shows wind speed.
+- The outer color identifies the latitude band: northern polar, northern subtropical, southern subtropical, or southern polar.
+
+These four outline categories make the major jet regions easier to distinguish. They are latitude-based visualization bands, not detected jet-axis boundaries.
+
 ## Requirements
 
 - Node.js 20.19 or newer
@@ -45,7 +59,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+Open the local URL printed by Vite. Nodemon restarts Vite when API, server, or Vite configuration files change; React source changes continue to use Vite hot reload.
 
 ## Production build
 
@@ -90,7 +104,7 @@ src/
 
 ## Accuracy
 
-Wind and temperature are modeled grid values with interpolation between fetched points. They are not measurements for every map pixel. Radar availability and resolution depend on RainViewer coverage.
+Wind, Jet Stream, and temperature layers use modeled grid values with interpolation between fetched points. They are not measurements for every map pixel. Jet Stream outlines use latitude bands for visual identification and do not represent exact atmospheric boundaries. Radar availability and resolution depend on RainViewer coverage.
 
 ## License
 
