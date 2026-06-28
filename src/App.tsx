@@ -93,16 +93,41 @@ function readUrlLocation(): WeatherLocation | null {
   }
 }
 
-function updateUrlLocation(location: WeatherLocation) {
+const WEATHER_MODES: readonly WeatherMode[] = [
+  'temperature',
+  'wind',
+  'jet-stream',
+  'precipitation',
+  'storm',
+  'air-quality'
+]
+
+function readUrlMode(): WeatherMode {
   try {
     const params = new URLSearchParams(window.location.search)
-    const value = `${location.latitude.toFixed(5)},${location.longitude.toFixed(5)}`
+    const raw = params.get('mode')
 
-    if (params.get('coords') === value) {
+    if (raw && WEATHER_MODES.includes(raw as WeatherMode)) {
+      return raw as WeatherMode
+    }
+
+    return 'temperature'
+  } catch {
+    return 'temperature'
+  }
+}
+
+function updateUrlLocation(location: WeatherLocation, mode: WeatherMode) {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const coordValue = `${location.latitude.toFixed(5)},${location.longitude.toFixed(5)}`
+
+    if (params.get('coords') === coordValue && params.get('mode') === mode) {
       return
     }
 
-    params.set('coords', value)
+    params.set('coords', coordValue)
+    params.set('mode', mode)
     const search = params.toString()
 
     window.history.replaceState(null, '', `?${search}`)
@@ -155,7 +180,7 @@ export default function App() {
     readUrlLocation() ?? loadStoredLocation() ?? defaultCity
   )
   const [selectedForecastReady, setSelectedForecastReady] = useState(false)
-  const [weatherMode, setWeatherMode] = useState<WeatherMode>('temperature')
+  const [weatherMode, setWeatherMode] = useState<WeatherMode>(readUrlMode)
   const mapWeatherMode = useDeferredValue(weatherMode)
   const [viewport, setViewport] = useState<WeatherViewport | null>(null)
   const [mapSamples, setMapSamples] = useState<WeatherMapSample[]>([])
@@ -233,12 +258,15 @@ export default function App() {
 
     loadWeather()
     persistLocation(selectedLocation)
-    updateUrlLocation(selectedLocation)
 
     return () => {
       cancelled = true
     }
   }, [selectedLocation])
+
+  useEffect(() => {
+    updateUrlLocation(selectedLocation, weatherMode)
+  }, [selectedLocation, weatherMode])
 
   useEffect(() => {
     let cancelled = false
