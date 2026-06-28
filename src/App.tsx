@@ -505,6 +505,12 @@ export default function App() {
     }
   }
 
+  function handleSavedLocationSelect(location: WeatherLocation) {
+    setSelectedForecastReady(false)
+    setSelectedLocation(location)
+    setStatus('Reading sky')
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -525,6 +531,7 @@ export default function App() {
           status={status}
           dataState={weatherDataState}
           onSearch={handleCitySearch}
+          onLocationSelect={handleSavedLocationSelect}
         />
         <WeatherDashboard
           weather={weather}

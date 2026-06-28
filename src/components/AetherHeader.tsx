@@ -3,15 +3,23 @@ import { Box, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/mat
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import type { WeatherDataState, WeatherLocation } from '../types/weather'
+import { LocationBookmarks } from './LocationBookmarks'
 
 type AetherHeaderProps = {
   location: WeatherLocation
   status: string
   dataState: WeatherDataState
   onSearch: (query: string) => void
+  onLocationSelect: (location: WeatherLocation) => void
 }
 
-export function AetherHeader({ location, status, dataState, onSearch }: AetherHeaderProps) {
+export function AetherHeader({
+  location,
+  status,
+  dataState,
+  onSearch,
+  onLocationSelect
+}: AetherHeaderProps) {
   const [query, setQuery] = useState('')
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -52,32 +60,39 @@ const DATA_STATE_TOOLTIP = (
         </Typography>
       </Stack>
 
-      <Box component="form" className="map-search" onSubmit={handleSubmit}>
-        <TextField
-          size="small"
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder="Search city"
-          inputProps={{ 'aria-label': 'Search city' }}
-          className="city-search-input"
+      <Box className="header-actions">
+        <LocationBookmarks
+          location={location}
+          onSelect={onLocationSelect}
         />
-        <IconButton type="submit" aria-label="Search" className="city-search-button">
-          <SearchIcon fontSize="small" />
-        </IconButton>
-        <Tooltip
-          title={DATA_STATE_TOOLTIP}
-          componentsProps={{ tooltip: { className: 'data-state-tooltip' } }}
-          enterDelay={200}
-          leaveDelay={200}
-        >
-          <Typography
-            variant="caption"
-            role="status"
-            className={`search-status search-status-${dataState}`}
+
+        <Box component="form" className="map-search" onSubmit={handleSubmit}>
+          <TextField
+            size="small"
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Search city"
+            inputProps={{ 'aria-label': 'Search city' }}
+            className="city-search-input"
+          />
+          <IconButton type="submit" aria-label="Search" className="city-search-button">
+            <SearchIcon fontSize="small" />
+          </IconButton>
+          <Tooltip
+            title={DATA_STATE_TOOLTIP}
+            componentsProps={{ tooltip: { className: 'data-state-tooltip' } }}
+            enterDelay={200}
+            leaveDelay={200}
           >
-            {status}
-          </Typography>
-        </Tooltip>
+            <Typography
+              variant="caption"
+              role="status"
+              className={`search-status search-status-${dataState}`}
+            >
+              {status}
+            </Typography>
+          </Tooltip>
+        </Box>
       </Box>
     </Box>
   )

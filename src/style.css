@@ -196,7 +196,7 @@ body {
 
 .brand-block {
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   overflow: hidden;
 }
 
@@ -244,6 +244,89 @@ body {
 .brand-place {
   color: rgba(230, 247, 255, 0.72);
   line-height: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.location-bookmarks-button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 214, 102, 0.32) !important;
+  border-radius: 9px !important;
+  background: rgba(255, 214, 102, 0.1) !important;
+  color: #ffdf80 !important;
+}
+
+.location-bookmarks-button:hover {
+  background: rgba(255, 214, 102, 0.2) !important;
+}
+
+.location-bookmarks-menu {
+  min-width: 270px;
+  max-width: min(340px, calc(100vw - 24px));
+  max-height: min(520px, calc(100dvh - 24px));
+  border: 1px solid rgba(190, 237, 255, 0.22);
+  border-radius: 10px !important;
+  background: rgba(7, 17, 22, 0.94) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.location-bookmarks-menu .MuiMenuItem-root {
+  gap: 10px;
+  min-height: 40px;
+}
+
+.location-bookmarks-menu .MuiMenuItem-root > svg {
+  width: 18px;
+  height: 18px;
+  color: #ffdf80;
+}
+
+.location-bookmarks-section {
+  padding: 4px 0;
+}
+
+.location-bookmarks-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 16px 2px;
+  color: rgba(230, 247, 255, 0.56);
+}
+
+.location-bookmarks-heading svg {
+  width: 15px;
+  height: 15px;
+}
+
+.location-bookmarks-label {
+  display: grid;
+  min-width: 0;
+}
+
+.location-bookmarks-label > :first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-bookmarks-label > :last-child,
+.location-bookmarks-empty {
+  color: rgba(230, 247, 255, 0.5);
+}
+
+.location-bookmarks-empty {
+  padding: 7px 16px 10px;
+  font-size: 12px !important;
 }
 
 .map-search {
