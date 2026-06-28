@@ -1,6 +1,6 @@
 # Aether
 
-[Open Aether live](https://aether-five-rose.vercel.app)
+[Live demo on Vercel](https://aether-five-rose.vercel.app)
 
 Aether is an interactive full-screen weather map built with React, TypeScript, Leaflet, and Canvas. It displays live weather fields over OpenStreetMap and updates the visible area as the map moves.
 
