@@ -85,6 +85,10 @@ export async function fetchWeatherMapSamples(
   rememberSamples(freshSamples)
   void persistWeatherSamples(freshSamples)
 
+  if (refreshPoints.length > 0 && freshSamples.length === 0) {
+    return []
+  }
+
   return getSamplesForGrid(points)
 }
 

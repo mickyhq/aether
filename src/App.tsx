@@ -300,13 +300,13 @@ export default function App() {
     let loading = false
     const cachedSamples = getCachedWeatherMapSamples(viewport)
 
-    setMapSamples(cachedSamples)
+    setMapSamples(current => current.length > 0 ? current : cachedSamples)
 
     const applyPersistentCache = async () => {
       const samples = await hydrateWeatherMapCache(viewport)
 
       if (!cancelled && samples.length > 0) {
-        setMapSamples(samples)
+        setMapSamples(current => current.length > 0 ? current : samples)
       }
     }
 
@@ -329,7 +329,7 @@ export default function App() {
       try {
         const samples = await fetchWeatherMapSamples(viewport, controller.signal)
 
-        if (!cancelled) {
+        if (!cancelled && samples.length > 0) {
           setMapSamples(samples)
         }
       } catch (error) {
