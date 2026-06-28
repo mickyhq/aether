@@ -217,7 +217,22 @@ body {
 .brand-name {
   color: #f7fcff;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.02em;
+}
+
+.brand-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.brand-version {
+  color: rgba(230, 247, 255, 0.48);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .brand-divider {

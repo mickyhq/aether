@@ -38,9 +38,14 @@ const DATA_STATE_TOOLTIP = (
         <Box className="brand-mark">
           <img src="/aether.svg" alt="" className="brand-logo" />
         </Box>
-        <Typography variant="subtitle2" className="brand-name">
-          Aether
-        </Typography>
+        <Box className="brand-copy">
+          <Typography variant="subtitle2" className="brand-name">
+            Aether
+          </Typography>
+          <Typography variant="caption" className="brand-version">
+            {import.meta.env.VITE_AETHER_BUILD_VERSION}
+          </Typography>
+        </Box>
         <span className="brand-divider" />
         <Typography variant="h6" className="brand-place">
           {location.label}

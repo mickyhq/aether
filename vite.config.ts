@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from 'vite'
+import { readFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -34,6 +35,12 @@ let lastUpstreamTime = 0
 const MIN_SPACING_MS = 300
 const DEFAULT_RETRY_AFTER_SECONDS = 15 * 60
 const DEPLOYED_API_ORIGIN = 'https://aether-five-rose.vercel.app'
+const packageVersion = (
+  JSON.parse(
+    readFileSync(new URL('./package.json', import.meta.url), 'utf8')
+  ) as { version: string }
+).version
+const buildVersion = `v${packageVersion}`
 
 function scheduleUpstream(url: string): Promise<UpstreamResult> {
   const provider = new URL(url).origin
@@ -132,6 +139,9 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    define: {
+      'import.meta.env.VITE_AETHER_BUILD_VERSION': JSON.stringify(buildVersion)
+    },
     plugins: [react(), localWeatherApi()]
   }
 })
