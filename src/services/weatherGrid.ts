@@ -32,9 +32,11 @@ const THUNDERSTORM_CODES = new Set([95, 96, 99])
 const FRESHNESS = 5 * 60 * 1000
 const BATCH_SIZE = 32
 const MAX_GRID_POINTS = 48
+const BATCH_DELAY_MS = 250
 const BASE_SPACING = 260
 const sampleCache = new Map<string, WeatherMapSample>()
 let persistentCachePromise: Promise<void> | null = null
+let lastBatchFetchTime = 0
 
 export const WEATHER_REFRESH_INTERVAL = FRESHNESS
 
@@ -58,6 +60,8 @@ export async function fetchWeatherMapSamples(viewport: WeatherViewport) {
   const freshSamples: WeatherMapSample[] = []
 
   for (const batch of chunkPoints(refreshPoints, BATCH_SIZE)) {
+    await throttleBatchDelay()
+
     try {
       freshSamples.push(...await fetchWeatherBatch(batch))
     } catch {
@@ -88,6 +92,7 @@ export function cacheWeatherSample(location: WeatherLocation, weather: WeatherCo
     longitude: location.longitude,
     updatedAt: Date.now(),
     showBadge: true,
+    evolution: weather.evolution,
     temperature: weather.temperature,
     precipitation: weather.precipitation,
     snowfall: weather.snowfall,
@@ -132,7 +137,7 @@ export async function getCachedWeatherForLocation(location: WeatherLocation): Pr
     rainDensity: Math.round(clamp(nearbySample.precipitation, 0, 12) * 42),
     isThunderstorm: nearbySample.isThunderstorm,
     cloudOpacity: nearbySample.cloudOpacity,
-    evolution: []
+    evolution: nearbySample.evolution ?? []
   }
 }
 
@@ -414,6 +419,17 @@ function worldYToLatitude(y: number, worldSize: number) {
   return radiansToDegrees(Math.atan(Math.sinh(mercator)))
 }
 
+async function throttleBatchDelay() {
+  const elapsed = Date.now() - lastBatchFetchTime
+
+  if (elapsed < BATCH_DELAY_MS) {
+    await new Promise(resolve => {
+      window.setTimeout(resolve, BATCH_DELAY_MS - elapsed)
+    })
+  }
+
+  lastBatchFetchTime = Date.now()
+}
 
 function describeWeatherCode(code: number) {
   if (THUNDERSTORM_CODES.has(code)) {

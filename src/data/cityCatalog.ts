@@ -23,6 +23,15 @@ export const cityCatalog: CountryOption[] = [
     name: 'France',
     regions: [
       {
+        id: 'corse',
+        name: 'Corse',
+        mapShape: [[0.1, 0.48], [0.36, 0.38], [0.72, 0.32], [0.92, 0.52], [0.8, 0.78], [0.52, 0.92], [0.2, 0.8], [0.04, 0.62]],
+        cities: [
+          { id: 'ajaccio', label: 'Ajaccio', latitude: 41.9192, longitude: 8.7386 },
+          { id: 'bastia', label: 'Bastia', latitude: 42.7000, longitude: 9.4500 }
+        ]
+      },
+      {
         id: 'idf',
         name: 'Ile-de-France',
         mapShape: [[0.16, 0.28], [0.34, 0.12], [0.63, 0.16], [0.86, 0.34], [0.78, 0.72], [0.52, 0.9], [0.22, 0.78], [0.08, 0.52]],
@@ -98,6 +107,8 @@ export const cityCatalog: CountryOption[] = [
   }
 ]
 
-export const defaultCountry = cityCatalog[0]
-export const defaultRegion = defaultCountry.regions[0]
-export const defaultCity = defaultRegion.cities[0]
+export const defaultCity: WeatherLocation = {
+  label: 'Ajaccio, Corsica',
+  latitude: 41.9192,
+  longitude: 8.7386
+}

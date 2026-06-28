@@ -213,6 +213,13 @@ export function AetherMap({
     }
 
     const nextCenter: L.LatLngExpression = [location.latitude, location.longitude]
+    const currentCenter = map.getCenter()
+    const latDelta = Math.abs(currentCenter.lat - location.latitude)
+    const lngDelta = Math.abs(currentCenter.lng - location.longitude)
+
+    if (latDelta < 0.1 && lngDelta < 0.1) {
+      return
+    }
 
     map.flyTo(nextCenter, Math.max(map.getZoom(), 10), {
       animate: true,

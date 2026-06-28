@@ -248,7 +248,7 @@ export class WeatherMapAnimation {
     const pulse = this.reducedMotion ? 0 : Math.sin(time * 0.4) * 0.025
 
     this.context.save()
-    this.context.globalAlpha = 0.72 + pulse
+    this.context.globalAlpha = 0.48 + pulse
     this.context.imageSmoothingEnabled = true
     this.context.drawImage(this.temperatureCanvas, 0, 0, this.width, this.height)
     this.context.restore()

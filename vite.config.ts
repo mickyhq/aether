@@ -12,12 +12,69 @@ type WeatherCacheRecord = {
 
 type Next = (error?: unknown) => void
 
+const pending = new Map<string, Promise<{ status: number, body: string, contentType: string }>>()
+let lastUpstreamTime = 0
+const MIN_SPACING_MS = 300
+
+function scheduleUpstream(url: string): Promise<{ status: number, body: string, contentType: string }> {
+  const existing = pending.get(url)
+
+  if (existing) {
+    return existing
+  }
+
+  const promise = fetchWithRetry(url)
+    .finally(() => {
+      pending.delete(url)
+    })
+
+  pending.set(url, promise)
+
+  return promise
+}
+
+async function fetchWithRetry(url: string, retries = 3) {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    await ensureSpacing()
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'Aether Local Development'
+      }
+    })
+    lastUpstreamTime = Date.now()
+    const body = await response.text()
+
+    if (response.status !== 429 || attempt === retries) {
+      return {
+        status: response.status,
+        body,
+        contentType: response.headers.get('content-type') ?? 'application/json'
+      }
+    }
+
+    await new Promise(resolve => { setTimeout(resolve, 1500) })
+  }
+
+  throw new Error('Weather request failed')
+}
+
+async function ensureSpacing() {
+  const elapsed = Date.now() - lastUpstreamTime
+
+  if (elapsed < MIN_SPACING_MS) {
+    await new Promise(resolve => { setTimeout(resolve, MIN_SPACING_MS - elapsed) })
+  }
+}
+
 export default defineConfig({
   plugins: [react(), localWeatherApi()]
 })
 
 function localWeatherApi(): Plugin {
   const cache = new Map<string, WeatherCacheRecord>()
+
   const handleWeatherRequest = async (
     request: IncomingMessage,
     response: ServerResponse,
@@ -42,8 +99,8 @@ function localWeatherApi(): Plugin {
       return
     }
 
-    const key = requestUrl.search
-    const cached = cache.get(key)
+    const cacheKey = requestUrl.search
+    const cached = cache.get(cacheKey)
     const now = Date.now()
 
     if (cached && cached.expiresAt > now) {
@@ -52,29 +109,20 @@ function localWeatherApi(): Plugin {
     }
 
     try {
-      const upstream = await fetch(
-        `${upstreamEndpoint}${requestUrl.search}`,
-        {
-          headers: {
-            Accept: 'application/json',
-            'User-Agent': 'Aether Local Development'
-          }
-        }
-      )
-      const body = await upstream.text()
+      const result = await scheduleUpstream(`${upstreamEndpoint}${requestUrl.search}`)
 
-      if (upstream.ok) {
+      if (result.status >= 200 && result.status < 300) {
         const freshness = requestUrl.pathname === '/api/air-quality'
           ? 60 * 60 * 1000
           : 5 * 60 * 1000
         const record = {
-          body,
-          contentType: upstream.headers.get('content-type') ?? 'application/json',
+          body: result.body,
+          contentType: result.contentType,
           expiresAt: now + freshness,
           staleUntil: now + 24 * 60 * 60 * 1000
         }
 
-        cache.set(key, record)
+        cache.set(cacheKey, record)
         sendCachedWeather(response, record)
         return
       }
@@ -84,9 +132,9 @@ function localWeatherApi(): Plugin {
         return
       }
 
-      response.statusCode = upstream.status
-      response.setHeader('Content-Type', 'application/json')
-      response.end(body)
+      response.statusCode = result.status
+      response.setHeader('Content-Type', result.contentType)
+      response.end(result.body)
     } catch (error) {
       if (cached && cached.staleUntil > now) {
         sendCachedWeather(response, cached)

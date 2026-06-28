@@ -98,6 +98,7 @@ export type WeatherMapSample = {
   updatedAt?: number
   showBadge?: boolean
   estimated?: boolean
+  evolution?: WeatherEvolutionFrame[]
   temperature: number
   precipitation: number
   snowfall: number

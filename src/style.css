@@ -196,8 +196,8 @@ body {
 
 .brand-block {
   min-width: 0;
-  flex: 0 1 auto;
-  white-space: nowrap;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .brand-mark {
@@ -227,11 +227,8 @@ body {
 }
 
 .brand-place {
-  overflow: hidden;
-  max-width: min(24vw, 260px);
   color: rgba(230, 247, 255, 0.72);
   line-height: 1;
-  text-overflow: ellipsis;
 }
 
 .map-search {
@@ -435,6 +432,14 @@ body {
 .hourly-forecast-chart svg {
   display: block;
   min-width: 288px;
+}
+
+.hourly-forecast-empty {
+  padding: 14px 0;
+  color: rgba(230, 247, 255, 0.38);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
 }
 
 @media (max-width: 560px) {

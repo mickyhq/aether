@@ -28,7 +28,7 @@ export function AetherHeader({ location, status, onSearch }: AetherHeaderProps) 
           Aether
         </Typography>
         <span className="brand-divider" />
-        <Typography variant="body2" className="brand-place">
+        <Typography variant="h6" className="brand-place">
           {location.label}
         </Typography>
       </Stack>

@@ -3,7 +3,7 @@ import BlurOnIcon from '@mui/icons-material/BlurOn'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
 import ThunderstormIcon from '@mui/icons-material/Thunderstorm'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
-import { Box, Chip, Stack, Typography } from '@mui/material'
+import { Box, Stack, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import type { AirQualityReading, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
 
@@ -25,18 +25,6 @@ export function WeatherDashboard({
   return (
     <Box className="weather-panel">
       <Stack spacing={1.25}>
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1.5}>
-          <Box className="panel-heading">
-            <Typography variant="h5" className="panel-title">
-              {weather?.zone ?? 'Paris'}
-            </Typography>
-            <Typography variant="caption" className="panel-subtitle">
-              {weather?.description ?? 'Waiting for local atmosphere'}
-            </Typography>
-          </Box>
-          <Chip size="small" label={status} className="status-chip" />
-        </Stack>
-
         <Stack className="metric-grid">
           <Metric
             icon={<DeviceThermostatIcon />}
@@ -75,9 +63,7 @@ export function WeatherDashboard({
           />
         </Stack>
 
-        {weather?.evolution.length ? (
-          <HourlyForecast frames={weather.evolution} />
-        ) : null}
+        <HourlyForecast frames={weather?.evolution ?? []} />
       </Stack>
     </Box>
   )
@@ -85,6 +71,20 @@ export function WeatherDashboard({
 
 function HourlyForecast({ frames }: { frames: WeatherEvolutionFrame[] }) {
   const visibleFrames = frames.slice(0, 12)
+
+  if (visibleFrames.length === 0) {
+    return (
+      <Box className="hourly-forecast">
+        <Typography variant="caption" className="hourly-forecast-label">
+          12-hour forecast
+        </Typography>
+        <Box className="hourly-forecast-empty">
+          Forecast unavailable
+        </Box>
+      </Box>
+    )
+  }
+
   const chartHeight = 52
   const chartWidth = visibleFrames.length * 24
 

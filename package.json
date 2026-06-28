@@ -17,6 +17,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
+    "@vercel/functions": "^3.7.4",
     "@vitejs/plugin-react": "^5.0.0",
     "leaflet": "^1.9.4",
     "react": "^19.1.0",

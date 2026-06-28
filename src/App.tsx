@@ -1,5 +1,5 @@
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { AetherHeader } from './components/AetherHeader'
 import { AetherMap } from './components/AetherMap'
 import { MapWeatherTooltip } from './components/MapWeatherTooltip'
@@ -32,6 +32,44 @@ import type {
   WeatherViewport
 } from './types/weather'
 
+const STORED_LOCATION_KEY = 'aether:location'
+
+function loadStoredLocation(): WeatherLocation | null {
+  try {
+    const stored = window.localStorage.getItem(STORED_LOCATION_KEY)
+
+    if (!stored) {
+      return null
+    }
+
+    const parsed = JSON.parse(stored) as WeatherLocation
+
+    if (
+      typeof parsed.latitude !== 'number' ||
+      typeof parsed.longitude !== 'number' ||
+      typeof parsed.label !== 'string'
+    ) {
+      return null
+    }
+
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function persistLocation(location: WeatherLocation) {
+  try {
+    window.localStorage.setItem(STORED_LOCATION_KEY, JSON.stringify({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      label: location.label
+    }))
+  } catch {
+    return
+  }
+}
+
 const theme = createTheme({
   palette: {
     mode: 'dark',
@@ -56,8 +94,11 @@ const theme = createTheme({
 
 export default function App() {
   const [weather, setWeather] = useState<WeatherConfig | null>(null)
+  const lastWeatherRef = useRef<WeatherConfig | null>(null)
   const [status, setStatus] = useState('Reading sky')
-  const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(defaultCity)
+  const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
+    loadStoredLocation() ?? defaultCity
+  )
   const [weatherMode, setWeatherMode] = useState<WeatherMode>('temperature')
   const mapWeatherMode = useDeferredValue(weatherMode)
   const [viewport, setViewport] = useState<WeatherViewport | null>(null)
@@ -104,6 +145,7 @@ export default function App() {
         cacheWeatherSample(selectedLocation, nextWeather)
 
         if (!cancelled) {
+          lastWeatherRef.current = nextWeather
           setWeather(nextWeather)
           setStatus('Live')
         }
@@ -111,8 +153,10 @@ export default function App() {
         const cachedWeather = await getCachedWeatherForLocation(selectedLocation)
 
         if (!cancelled) {
-          if (cachedWeather) {
-            setWeather(cachedWeather)
+          const fallback = cachedWeather ?? lastWeatherRef.current
+
+          if (fallback) {
+            setWeather(fallback)
             setStatus('Cached')
           } else {
             setStatus(error instanceof Error ? error.message : 'Weather fetch failed')
@@ -122,6 +166,7 @@ export default function App() {
     }
 
     loadWeather()
+    persistLocation(selectedLocation)
 
     return () => {
       cancelled = true
@@ -243,13 +288,19 @@ export default function App() {
   }, [viewport])
 
   async function handleMapClick(location: WeatherLocation) {
+    setSelectedLocation(location)
     setStatus('Locating')
-    const label = await reverseGeocode(location.latitude, location.longitude)
 
-    setSelectedLocation({
-      ...location,
-      label
-    })
+    try {
+      const label = await reverseGeocode(location.latitude, location.longitude)
+
+      setSelectedLocation(prev => ({
+        ...prev,
+        label
+      }))
+    } catch {
+      return
+    }
   }
 
   async function handleCitySearch(query: string) {

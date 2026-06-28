@@ -21,11 +21,13 @@ const CURRENT_FIELDS = [
 const FRESHNESS = 60 * 60 * 1000
 const MAX_CACHE_AGE = 24 * 60 * 60 * 1000
 const BATCH_SIZE = 32
+const BATCH_DELAY_MS = 250
 const STORE_NAME = 'air-quality-samples'
 const MAX_STORED_SAMPLES = 1000
 const sampleCache = new Map<string, AirQualityMapSample>()
 let persistTimer = 0
 let cacheLoaded = false
+let lastBatchFetchTime = 0
 
 export const AIR_QUALITY_REFRESH_INTERVAL = FRESHNESS
 
@@ -41,6 +43,8 @@ export async function fetchAirQualityMapSamples(viewport: WeatherViewport) {
   const freshSamples: AirQualityMapSample[] = []
 
   for (const batch of chunkPoints(refreshPoints, BATCH_SIZE)) {
+    await throttleBatchDelay()
+
     try {
       freshSamples.push(...await fetchAirQualityBatch(batch))
     } catch {
@@ -246,6 +250,18 @@ async function persistCache() {
   } catch {
     return
   }
+}
+
+async function throttleBatchDelay() {
+  const elapsed = Date.now() - lastBatchFetchTime
+
+  if (elapsed < BATCH_DELAY_MS) {
+    await new Promise(resolve => {
+      window.setTimeout(resolve, BATCH_DELAY_MS - elapsed)
+    })
+  }
+
+  lastBatchFetchTime = Date.now()
 }
 
 function chunkPoints(points: WeatherLocation[], size: number) {
