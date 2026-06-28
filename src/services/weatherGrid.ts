@@ -48,8 +48,13 @@ export function getVisibleWeatherGrid(viewport: WeatherViewport): WeatherLocatio
   }))
 }
 
-export async function fetchWeatherMapSamples(viewport: WeatherViewport) {
+export async function fetchWeatherMapSamples(
+  viewport: WeatherViewport,
+  signal?: AbortSignal
+) {
+  signal?.throwIfAborted()
   await loadPersistentCache()
+  signal?.throwIfAborted()
 
   const points = buildVisibleGrid(viewport)
   const refreshPoints = points.filter(point => {
@@ -60,11 +65,17 @@ export async function fetchWeatherMapSamples(viewport: WeatherViewport) {
   const freshSamples: WeatherMapSample[] = []
 
   for (const batch of chunkPoints(refreshPoints, BATCH_SIZE)) {
+    signal?.throwIfAborted()
     await throttleBatchDelay()
+    signal?.throwIfAborted()
 
     try {
-      freshSamples.push(...await fetchWeatherBatch(batch))
-    } catch {
+      freshSamples.push(...await fetchWeatherBatch(batch, signal))
+    } catch (error) {
+      if (signal?.aborted) {
+        throw error
+      }
+
       continue
     }
   }
@@ -181,7 +192,10 @@ export function interpolateWeatherAt(
   }
 }
 
-async function fetchWeatherBatch(points: GridPoint[]): Promise<WeatherMapSample[]> {
+async function fetchWeatherBatch(
+  points: GridPoint[],
+  signal?: AbortSignal
+): Promise<WeatherMapSample[]> {
   if (points.length === 0) {
     return []
   }
@@ -193,7 +207,9 @@ async function fetchWeatherBatch(points: GridPoint[]): Promise<WeatherMapSample[
     hourly: HOURLY_FIELDS.join(','),
     forecast_days: '1'
   })
-  const response = await fetch(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)
+  const response = await fetch(`${OPEN_METEO_ENDPOINT}?${params.toString()}`, {
+    signal
+  })
 
   if (!response.ok) {
     throw new Error(`Weather grid error ${response.status}`)

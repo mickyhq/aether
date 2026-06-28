@@ -99,6 +99,7 @@ export default function App() {
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
     loadStoredLocation() ?? defaultCity
   )
+  const [selectedForecastReady, setSelectedForecastReady] = useState(false)
   const [weatherMode, setWeatherMode] = useState<WeatherMode>('temperature')
   const mapWeatherMode = useDeferredValue(weatherMode)
   const [viewport, setViewport] = useState<WeatherViewport | null>(null)
@@ -138,6 +139,8 @@ export default function App() {
     let cancelled = false
 
     async function loadWeather() {
+      setSelectedForecastReady(false)
+
       try {
         setStatus('Reading sky')
         const forecast = await fetchOpenMeteoForecast(selectedLocation)
@@ -161,6 +164,10 @@ export default function App() {
           } else {
             setStatus(error instanceof Error ? error.message : 'Weather fetch failed')
           }
+        }
+      } finally {
+        if (!cancelled) {
+          setSelectedForecastReady(true)
         }
       }
     }
@@ -198,6 +205,16 @@ export default function App() {
         setMapSamples(samples)
       }
     }
+
+    void applyPersistentCache()
+
+    if (!selectedForecastReady) {
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const controller = new AbortController()
     const refreshVisibleWeather = async () => {
       if (loading) {
         return
@@ -206,13 +223,13 @@ export default function App() {
       loading = true
 
       try {
-        const samples = await fetchWeatherMapSamples(viewport)
+        const samples = await fetchWeatherMapSamples(viewport, controller.signal)
 
         if (!cancelled) {
           setMapSamples(samples)
         }
       } catch (error) {
-        if (!cancelled) {
+        if (!cancelled && !controller.signal.aborted) {
           setStatus(error instanceof Error ? error.message : 'Map weather failed')
         }
       } finally {
@@ -227,18 +244,18 @@ export default function App() {
     const timeout = window.setTimeout(refreshVisibleWeather, 120)
     const interval = window.setInterval(refreshVisibleWeather, WEATHER_REFRESH_INTERVAL)
 
-    void applyPersistentCache()
     window.addEventListener('online', refreshWhenVisible)
     document.addEventListener('visibilitychange', refreshWhenVisible)
 
     return () => {
       cancelled = true
+      controller.abort()
       window.clearTimeout(timeout)
       window.clearInterval(interval)
       window.removeEventListener('online', refreshWhenVisible)
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
-  }, [viewport])
+  }, [selectedForecastReady, viewport])
 
   useEffect(() => {
     if (!viewport) {
@@ -288,12 +305,14 @@ export default function App() {
   }, [viewport])
 
   async function handleMapClick(location: WeatherLocation) {
+    setSelectedForecastReady(false)
     setSelectedLocation(location)
     setStatus('Locating')
 
     try {
       const label = await reverseGeocode(location.latitude, location.longitude)
 
+      setSelectedForecastReady(false)
       setSelectedLocation(prev => ({
         ...prev,
         label
@@ -307,6 +326,7 @@ export default function App() {
     try {
       setStatus('Searching city')
       const nextLocation = await searchCity(query)
+      setSelectedForecastReady(false)
       setSelectedLocation(nextLocation)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'City search failed')
