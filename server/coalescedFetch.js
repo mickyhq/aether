@@ -1,6 +1,6 @@
 const pendingRequests = new Map()
 
-export function fetchCoalesced(key, url, userAgent) {
+export function fetchCoalesced(key, url, userAgent, extraHeaders = {}) {
   const existing = pendingRequests.get(key)
 
   if (existing) {
@@ -10,7 +10,8 @@ export function fetchCoalesced(key, url, userAgent) {
   const request = fetch(url, {
     headers: {
       Accept: 'application/json',
-      'User-Agent': userAgent
+      'User-Agent': userAgent,
+      ...extraHeaders
     }
   })
     .then(async response => ({

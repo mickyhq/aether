@@ -29,7 +29,7 @@ export default async function handler(request, response) {
   }
 
   const cacheKey = `${coordinates.latitude.toFixed(3)}:${coordinates.longitude.toFixed(3)}`
-  const cache = getSharedCache('aether-heat-alerts-v1')
+  const cache = getSharedCache('aether-heat-alerts-v2')
   const cached = await readSharedCache(cache, `fresh:${cacheKey}`)
 
   if (cached) {

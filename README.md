@@ -24,6 +24,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 - [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/) supplies modeled air-quality data through the Open-Meteo Air Quality API.
 - [RainViewer](https://www.rainviewer.com/api.html) supplies precipitation radar tiles.
 - [OpenStreetMap](https://www.openstreetmap.org/) supplies the base map.
+- [MeteoGate](https://meteogate.eu/) supplies official European high-temperature warnings from MeteoAlarm members.
 
 Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). Air-quality data requires attribution to both CAMS and Open-Meteo. RainViewer requires attribution and its free API is intended for personal, educational, and small-scale community use. OpenStreetMap tiles must follow the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
@@ -67,7 +68,11 @@ Import the repository into Vercel. The included `vercel.json` configures:
 - Long-lived caching for hashed assets
 - A cached serverless proxy for Open-Meteo requests
 
-No environment variables are currently required.
+Set `METEOGATE_KEY` in Vercel to enable official European heat warnings:
+
+```text
+METEOGATE_KEY=your-meteogate-api-key
+```
 
 ## Main structure
 
