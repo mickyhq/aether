@@ -1,13 +1,13 @@
 {
   "name": "aether",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.4",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "nodemon",
     "start": "vite",
     "build": "tsc && vite build",
     "postbuild": "node scripts/warmWeatherCache.js",
@@ -29,6 +29,7 @@
   "devDependencies": {
     "@types/leaflet": "^1.9.21",
     "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "nodemon": "^3.1.14"
   }
 }

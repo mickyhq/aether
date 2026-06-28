@@ -183,6 +183,8 @@ export default function App() {
   const [weatherMode, setWeatherMode] = useState<WeatherMode>(readUrlMode)
   const mapWeatherMode = useDeferredValue(weatherMode)
   const [viewport, setViewport] = useState<WeatherViewport | null>(null)
+  const previousViewportRef = useRef<WeatherViewport | null>(null)
+  const jetStreamViewportRef = useRef<WeatherViewport | null>(null)
   const [mapSamples, setMapSamples] = useState<WeatherMapSample[]>([])
   const [airQualitySamples, setAirQualitySamples] = useState<AirQualityMapSample[]>([])
   const [pointerWeather, setPointerWeather] = useState<MapWeatherPointer | null>(null)
@@ -269,6 +271,10 @@ export default function App() {
   }, [selectedLocation, weatherMode])
 
   useEffect(() => {
+    jetStreamViewportRef.current = null
+  }, [selectedLocation])
+
+  useEffect(() => {
     let cancelled = false
 
     setOfficialHeatAlerts([])
@@ -296,14 +302,29 @@ export default function App() {
       return
     }
 
+    const previousViewport = previousViewportRef.current
+    const zoomChanged = previousViewport !== null &&
+      previousViewport.zoom !== viewport.zoom
+
+    previousViewportRef.current = viewport
+
+    if (mapWeatherMode !== 'jet-stream') {
+      jetStreamViewportRef.current = null
+    } else if (!jetStreamViewportRef.current || !zoomChanged) {
+      jetStreamViewportRef.current = viewport
+    }
+
+    const samplingViewport = mapWeatherMode === 'jet-stream'
+      ? jetStreamViewportRef.current ?? viewport
+      : viewport
     let cancelled = false
     let loading = false
-    const cachedSamples = getCachedWeatherMapSamples(viewport)
+    const cachedSamples = getCachedWeatherMapSamples(samplingViewport)
 
     setMapSamples(current => current.length > 0 ? current : cachedSamples)
 
     const applyPersistentCache = async () => {
-      const samples = await hydrateWeatherMapCache(viewport)
+      const samples = await hydrateWeatherMapCache(samplingViewport)
 
       if (!cancelled && samples.length > 0) {
         setMapSamples(current => current.length > 0 ? current : samples)
@@ -327,7 +348,7 @@ export default function App() {
       loading = true
 
       try {
-        const samples = await fetchWeatherMapSamples(viewport, controller.signal)
+        const samples = await fetchWeatherMapSamples(samplingViewport, controller.signal)
 
         if (!cancelled && samples.length > 0) {
           setMapSamples(samples)
@@ -359,7 +380,7 @@ export default function App() {
       window.removeEventListener('online', refreshWhenVisible)
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
-  }, [selectedForecastReady, viewport])
+  }, [mapWeatherMode, selectedForecastReady, viewport])
 
   useEffect(() => {
     if (!viewport) {

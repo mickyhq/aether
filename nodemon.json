@@ -1,0 +1,13 @@
+{
+  "watch": [
+    "vite.config.ts",
+    "server",
+    "api"
+  ],
+  "ext": "ts,js,json",
+  "ignore": [
+    "dist",
+    "node_modules"
+  ],
+  "exec": "vite"
+}
