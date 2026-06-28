@@ -2,6 +2,11 @@ import { defineConfig } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import {
+  AIR_QUALITY_PARAMETER_CONFIG,
+  WEATHER_PARAMETER_CONFIG,
+  buildCanonicalOpenMeteoParams
+} from './server/openMeteoParams.js'
 
 type WeatherCacheRecord = {
   body: string
@@ -145,7 +150,23 @@ function localWeatherApi(): Plugin {
       return
     }
 
-    const cacheKey = requestUrl.search
+    const parameterConfig = requestUrl.pathname === '/api/weather'
+      ? WEATHER_PARAMETER_CONFIG
+      : AIR_QUALITY_PARAMETER_CONFIG
+    const canonical = buildCanonicalOpenMeteoParams(
+      requestUrl.searchParams,
+      parameterConfig
+    )
+
+    if (!canonical.params) {
+      response.statusCode = 400
+      response.setHeader('Content-Type', 'application/json')
+      response.end(JSON.stringify({ error: canonical.error }))
+      return
+    }
+
+    const canonicalQuery = canonical.params.toString()
+    const cacheKey = `${requestUrl.pathname}?${canonicalQuery}`
     const cached = cache.get(cacheKey)
     const now = Date.now()
 
@@ -155,7 +176,7 @@ function localWeatherApi(): Plugin {
     }
 
     try {
-      const result = await scheduleUpstream(`${upstreamEndpoint}${requestUrl.search}`)
+      const result = await scheduleUpstream(`${upstreamEndpoint}?${canonicalQuery}`)
 
       if (result.status >= 200 && result.status < 300) {
         const freshness = requestUrl.pathname === '/api/air-quality'

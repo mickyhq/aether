@@ -9,18 +9,14 @@ import {
   getRemainingBlockSeconds
 } from '../server/upstreamBackoff.js'
 import { fetchCoalesced } from '../server/coalescedFetch.js'
+import {
+  WEATHER_PARAMETER_CONFIG,
+  buildCanonicalOpenMeteoParams
+} from '../server/openMeteoParams.js'
 
 const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
 const FRESH_CACHE_TTL = 10 * 60
 const STALE_CACHE_TTL = 24 * 60 * 60
-const ALLOWED_PARAMETERS = new Set([
-  'latitude',
-  'longitude',
-  'current',
-  'hourly',
-  'forecast_days'
-])
-const COORDINATE_PATTERN = /^-?\d+(?:\.\d+)?(?:,-?\d+(?:\.\d+)?)*$/
 
 export default async function handler(request, response) {
   if (request.method !== 'GET') {
@@ -29,37 +25,17 @@ export default async function handler(request, response) {
     return
   }
 
-  const latitude = getQueryValue(request.query.latitude)
-  const longitude = getQueryValue(request.query.longitude)
+  const canonical = buildCanonicalOpenMeteoParams(
+    getRequestParams(request.query),
+    WEATHER_PARAMETER_CONFIG
+  )
 
-  if (
-    !latitude ||
-    !longitude ||
-    !COORDINATE_PATTERN.test(latitude) ||
-    !COORDINATE_PATTERN.test(longitude)
-  ) {
-    response.status(400).json({ error: 'Invalid coordinates' })
+  if (!canonical.params) {
+    response.status(400).json({ error: canonical.error })
     return
   }
 
-  const latitudeCount = latitude.split(',').length
-  const longitudeCount = longitude.split(',').length
-
-  if (latitudeCount !== longitudeCount || latitudeCount > 40) {
-    response.status(400).json({ error: 'Coordinate batch too large' })
-    return
-  }
-
-  const params = new URLSearchParams()
-
-  for (const key of ALLOWED_PARAMETERS) {
-    const queryValue = getQueryValue(request.query[key])
-
-    if (queryValue) {
-      params.set(key, normalizeParameter(key, queryValue))
-    }
-  }
-
+  const params = canonical.params
   const cacheKey = params.toString()
   const sharedCache = getSharedCache('aether-weather-v1')
   const cached = await readSharedCache(sharedCache, `fresh:${cacheKey}`)
@@ -165,17 +141,18 @@ function sendRateLimited(response, retryAfter) {
   })
 }
 
-function getQueryValue(value) {
-  return Array.isArray(value) ? value[0] : value
-}
+function getRequestParams(query) {
+  const params = new URLSearchParams()
 
-function normalizeParameter(key, value) {
-  if (key !== 'latitude' && key !== 'longitude') {
-    return value
+  for (const [key, value] of Object.entries(query)) {
+    const values = Array.isArray(value) ? value : [value]
+
+    for (const item of values) {
+      if (typeof item === 'string') {
+        params.append(key, item)
+      }
+    }
   }
 
-  return value
-    .split(',')
-    .map(coordinate => Number(coordinate).toFixed(3))
-    .join(',')
+  return params
 }
