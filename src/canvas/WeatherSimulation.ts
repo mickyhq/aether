@@ -1,4 +1,5 @@
 import type { WeatherConfig, WeatherEvolutionFrame, WeatherMapSample, WeatherMode, WeatherViewport } from '../types/weather'
+import { normalizeLongitude } from '../utils/geo'
 import { Vector2D } from './Vector2D'
 
 type SimulationParticle = {
@@ -583,9 +584,9 @@ export class WeatherSimulation {
   }
 
   private projectToScreen(sample: WeatherMapSample, viewport: WeatherViewport) {
-    const west = this.normalizeLongitude(viewport.west)
-    const east = this.normalizeLongitude(viewport.east)
-    const lon = this.normalizeLongitude(sample.longitude)
+    const west = normalizeLongitude(viewport.west)
+    const east = normalizeLongitude(viewport.east)
+    const lon = normalizeLongitude(sample.longitude)
     const crossesDateLine = east < west
     const adjustedLon = crossesDateLine && lon < west ? lon + 360 : lon
     const adjustedEast = crossesDateLine ? east + 360 : east
@@ -626,7 +627,4 @@ export class WeatherSimulation {
     }
   }
 
-  private normalizeLongitude(longitude: number) {
-    return ((((longitude + 180) % 360) + 360) % 360) - 180
-  }
 }

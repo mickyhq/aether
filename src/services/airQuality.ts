@@ -7,6 +7,7 @@ import type {
 } from '../types/weather'
 import { getVisibleWeatherGrid } from './weatherGrid'
 import { getWeatherCacheKey } from './weatherCache'
+import { degreesToRadians, distanceInKilometers, inverseDistanceWeight } from '../utils/geo'
 
 const AIR_QUALITY_ENDPOINT = '/api/air-quality'
 const CURRENT_FIELDS = [
@@ -218,31 +219,4 @@ function chunkPoints(points: WeatherLocation[], size: number) {
   }
 
   return chunks
-}
-
-function distanceInKilometers(
-  first: Pick<WeatherLocation, 'latitude' | 'longitude'>,
-  second: Pick<WeatherLocation, 'latitude' | 'longitude'>
-) {
-  const earthRadius = 6371
-  const latitudeDelta = degreesToRadians(second.latitude - first.latitude)
-  const longitudeDelta = degreesToRadians(second.longitude - first.longitude)
-  const firstLatitude = degreesToRadians(first.latitude)
-  const secondLatitude = degreesToRadians(second.latitude)
-  const haversine = (
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(firstLatitude) *
-    Math.cos(secondLatitude) *
-    Math.sin(longitudeDelta / 2) ** 2
-  )
-
-  return earthRadius * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
-}
-
-function inverseDistanceWeight(distance: number) {
-  return 1 / Math.max(distance * distance, 0.01)
-}
-
-function degreesToRadians(value: number) {
-  return value * Math.PI / 180
 }

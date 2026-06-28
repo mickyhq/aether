@@ -1,4 +1,5 @@
 import type { WeatherMapSample } from '../types/weather'
+import { normalizeLongitude } from '../utils/geo'
 
 type WeatherCacheRecord = {
   key: string
@@ -101,6 +102,3 @@ function openDatabase() {
   return databasePromise
 }
 
-function normalizeLongitude(longitude: number) {
-  return ((((longitude + 180) % 360) + 360) % 360) - 180
-}

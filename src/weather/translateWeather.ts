@@ -1,4 +1,5 @@
 import type { OpenMeteoResponse, WeatherConfig, WeatherLocation } from '../types/weather'
+import { clamp, degreesToRadians } from '../utils/geo'
 
 const THUNDERSTORM_CODES = new Set([95, 96, 99])
 
@@ -49,14 +50,6 @@ function buildEvolution(payload: OpenMeteoResponse) {
       isThunderstorm: THUNDERSTORM_CODES.has(weatherCode)
     }
   })
-}
-
-function degreesToRadians(degrees: number) {
-  return (degrees * Math.PI) / 180
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
 }
 
 function describeWeather(code: number) {

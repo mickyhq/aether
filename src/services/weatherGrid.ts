@@ -7,6 +7,7 @@ import type {
   WeatherViewport
 } from '../types/weather'
 import { getWeatherCacheKey, loadPersistedWeatherSamples, persistWeatherSamples } from './weatherCache'
+import { clamp, degreesToRadians, distanceInKilometers, inverseDistanceWeight, normalizeAngle, normalizeLongitude, radiansToDegrees } from '../utils/geo'
 
 type GridPoint = WeatherLocation & {
   showBadge: false
@@ -392,21 +393,6 @@ function distributePoints(points: GridPoint[], limit: number) {
   })
 }
 
-function distanceInKilometers(
-  first: { latitude: number, longitude: number },
-  second: { latitude: number, longitude: number }
-) {
-  const latitudeDistance = (first.latitude - second.latitude) * 111.32
-  const longitudeScale = Math.cos(degreesToRadians((first.latitude + second.latitude) / 2))
-  const longitudeDistance = normalizeLongitude(first.longitude - second.longitude) * 111.32 * longitudeScale
-
-  return Math.hypot(latitudeDistance, longitudeDistance)
-}
-
-function inverseDistanceWeight(distance: number) {
-  return 1 / Math.max(distance * distance, 1)
-}
-
 function longitudeToWorldX(longitude: number, worldSize: number) {
   return ((longitude + 180) / 360) * worldSize
 }
@@ -428,25 +414,6 @@ function worldYToLatitude(y: number, worldSize: number) {
   return radiansToDegrees(Math.atan(Math.sinh(mercator)))
 }
 
-function normalizeLongitude(longitude: number) {
-  return ((((longitude + 180) % 360) + 360) % 360) - 180
-}
-
-function normalizeAngle(angle: number) {
-  return ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)
-}
-
-function degreesToRadians(degrees: number) {
-  return degrees * Math.PI / 180
-}
-
-function radiansToDegrees(radians: number) {
-  return radians * 180 / Math.PI
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
 
 function describeWeatherCode(code: number) {
   if (THUNDERSTORM_CODES.has(code)) {

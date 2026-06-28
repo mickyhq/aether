@@ -6,8 +6,8 @@
 
 ## P0 — Bugs & Quick Fixes
 
-- [ ] **Deduplicate shared math utilities.** `distanceInKilometers`, `inverseDistanceWeight`, `degreesToRadians`, `clamp`, `normalizeLongitude` are copy-pasted between `weatherGrid.ts` and `airQuality.ts`. Extract into `src/utils/geo.ts` and `src/utils/math.ts`.
-- [ ] **Fix distance calculation inconsistency.** `weatherGrid.ts` uses a flat-earth approximation (111.32 km/deg) while `airQuality.ts` uses proper haversine. Both should use the same haversine implementation for accuracy.
+- [x] **Deduplicate shared math utilities.** `distanceInKilometers`, `inverseDistanceWeight`, `degreesToRadians`, `clamp`, `normalizeLongitude` are copy-pasted between `weatherGrid.ts` and `airQuality.ts`. Extract into `src/utils/geo.ts` and `src/utils/math.ts`.
+- [x] **Fix distance calculation inconsistency.** `weatherGrid.ts` uses a flat-earth approximation (111.32 km/deg) while `airQuality.ts` uses proper haversine. Both should use the same haversine implementation for accuracy.
 - [ ] **Air quality storage → IndexedDB.** `airQuality.ts` persists to `localStorage` (5 MB limit) while `weatherCache.ts` uses IndexedDB. IndexedDB is better for growing spatial data. Unify on IndexedDB.
 - [ ] **Remove `current.precipitation` from the `OpenMeteoCurrent` type** — it is no longer used after our fix and could confuse future readers.
 - [ ] **Add a `.gitignore` entry for Vercel `.vercel` folder if not already present.**
