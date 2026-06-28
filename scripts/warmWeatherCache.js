@@ -36,7 +36,9 @@ const HOURLY_FIELDS = [
 const DAILY_FIELDS = [
   'temperature_2m_max',
   'temperature_2m_min',
-  'apparent_temperature_max'
+  'apparent_temperature_max',
+  'sunrise',
+  'sunset'
 ]
 const POPULAR_LOCATIONS = [
   { name: 'Ajaccio', latitude: 41.9192, longitude: 8.7386 },
@@ -134,7 +136,8 @@ function getLocationParams(location) {
     current: CURRENT_FIELDS.join(','),
     hourly: HOURLY_FIELDS.join(','),
     daily: DAILY_FIELDS.join(','),
-    forecast_days: '7'
+    forecast_days: '7',
+    timezone: 'auto'
   })
   const canonical = buildCanonicalOpenMeteoParams(
     input,

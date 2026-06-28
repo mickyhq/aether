@@ -26,6 +26,8 @@ export function translateWeather(payload: OpenMeteoResponse, location: WeatherLo
     isThunderstorm: THUNDERSTORM_CODES.has(current.weather_code),
     cloudOpacity,
     evolution: buildEvolution(payload),
+    sunrise: payload.daily?.sunrise?.[0] ?? null,
+    sunset: payload.daily?.sunset?.[0] ?? null,
     heatRisk: buildHeatRisk(payload)
   }
 }

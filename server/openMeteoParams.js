@@ -26,9 +26,12 @@ export const WEATHER_PARAMETER_CONFIG = {
   ]),
   dailyFields: new Set([
     'apparent_temperature_max',
+    'sunrise',
+    'sunset',
     'temperature_2m_max',
     'temperature_2m_min'
   ]),
+  timezone: true,
   maxForecastDays: 7
 }
 
@@ -55,6 +58,10 @@ export function buildCanonicalOpenMeteoParams(input, config) {
 
   if (config.maxForecastDays) {
     allowedParameters.add('forecast_days')
+  }
+
+  if (config.timezone) {
+    allowedParameters.add('timezone')
   }
 
   for (const key of input.keys()) {
@@ -113,6 +120,16 @@ export function buildCanonicalOpenMeteoParams(input, config) {
     }
 
     params.set('daily', daily.join(','))
+  }
+
+  if (config.timezone && input.has('timezone')) {
+    const timezone = input.get('timezone')
+
+    if (timezone !== 'auto') {
+      return invalid('Invalid timezone')
+    }
+
+    params.set('timezone', timezone)
   }
 
   if (config.maxForecastDays && input.has('forecast_days')) {

@@ -2,7 +2,7 @@ import type { OpenMeteoResponse, WeatherLocation } from '../types/weather'
 import type { WeatherDataState } from '../types/weather'
 
 const OPEN_METEO_ENDPOINT = '/api/weather'
-const FORECAST_CACHE_KEY = 'aether:forecast-cache-v2'
+const FORECAST_CACHE_KEY = 'aether:forecast-cache-v3'
 const FORECAST_FRESHNESS = 5 * 60 * 1000
 const FORECAST_STALE_AGE = 6 * 60 * 60 * 1000
 const CURRENT_FIELDS = [
@@ -28,7 +28,9 @@ const HOURLY_FIELDS = [
 const DAILY_FIELDS = [
   'temperature_2m_max',
   'temperature_2m_min',
-  'apparent_temperature_max'
+  'apparent_temperature_max',
+  'sunrise',
+  'sunset'
 ]
 
 export async function fetchOpenMeteoForecast(
@@ -50,7 +52,8 @@ export async function fetchOpenMeteoForecast(
     current: CURRENT_FIELDS.join(','),
     hourly: HOURLY_FIELDS.join(','),
     daily: DAILY_FIELDS.join(','),
-    forecast_days: '7'
+    forecast_days: '7',
+    timezone: 'auto'
   })
 
   const response = await fetch(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)

@@ -108,6 +108,8 @@ export function cacheWeatherSample(location: WeatherLocation, weather: WeatherCo
     updatedAt: Date.now(),
     showBadge: true,
     evolution: weather.evolution,
+    sunrise: weather.sunrise,
+    sunset: weather.sunset,
     temperature: weather.temperature,
     precipitation: weather.precipitation,
     snowfall: weather.snowfall,
@@ -153,6 +155,8 @@ export async function getCachedWeatherForLocation(location: WeatherLocation): Pr
     isThunderstorm: nearbySample.isThunderstorm,
     cloudOpacity: nearbySample.cloudOpacity,
     evolution: nearbySample.evolution ?? [],
+    sunrise: nearbySample.sunrise ?? null,
+    sunset: nearbySample.sunset ?? null,
     heatRisk: null
   }
 }

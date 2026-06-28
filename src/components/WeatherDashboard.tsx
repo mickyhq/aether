@@ -8,6 +8,7 @@ import { Box, Stack, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import type { AirQualityReading, HeatAlert, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
 import { SevereWeatherAlerts } from './SevereWeatherAlerts'
+import { SunTimes } from './SunTimes'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
@@ -76,6 +77,10 @@ export function WeatherDashboard({
           />
         </Stack>
 
+        <SunTimes
+          sunrise={weather?.sunrise ?? null}
+          sunset={weather?.sunset ?? null}
+        />
         <HourlyForecast frames={weather?.evolution ?? []} />
       </Stack>
     </Box>

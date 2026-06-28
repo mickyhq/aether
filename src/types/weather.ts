@@ -42,6 +42,8 @@ export type OpenMeteoDaily = {
   temperature_2m_max: number[]
   temperature_2m_min: number[]
   apparent_temperature_max: number[]
+  sunrise: string[]
+  sunset: string[]
 }
 
 export type OpenMeteoResponse = {
@@ -113,6 +115,8 @@ export type WeatherConfig = {
   isThunderstorm: boolean
   cloudOpacity: number
   evolution: WeatherEvolutionFrame[]
+  sunrise: string | null
+  sunset: string | null
   heatRisk: HeatRisk | null
 }
 
@@ -124,6 +128,8 @@ export type WeatherMapSample = {
   showBadge?: boolean
   estimated?: boolean
   evolution?: WeatherEvolutionFrame[]
+  sunrise?: string | null
+  sunset?: string | null
   temperature: number
   precipitation: number
   snowfall: number
