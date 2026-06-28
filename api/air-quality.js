@@ -3,6 +3,11 @@ import {
   readSharedCache,
   writeSharedCache
 } from '../server/sharedCache.js'
+import {
+  UPSTREAM_BLOCK_KEY,
+  blockUpstream,
+  getRemainingBlockSeconds
+} from '../server/upstreamBackoff.js'
 
 const OPEN_METEO_ENDPOINT = 'https://air-quality-api.open-meteo.com/v1/air-quality'
 const FRESH_CACHE_TTL = 60 * 60
@@ -61,8 +66,23 @@ export default async function handler(request, response) {
     return
   }
 
+  const blockedUntil = await readSharedCache(sharedCache, UPSTREAM_BLOCK_KEY)
+  const blockedFor = getRemainingBlockSeconds(blockedUntil)
+
+  if (blockedFor > 0) {
+    const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
+
+    if (stale) {
+      sendAirQuality(response, stale, 'stale')
+      return
+    }
+
+    sendRateLimited(response, blockedFor)
+    return
+  }
+
   try {
-    const upstream = await fetchWithRetry(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)
+    const upstream = await fetchUpstream(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)
     const body = await upstream.text()
 
     if (upstream.ok) {
@@ -79,6 +99,15 @@ export default async function handler(request, response) {
       return
     }
 
+    let retryAfter
+
+    if (upstream.status === 429) {
+      retryAfter = await blockUpstream(
+        sharedCache,
+        upstream.headers.get('retry-after')
+      )
+    }
+
     const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
 
     if (stale) {
@@ -89,6 +118,11 @@ export default async function handler(request, response) {
     response.status(upstream.status)
     response.setHeader('Content-Type', 'application/json')
     response.setHeader('Cache-Control', 'no-store')
+
+    if (retryAfter) {
+      response.setHeader('Retry-After', String(retryAfter))
+    }
+
     response.send(body)
   } catch {
     const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
@@ -114,23 +148,24 @@ function sendAirQuality(response, record, cacheStatus) {
   response.send(record.body)
 }
 
-async function fetchWithRetry(url, retries = 1) {
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    const upstream = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Aether Air Quality Map'
-      }
-    })
+function sendRateLimited(response, retryAfter) {
+  response.status(429)
+  response.setHeader('Content-Type', 'application/json')
+  response.setHeader('Cache-Control', 'no-store')
+  response.setHeader('Retry-After', String(retryAfter))
+  response.json({
+    error: 'Air quality provider rate limited',
+    retryAfter
+  })
+}
 
-    if (upstream.status !== 429 || attempt === retries) {
-      return upstream
+function fetchUpstream(url) {
+  return fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'Aether Air Quality Map'
     }
-
-    const delay = (attempt + 1) * 500
-
-    await new Promise(resolve => { setTimeout(resolve, delay) })
-  }
+  })
 }
 
 function getQueryValue(value) {

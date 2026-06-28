@@ -10,20 +10,47 @@ type WeatherCacheRecord = {
   staleUntil: number
 }
 
+type UpstreamResult = {
+  status: number
+  body: string
+  contentType: string
+  retryAfter?: string
+}
+
 type Next = (error?: unknown) => void
 
-const pending = new Map<string, Promise<{ status: number, body: string, contentType: string }>>()
+const pending = new Map<string, Promise<UpstreamResult>>()
+const blockedUntil = new Map<string, number>()
 let lastUpstreamTime = 0
 const MIN_SPACING_MS = 300
+const DEFAULT_RETRY_AFTER_SECONDS = 15 * 60
 
-function scheduleUpstream(url: string): Promise<{ status: number, body: string, contentType: string }> {
+function scheduleUpstream(url: string): Promise<UpstreamResult> {
+  const provider = new URL(url).origin
+  const blockedFor = Math.max(
+    0,
+    Math.ceil(((blockedUntil.get(provider) ?? 0) - Date.now()) / 1000)
+  )
+
+  if (blockedFor > 0) {
+    return Promise.resolve({
+      status: 429,
+      body: JSON.stringify({
+        error: 'Weather provider rate limited',
+        retryAfter: blockedFor
+      }),
+      contentType: 'application/json',
+      retryAfter: String(blockedFor)
+    })
+  }
+
   const existing = pending.get(url)
 
   if (existing) {
     return existing
   }
 
-  const promise = fetchWithRetry(url)
+  const promise = fetchUpstream(url)
     .finally(() => {
       pending.delete(url)
     })
@@ -33,31 +60,50 @@ function scheduleUpstream(url: string): Promise<{ status: number, body: string, 
   return promise
 }
 
-async function fetchWithRetry(url: string, retries = 3) {
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    await ensureSpacing()
+async function fetchUpstream(url: string): Promise<UpstreamResult> {
+  await ensureSpacing()
 
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Aether Local Development'
-      }
-    })
-    lastUpstreamTime = Date.now()
-    const body = await response.text()
-
-    if (response.status !== 429 || attempt === retries) {
-      return {
-        status: response.status,
-        body,
-        contentType: response.headers.get('content-type') ?? 'application/json'
-      }
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'Aether Local Development'
     }
-
-    await new Promise(resolve => { setTimeout(resolve, 1500) })
+  })
+  lastUpstreamTime = Date.now()
+  const body = await response.text()
+  const result: UpstreamResult = {
+    status: response.status,
+    body,
+    contentType: response.headers.get('content-type') ?? 'application/json'
   }
 
-  throw new Error('Weather request failed')
+  if (response.status === 429) {
+    const retryAfter = parseRetryAfter(response.headers.get('retry-after'))
+    const provider = new URL(url).origin
+
+    blockedUntil.set(provider, Date.now() + retryAfter * 1000)
+    result.retryAfter = String(retryAfter)
+  }
+
+  return result
+}
+
+function parseRetryAfter(value: string | null) {
+  if (!value) {
+    return DEFAULT_RETRY_AFTER_SECONDS
+  }
+
+  const seconds = Number(value)
+
+  if (Number.isFinite(seconds)) {
+    return Math.max(1, Math.ceil(seconds))
+  }
+
+  const retryAt = Date.parse(value)
+
+  return Number.isNaN(retryAt)
+    ? DEFAULT_RETRY_AFTER_SECONDS
+    : Math.max(1, Math.ceil((retryAt - Date.now()) / 1000))
 }
 
 async function ensureSpacing() {
@@ -134,6 +180,11 @@ function localWeatherApi(): Plugin {
 
       response.statusCode = result.status
       response.setHeader('Content-Type', result.contentType)
+
+      if (result.retryAfter) {
+        response.setHeader('Retry-After', result.retryAfter)
+      }
+
       response.end(result.body)
     } catch (error) {
       if (cached && cached.staleUntil > now) {
