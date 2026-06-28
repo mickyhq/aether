@@ -752,7 +752,7 @@ function windFieldAt(
       continue
     }
 
-    const vector = windVector(angle)
+    const vector = windVector(angle, useJetStream)
 
     vectorX += vector.x * speed * weight
     vectorY += vector.y * speed * weight
@@ -771,10 +771,12 @@ function windFieldAt(
   }
 }
 
-function windVector(angle: number) {
+function windVector(angle: number, reverse = false) {
+  const direction = reverse ? -1 : 1
+
   return {
-    x: -Math.sin(angle),
-    y: Math.cos(angle)
+    x: -Math.sin(angle) * direction,
+    y: Math.cos(angle) * direction
   }
 }
 
