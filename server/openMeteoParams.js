@@ -10,7 +10,9 @@ export const WEATHER_PARAMETER_CONFIG = {
     'snowfall',
     'temperature_2m',
     'weather_code',
+    'wind_direction_250hPa',
     'wind_direction_10m',
+    'wind_speed_250hPa',
     'wind_speed_10m'
   ]),
   hourlyFields: new Set([

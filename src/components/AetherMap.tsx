@@ -142,7 +142,7 @@ export function AetherMap({
         ...reading,
         ...(airQuality ?? {}),
         screenX: Math.max(12, Math.min(pointer.x + 16, size.x - 206)),
-        screenY: Math.max(12, Math.min(pointer.y + 16, size.y - 172))
+        screenY: Math.max(12, Math.min(pointer.y + 16, size.y - 206))
       })
     }
     const handleMouseMove = (event: L.LeafletMouseEvent) => {
@@ -236,7 +236,7 @@ export function AetherMap({
 
     badgeLayer.clearLayers()
 
-    if (mode === 'air-quality') {
+    if (mode === 'air-quality' || mode === 'jet-stream') {
       return
     }
 
@@ -282,6 +282,12 @@ function formatMetric(sample: WeatherMapSample, mode: WeatherMode) {
 
   if (mode === 'wind') {
     return `${Math.round(sample.rawWindSpeed)} km/h`
+  }
+
+  if (mode === 'jet-stream') {
+    return sample.jetStreamSpeed === undefined
+      ? '--'
+      : `${Math.round(sample.jetStreamSpeed)} km/h`
   }
 
   if (mode === 'precipitation') {

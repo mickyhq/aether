@@ -1,6 +1,7 @@
 import AirIcon from '@mui/icons-material/Air'
 import BlurOnIcon from '@mui/icons-material/BlurOn'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
+import FlightIcon from '@mui/icons-material/Flight'
 import ThunderstormIcon from '@mui/icons-material/Thunderstorm'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import { Box, Stack, Typography } from '@mui/material'
@@ -44,6 +45,13 @@ export function WeatherDashboard({
             value={formatWind(weather)}
             selected={mode === 'wind'}
             onClick={() => onModeChange('wind')}
+          />
+          <Metric
+            icon={<FlightIcon />}
+            label="Jet stream"
+            value="250 hPa"
+            selected={mode === 'jet-stream'}
+            onClick={() => onModeChange('jet-stream')}
           />
           <Metric
             icon={<WaterDropIcon />}

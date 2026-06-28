@@ -9,6 +9,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 ## Features
 
 - Animated wind particles colored by speed
+- Animated 250 hPa jet-stream layer
 - Interpolated temperature layer and legend
 - European AQI layer with PM2.5 readings
 - Animated precipitation radar

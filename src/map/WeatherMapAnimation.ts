@@ -40,6 +40,15 @@ const WIND_COLORS = [
   '#ff6b5e',
   '#d967ff'
 ]
+const JET_STREAM_COLORS = [
+  '#6ce5ff',
+  '#62b8ff',
+  '#7785ff',
+  '#a46cff',
+  '#e66cff',
+  '#ff83c8',
+  '#fff4ff'
+]
 
 export class WeatherMapAnimation {
   private map: L.Map
@@ -229,6 +238,11 @@ export class WeatherMapAnimation {
 
     if (this.mode === 'wind') {
       this.drawWind(projectedSamples, deltaTime)
+      return
+    }
+
+    if (this.mode === 'jet-stream') {
+      this.drawJetStream(projectedSamples, deltaTime)
       return
     }
 
@@ -467,6 +481,113 @@ export class WeatherMapAnimation {
     this.context.fillText('72+ km/h', x + legendWidth, y + 29)
   }
 
+  private drawJetStream(samples: ProjectedSample[], deltaTime: number) {
+    const availableSamples = samples.filter(({ sample }) => (
+      sample.jetStreamSpeed !== undefined &&
+      sample.jetStreamAngle !== undefined
+    ))
+
+    if (availableSamples.length === 0) {
+      return
+    }
+
+    const averageSpeed = availableSamples.reduce(
+      (sum, { sample }) => sum + (sample.jetStreamSpeed ?? 0),
+      0
+    ) / availableSamples.length
+
+    this.context.fillStyle = `rgba(21, 12, 54, ${Math.min(0.12 + averageSpeed / 1100, 0.34)})`
+    this.context.fillRect(0, 0, this.width, this.height)
+
+    if (this.reducedMotion) {
+      this.drawJetStreamLegend()
+      return
+    }
+
+    const activeCount = Math.min(
+      PARTICLE_COUNT,
+      Math.round(260 + averageSpeed * 1.4)
+    )
+    const paths = JET_STREAM_COLORS.map(() => new Path2D())
+    const usedBuckets = new Set<number>()
+
+    this.context.save()
+    this.context.lineCap = 'round'
+
+    for (let index = 0; index < activeCount; index += 1) {
+      const particle = this.particles[index]
+
+      if (particle.life <= 0 || this.isOutside(particle.x, particle.y, 60)) {
+        this.resetWindParticle(particle)
+      }
+
+      const field = windFieldAt(
+        particle.x,
+        particle.y,
+        availableSamples,
+        true
+      )
+      const speed = 24 + Math.min(field.speed, 320) * 0.72
+      const tail = 12 + Math.min(field.speed, 320) * 0.17
+
+      particle.x += field.x * speed * deltaTime
+      particle.y += field.y * speed * deltaTime
+      particle.life -= deltaTime
+
+      const bucket = Math.max(
+        0,
+        Math.min(
+          JET_STREAM_COLORS.length - 1,
+          Math.floor((field.speed - 60) / 40)
+        )
+      )
+      const path = paths[bucket]
+
+      usedBuckets.add(bucket)
+      path.moveTo(particle.x - field.x * tail, particle.y - field.y * tail)
+      path.lineTo(particle.x, particle.y)
+    }
+
+    for (const bucket of usedBuckets) {
+      this.context.lineWidth = 7
+      this.context.strokeStyle = 'rgba(18, 6, 45, 0.52)'
+      this.context.stroke(paths[bucket])
+      this.context.lineWidth = 2.1
+      this.context.strokeStyle = JET_STREAM_COLORS[bucket]
+      this.context.stroke(paths[bucket])
+    }
+
+    this.context.restore()
+    this.drawJetStreamLegend()
+  }
+
+  private drawJetStreamLegend() {
+    const legendWidth = Math.min(380, this.width - 48)
+    const x = (this.width - legendWidth) / 2
+    const y = this.height - 34
+    const gradient = this.context.createLinearGradient(x, 0, x + legendWidth, 0)
+
+    for (let index = 0; index < JET_STREAM_COLORS.length; index += 1) {
+      gradient.addColorStop(
+        index / (JET_STREAM_COLORS.length - 1),
+        JET_STREAM_COLORS[index]
+      )
+    }
+
+    this.context.fillStyle = 'rgba(10, 5, 28, 0.8)'
+    this.context.beginPath()
+    this.context.roundRect(x - 12, y - 10, legendWidth + 24, 42, 8)
+    this.context.fill()
+    this.context.fillStyle = gradient
+    this.context.fillRect(x, y, legendWidth, 12)
+    this.context.fillStyle = 'rgba(247, 252, 255, 0.96)'
+    this.context.font = '700 12px Inter, system-ui, sans-serif'
+    this.context.textAlign = 'left'
+    this.context.fillText('60 km/h · 250 hPa', x, y + 29)
+    this.context.textAlign = 'right'
+    this.context.fillText('300+ km/h', x + legendWidth, y + 29)
+  }
+
   private drawPrecipitation(samples: ProjectedSample[], deltaTime: number) {
     const wetSamples = samples.filter(({ sample }) => sample.precipitation > 0.02 || sample.snowfall > 0.02)
 
@@ -605,7 +726,12 @@ export class WeatherMapAnimation {
   }
 }
 
-function windFieldAt(x: number, y: number, samples: ProjectedSample[]) {
+function windFieldAt(
+  x: number,
+  y: number,
+  samples: ProjectedSample[],
+  useJetStream = false
+) {
   let vectorX = 0
   let vectorY = 0
   let totalWeight = 0
@@ -615,10 +741,21 @@ function windFieldAt(x: number, y: number, samples: ProjectedSample[]) {
     const distanceY = projected.y - y
     const distanceSquared = distanceX * distanceX + distanceY * distanceY
     const weight = 1 / (distanceSquared + 14000)
-    const vector = windVector(projected.sample.windAngle)
+    const speed = useJetStream
+      ? projected.sample.jetStreamSpeed
+      : projected.sample.rawWindSpeed
+    const angle = useJetStream
+      ? projected.sample.jetStreamAngle
+      : projected.sample.windAngle
 
-    vectorX += vector.x * projected.sample.rawWindSpeed * weight
-    vectorY += vector.y * projected.sample.rawWindSpeed * weight
+    if (speed === undefined || angle === undefined) {
+      continue
+    }
+
+    const vector = windVector(angle)
+
+    vectorX += vector.x * speed * weight
+    vectorY += vector.y * speed * weight
     totalWeight += weight
   }
 

@@ -1,6 +1,7 @@
 import AirIcon from '@mui/icons-material/Air'
 import BlurOnIcon from '@mui/icons-material/BlurOn'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
+import FlightIcon from '@mui/icons-material/Flight'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import type { MapWeatherPointer } from '../types/weather'
 
@@ -30,6 +31,15 @@ export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
         <DeviceThermostatIcon />
         <span>{Math.round(reading.temperature)}°C</span>
       </div>
+
+      {reading.jetStreamSpeed !== undefined && reading.jetStreamAngle !== undefined && (
+        <div className="map-weather-tooltip-row">
+          <FlightIcon />
+          <span>
+            Jet {Math.round(reading.jetStreamSpeed)} km/h {formatWindDirection(reading.jetStreamAngle)}
+          </span>
+        </div>
+      )}
 
       <div className="map-weather-tooltip-row">
         <AirIcon />

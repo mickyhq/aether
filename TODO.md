@@ -18,6 +18,7 @@
 
 ## P2 — Product improvements
 
+- [x] Add an animated 250 hPa jet-stream map layer.
 - [x] Add severe-weather alerts for thunderstorms, heavy rain, and snow.
 - [x] Add heat-wave forecasts and official US heat warnings.
 - [ ] Add favorite and recent locations.
