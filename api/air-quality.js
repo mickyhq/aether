@@ -8,6 +8,7 @@ import {
   blockUpstream,
   getRemainingBlockSeconds
 } from '../server/upstreamBackoff.js'
+import { fetchCoalesced } from '../server/coalescedFetch.js'
 
 const OPEN_METEO_ENDPOINT = 'https://air-quality-api.open-meteo.com/v1/air-quality'
 const FRESH_CACHE_TTL = 60 * 60
@@ -82,13 +83,16 @@ export default async function handler(request, response) {
   }
 
   try {
-    const upstream = await fetchUpstream(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)
-    const body = await upstream.text()
+    const upstream = await fetchCoalesced(
+      `air-quality:${cacheKey}`,
+      `${OPEN_METEO_ENDPOINT}?${params.toString()}`,
+      'Aether Air Quality Map'
+    )
 
     if (upstream.ok) {
       const record = {
-        body,
-        contentType: upstream.headers.get('content-type') ?? 'application/json'
+        body: upstream.body,
+        contentType: upstream.contentType
       }
 
       await Promise.all([
@@ -104,7 +108,7 @@ export default async function handler(request, response) {
     if (upstream.status === 429) {
       retryAfter = await blockUpstream(
         sharedCache,
-        upstream.headers.get('retry-after')
+        upstream.retryAfter
       )
     }
 
@@ -123,7 +127,7 @@ export default async function handler(request, response) {
       response.setHeader('Retry-After', String(retryAfter))
     }
 
-    response.send(body)
+    response.send(upstream.body)
   } catch {
     const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
 
@@ -156,15 +160,6 @@ function sendRateLimited(response, retryAfter) {
   response.json({
     error: 'Air quality provider rate limited',
     retryAfter
-  })
-}
-
-function fetchUpstream(url) {
-  return fetch(url, {
-    headers: {
-      Accept: 'application/json',
-      'User-Agent': 'Aether Air Quality Map'
-    }
   })
 }
 

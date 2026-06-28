@@ -2,8 +2,6 @@
 
 ## P0 — Weather reliability
 
-- [ ] Add request coalescing so simultaneous cache misses make one Open-Meteo call.
-- [x] Stop upstream calls temporarily after a `429` response and honor `Retry-After`.
 - [ ] Validate and canonicalize all API parameters to prevent cache-busting requests.
 - [ ] Warm the Vercel cache for popular locations after deployment.
 - [ ] Prioritize selected-location forecasts over background map-grid refreshes.
