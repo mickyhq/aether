@@ -1,1 +1,1 @@
-update the version at each request where code change happened.
+update the version at each request where code change happened. version segments go up to 99.

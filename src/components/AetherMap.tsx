@@ -13,6 +13,11 @@ import type {
   WeatherViewport
 } from '../types/weather'
 
+const WORLD_BOUNDS = L.latLngBounds(
+  [-85.05112878, -180],
+  [85.05112878, 180]
+)
+
 type AetherMapProps = {
   location: WeatherLocation
   mode: WeatherMode
@@ -79,11 +84,14 @@ export function AetherMap({
       center: [initialLocation.latitude, initialLocation.longitude],
       zoom: 10,
       zoomControl: true,
-      worldCopyJump: true
+      maxBounds: WORLD_BOUNDS,
+      maxBoundsViscosity: 1,
+      worldCopyJump: false
     })
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
+      noWrap: true,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map)
     map.attributionControl.addAttribution(
