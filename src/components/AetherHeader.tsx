@@ -1,5 +1,5 @@
 import SearchIcon from '@mui/icons-material/Search'
-import { Box, IconButton, Stack, TextField, Typography } from '@mui/material'
+import { Box, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import type { WeatherDataState, WeatherLocation } from '../types/weather'
@@ -18,6 +18,19 @@ export function AetherHeader({ location, status, dataState, onSearch }: AetherHe
     event.preventDefault()
     onSearch(query)
   }
+
+const DATA_STATE_TOOLTIP = (
+  <dl className="data-state-legend">
+    <dt>Live</dt>
+    <dd>Fresh data from Open-Meteo API</dd>
+    <dt>Cached</dt>
+    <dd>Served from CDN cache or local storage</dd>
+    <dt>Stale</dt>
+    <dd>Cached data served when upstream was unreachable</dd>
+    <dt>Unavailable</dt>
+    <dd>No data could be retrieved from any source</dd>
+  </dl>
+) as unknown as React.ReactNode
 
   return (
     <Box className="aether-header">
@@ -46,13 +59,20 @@ export function AetherHeader({ location, status, dataState, onSearch }: AetherHe
         <IconButton type="submit" aria-label="Search" className="city-search-button">
           <SearchIcon fontSize="small" />
         </IconButton>
-        <Typography
-          variant="caption"
-          role="status"
-          className={`search-status search-status-${dataState}`}
+        <Tooltip
+          title={DATA_STATE_TOOLTIP}
+          componentsProps={{ tooltip: { className: 'data-state-tooltip' } }}
+          enterDelay={200}
+          leaveDelay={200}
         >
-          {status}
-        </Typography>
+          <Typography
+            variant="caption"
+            role="status"
+            className={`search-status search-status-${dataState}`}
+          >
+            {status}
+          </Typography>
+        </Tooltip>
       </Box>
     </Box>
   )
