@@ -22,7 +22,7 @@ export async function readSharedCache(cache, key) {
 
 export async function writeSharedCache(cache, key, value, ttl) {
   if (!cache) {
-    return
+    return false
   }
 
   try {
@@ -30,7 +30,8 @@ export async function writeSharedCache(cache, key, value, ttl) {
       name: key,
       ttl
     })
+    return true
   } catch {
-    return
+    return false
   }
 }

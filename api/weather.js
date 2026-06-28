@@ -13,10 +13,12 @@ import {
   WEATHER_PARAMETER_CONFIG,
   buildCanonicalOpenMeteoParams
 } from '../server/openMeteoParams.js'
+import {
+  STALE_CACHE_TTL,
+  WEATHER_FRESH_CACHE_TTL
+} from '../server/cachePolicy.js'
 
 const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
-const FRESH_CACHE_TTL = 10 * 60
-const STALE_CACHE_TTL = 24 * 60 * 60
 
 export default async function handler(request, response) {
   if (request.method !== 'GET') {
@@ -74,7 +76,12 @@ export default async function handler(request, response) {
       }
 
       await Promise.all([
-        writeSharedCache(sharedCache, `fresh:${cacheKey}`, record, FRESH_CACHE_TTL),
+        writeSharedCache(
+          sharedCache,
+          `fresh:${cacheKey}`,
+          record,
+          WEATHER_FRESH_CACHE_TTL
+        ),
         writeSharedCache(sharedCache, `stale:${cacheKey}`, record, STALE_CACHE_TTL)
       ])
       sendWeather(response, record, 'upstream')

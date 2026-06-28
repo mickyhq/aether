@@ -13,10 +13,12 @@ import {
   AIR_QUALITY_PARAMETER_CONFIG,
   buildCanonicalOpenMeteoParams
 } from '../server/openMeteoParams.js'
+import {
+  AIR_QUALITY_FRESH_CACHE_TTL,
+  STALE_CACHE_TTL
+} from '../server/cachePolicy.js'
 
 const OPEN_METEO_ENDPOINT = 'https://air-quality-api.open-meteo.com/v1/air-quality'
-const FRESH_CACHE_TTL = 60 * 60
-const STALE_CACHE_TTL = 24 * 60 * 60
 
 export default async function handler(request, response) {
   if (request.method !== 'GET') {
@@ -74,7 +76,12 @@ export default async function handler(request, response) {
       }
 
       await Promise.all([
-        writeSharedCache(sharedCache, `fresh:${cacheKey}`, record, FRESH_CACHE_TTL),
+        writeSharedCache(
+          sharedCache,
+          `fresh:${cacheKey}`,
+          record,
+          AIR_QUALITY_FRESH_CACHE_TTL
+        ),
         writeSharedCache(sharedCache, `stale:${cacheKey}`, record, STALE_CACHE_TTL)
       ])
       sendAirQuality(response, record, 'upstream')

@@ -10,6 +10,7 @@
     "dev": "vite",
     "start": "vite",
     "build": "tsc && vite build",
+    "postbuild": "node scripts/warmWeatherCache.js",
     "preview": "vite preview"
   },
   "dependencies": {
