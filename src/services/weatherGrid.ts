@@ -12,7 +12,7 @@ type GridPoint = WeatherLocation & {
   showBadge: false
 }
 
-const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
+const OPEN_METEO_ENDPOINT = '/api/weather'
 const CURRENT_FIELDS = [
   'temperature_2m',
   'precipitation',
@@ -26,9 +26,9 @@ const CURRENT_FIELDS = [
 ]
 const THUNDERSTORM_CODES = new Set([95, 96, 99])
 const FRESHNESS = 5 * 60 * 1000
-const BATCH_SIZE = 40
-const MAX_GRID_POINTS = 180
-const BASE_SPACING = 160
+const BATCH_SIZE = 32
+const MAX_GRID_POINTS = 48
+const BASE_SPACING = 260
 const sampleCache = new Map<string, WeatherMapSample>()
 let persistentCachePromise: Promise<void> | null = null
 
@@ -43,12 +43,15 @@ export async function fetchWeatherMapSamples(viewport: WeatherViewport) {
 
     return needsRefresh(sample)
   })
-  const settledBatches = await Promise.allSettled(
-    chunkPoints(refreshPoints, BATCH_SIZE).map(fetchWeatherBatch)
-  )
-  const freshSamples = settledBatches
-    .filter((result): result is PromiseFulfilledResult<WeatherMapSample[]> => result.status === 'fulfilled')
-    .flatMap(result => result.value)
+  const freshSamples: WeatherMapSample[] = []
+
+  for (const batch of chunkPoints(refreshPoints, BATCH_SIZE)) {
+    try {
+      freshSamples.push(...await fetchWeatherBatch(batch))
+    } catch {
+      continue
+    }
+  }
 
   rememberSamples(freshSamples)
   void persistWeatherSamples(freshSamples)
@@ -86,6 +89,39 @@ export function cacheWeatherSample(location: WeatherLocation, weather: WeatherCo
 
   rememberSamples([sample])
   void persistWeatherSamples([sample])
+}
+
+export async function getCachedWeatherForLocation(location: WeatherLocation): Promise<WeatherConfig | null> {
+  await loadPersistentCache()
+
+  const nearbySample = Array.from(sampleCache.values())
+    .map(sample => ({
+      sample,
+      distance: distanceInKilometers(sample, location)
+    }))
+    .filter(item => item.distance <= 50)
+    .sort((first, second) => first.distance - second.distance)[0]?.sample
+
+  if (!nearbySample) {
+    return null
+  }
+
+  return {
+    zone: location.label,
+    temperature: nearbySample.temperature,
+    humidity: 0,
+    weatherCode: nearbySample.weatherCode,
+    description: describeWeatherCode(nearbySample.weatherCode),
+    precipitation: nearbySample.precipitation,
+    snowfall: nearbySample.snowfall,
+    windSpeed: nearbySample.windSpeed,
+    rawWindSpeed: nearbySample.rawWindSpeed,
+    windAngle: nearbySample.windAngle,
+    rainDensity: Math.round(clamp(nearbySample.precipitation, 0, 12) * 42),
+    isThunderstorm: nearbySample.isThunderstorm,
+    cloudOpacity: nearbySample.cloudOpacity,
+    evolution: []
+  }
 }
 
 export function interpolateWeatherAt(
@@ -396,4 +432,28 @@ function radiansToDegrees(radians: number) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
+}
+
+function describeWeatherCode(code: number) {
+  if (THUNDERSTORM_CODES.has(code)) {
+    return 'Thunderstorm'
+  }
+
+  if ([71, 73, 75, 77, 85, 86].includes(code)) {
+    return 'Snow'
+  }
+
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
+    return 'Rain'
+  }
+
+  if ([45, 48].includes(code)) {
+    return 'Fog'
+  }
+
+  if ([1, 2, 3].includes(code)) {
+    return 'Cloud drift'
+  }
+
+  return 'Clear air'
 }

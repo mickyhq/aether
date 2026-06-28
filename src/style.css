@@ -201,13 +201,17 @@ body {
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: rgba(143, 229, 255, 0.14);
-  color: #8fe5ff;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .brand-name {

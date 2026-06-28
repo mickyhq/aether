@@ -11,6 +11,7 @@ import {
   WEATHER_REFRESH_INTERVAL,
   cacheWeatherSample,
   fetchWeatherMapSamples,
+  getCachedWeatherForLocation,
   getCachedWeatherMapSamples,
   hydrateWeatherMapCache
 } from './services/weatherGrid'
@@ -90,8 +91,15 @@ export default function App() {
           setStatus('Live')
         }
       } catch (error) {
+        const cachedWeather = await getCachedWeatherForLocation(selectedLocation)
+
         if (!cancelled) {
-          setStatus(error instanceof Error ? error.message : 'Weather fetch failed')
+          if (cachedWeather) {
+            setWeather(cachedWeather)
+            setStatus('Cached')
+          } else {
+            setStatus(error instanceof Error ? error.message : 'Weather fetch failed')
+          }
         }
       }
     }

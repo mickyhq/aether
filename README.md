@@ -60,8 +60,8 @@ Import the repository into Vercel. The included `vercel.json` configures:
 - Vite as the framework
 - `npm run build` as the build command
 - `dist` as the output directory
-- SPA route fallback
 - Long-lived caching for hashed assets
+- A cached serverless proxy for Open-Meteo requests
 
 No environment variables are currently required.
 

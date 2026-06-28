@@ -1,4 +1,3 @@
-import PublicIcon from '@mui/icons-material/Public'
 import SearchIcon from '@mui/icons-material/Search'
 import { Box, IconButton, Stack, TextField, Typography } from '@mui/material'
 import { useState } from 'react'
@@ -23,7 +22,7 @@ export function AetherHeader({ location, status, onSearch }: AetherHeaderProps) 
     <Box className="aether-header">
       <Stack direction="row" alignItems="center" gap={1.25} className="brand-block">
         <Box className="brand-mark">
-          <PublicIcon fontSize="small" />
+          <img src="/aether.svg" alt="" className="brand-logo" />
         </Box>
         <Typography variant="subtitle2" className="brand-name">
           Aether
