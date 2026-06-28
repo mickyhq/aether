@@ -42,6 +42,8 @@ export function AetherMap({
   const airQualitySamplesRef = useRef(airQualitySamples)
   const pointerCallbackRef = useRef(onPointerWeatherChange)
   const clickCallbackRef = useRef(onMapClick)
+  const clickedLatRef = useRef(0)
+  const clickedLngRef = useRef(0)
   const pointerRefreshRef = useRef<() => void>(() => {})
   const lastPointerRef = useRef<{
     latitude: number
@@ -161,6 +163,8 @@ export function AetherMap({
       pointerCallbackRef.current(null)
     }
     const handleMapClick = (event: L.LeafletMouseEvent) => {
+      clickedLatRef.current = event.latlng.lat
+      clickedLngRef.current = event.latlng.lng
       clickCallbackRef.current({
         label: `${event.latlng.lat.toFixed(3)}, ${event.latlng.lng.toFixed(3)}`,
         latitude: event.latlng.lat,
@@ -214,6 +218,13 @@ export function AetherMap({
 
     const nextCenter: L.LatLngExpression = [location.latitude, location.longitude]
     const currentCenter = map.getCenter()
+    if (
+      Math.abs(clickedLatRef.current - location.latitude) < 0.0001 &&
+      Math.abs(clickedLngRef.current - location.longitude) < 0.0001
+    ) {
+      return
+    }
+
     const latDelta = Math.abs(currentCenter.lat - location.latitude)
     const lngDelta = Math.abs(currentCenter.lng - location.longitude)
 
