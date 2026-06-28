@@ -2,10 +2,6 @@
 
 ## P0 — Weather reliability
 
-- [x] Validate and canonicalize all API parameters to prevent cache-busting requests.
-- [x] Warm the Vercel cache for popular locations after deployment.
-- [x] Prioritize selected-location forecasts over background map-grid refreshes.
-- [x] Show clear `Live`, `Cached`, `Stale`, and `Unavailable` states in the UI.
 
 ## P1 — Cache and monitoring
 
@@ -18,7 +14,6 @@
 
 ## P2 — Product improvements
 
-- [ ] Add a dark map tile option.
 - [ ] Add radar opacity controls.
 - [ ] Add keyboard map navigation and improved screen-reader labels.
 - [ ] Add PWA support for a stronger offline experience.
