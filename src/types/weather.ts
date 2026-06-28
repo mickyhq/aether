@@ -24,8 +24,6 @@ export type OpenMeteoCurrent = {
   cloud_cover: number
   wind_speed_10m: number
   wind_direction_10m: number
-  wind_speed_250hPa?: number
-  wind_direction_250hPa?: number
 }
 
 export type OpenMeteoHourly = {
@@ -133,8 +131,6 @@ export type WeatherMapSample = {
   windSpeed: number
   rawWindSpeed: number
   windAngle: number
-  jetStreamSpeed?: number
-  jetStreamAngle?: number
   cloudOpacity: number
   isThunderstorm: boolean
 }
@@ -148,6 +144,16 @@ export type AirQualityMapSample = {
   pm10: number
   nitrogenDioxide: number
   ozone: number
+}
+
+export type JetStreamSample = {
+  latitude: number
+  longitude: number
+  updatedAt: number
+  speed: number
+  angle: number
+  eastward: number
+  northward: number
 }
 
 export type AirQualityReading = Omit<AirQualityMapSample, 'updatedAt'>

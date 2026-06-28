@@ -22,9 +22,7 @@ const CURRENT_FIELDS = [
   'weather_code',
   'cloud_cover',
   'wind_speed_10m',
-  'wind_direction_10m',
-  'wind_speed_250hPa',
-  'wind_direction_250hPa'
+  'wind_direction_10m'
 ]
 
 const HOURLY_FIELDS = [
@@ -185,7 +183,6 @@ export function interpolateWeatherAt(
   )
   const eastwardWind = weighted(sample => -sample.rawWindSpeed * Math.sin(sample.windAngle))
   const northwardWind = weighted(sample => -sample.rawWindSpeed * Math.cos(sample.windAngle))
-  const jetStream = interpolateJetStream(nearbySamples)
   const nearest = nearbySamples[0].sample
 
   return {
@@ -195,7 +192,6 @@ export function interpolateWeatherAt(
     precipitation: weighted(sample => sample.precipitation),
     rawWindSpeed: Math.hypot(eastwardWind, northwardWind),
     windAngle: normalizeAngle(Math.atan2(-eastwardWind, -northwardWind)),
-    ...jetStream,
     cloudOpacity: weighted(sample => sample.cloudOpacity),
     isThunderstorm: nearest.isThunderstorm
   }
@@ -256,10 +252,6 @@ function mapWeatherSample(point: GridPoint | undefined, payload: OpenMeteoRespon
     windSpeed: clamp(rawWindSpeed / 80, 0, 1),
     rawWindSpeed,
     windAngle: degreesToRadians(current.wind_direction_10m),
-    jetStreamSpeed: current.wind_speed_250hPa,
-    jetStreamAngle: current.wind_direction_250hPa === undefined
-      ? undefined
-      : degreesToRadians(current.wind_direction_250hPa),
     cloudOpacity: clamp(current.cloud_cover / 100, 0, 1),
     isThunderstorm: THUNDERSTORM_CODES.has(current.weather_code)
   }
@@ -383,7 +375,6 @@ function estimateSample(point: GridPoint): WeatherMapSample | null {
   const northwardWind = weighted(sample => -sample.rawWindSpeed * Math.cos(sample.windAngle))
   const rawWindSpeed = Math.hypot(eastwardWind, northwardWind)
   const windAngle = normalizeAngle(Math.atan2(-eastwardWind, -northwardWind))
-  const jetStream = interpolateJetStream(nearbySamples)
   const nearest = nearbySamples[0].sample
 
   return {
@@ -399,7 +390,6 @@ function estimateSample(point: GridPoint): WeatherMapSample | null {
     windSpeed: clamp(rawWindSpeed / 80, 0, 1),
     rawWindSpeed,
     windAngle,
-    ...jetStream,
     cloudOpacity: weighted(sample => sample.cloudOpacity),
     isThunderstorm: nearest.isThunderstorm
   }
@@ -422,45 +412,8 @@ function loadPersistentCache() {
 function needsRefresh(sample: WeatherMapSample | undefined) {
   return (
     !sample?.updatedAt ||
-    sample.jetStreamSpeed === undefined ||
-    sample.jetStreamAngle === undefined ||
     Date.now() - sample.updatedAt >= FRESHNESS
   )
-}
-
-function interpolateJetStream(
-  nearbySamples: Array<{ sample: WeatherMapSample, distance: number }>
-) {
-  const available = nearbySamples.filter(({ sample }) => (
-    sample.jetStreamSpeed !== undefined &&
-    sample.jetStreamAngle !== undefined
-  ))
-
-  if (available.length === 0) {
-    return {}
-  }
-
-  const totalWeight = available.reduce(
-    (sum, item) => sum + inverseDistanceWeight(item.distance),
-    0
-  )
-  const eastward = available.reduce((sum, item) => {
-    const speed = item.sample.jetStreamSpeed ?? 0
-    const angle = item.sample.jetStreamAngle ?? 0
-
-    return sum - speed * Math.sin(angle) * inverseDistanceWeight(item.distance)
-  }, 0) / totalWeight
-  const northward = available.reduce((sum, item) => {
-    const speed = item.sample.jetStreamSpeed ?? 0
-    const angle = item.sample.jetStreamAngle ?? 0
-
-    return sum - speed * Math.cos(angle) * inverseDistanceWeight(item.distance)
-  }, 0) / totalWeight
-
-  return {
-    jetStreamSpeed: Math.hypot(eastward, northward),
-    jetStreamAngle: normalizeAngle(Math.atan2(-eastward, -northward))
-  }
 }
 
 function chunkPoints(points: GridPoint[], size: number) {

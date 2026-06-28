@@ -1,5 +1,11 @@
 import L from 'leaflet'
-import type { AirQualityMapSample, WeatherMapSample, WeatherMode } from '../types/weather'
+import { geographicDistanceSquared } from '../services/jetStream'
+import type {
+  AirQualityMapSample,
+  JetStreamSample,
+  WeatherMapSample,
+  WeatherMode
+} from '../types/weather'
 
 type Particle = {
   x: number
@@ -62,6 +68,7 @@ export class WeatherMapAnimation {
   private airQualityTextureDirty = true
   private samples: WeatherMapSample[] = []
   private airQualitySamples: AirQualityMapSample[] = []
+  private jetStreamSamples: JetStreamSample[] = []
   private mode: WeatherMode = 'temperature'
   private particles: Particle[]
   private lightning: LightningSegment[] = []
@@ -128,18 +135,26 @@ export class WeatherMapAnimation {
   setData(
     samples: WeatherMapSample[],
     mode: WeatherMode,
-    airQualitySamples: AirQualityMapSample[]
+    airQualitySamples: AirQualityMapSample[],
+    jetStreamSamples: JetStreamSample[]
   ) {
     const samplesChanged = samples !== this.samples
     const airQualityChanged = airQualitySamples !== this.airQualitySamples
+    const jetStreamChanged = jetStreamSamples !== this.jetStreamSamples
+    const activeDataChanged = mode === 'jet-stream'
+      ? jetStreamChanged
+      : mode === 'air-quality'
+        ? airQualityChanged
+        : samplesChanged
 
-    if (mode !== this.mode || samplesChanged || airQualityChanged) {
+    if (mode !== this.mode || activeDataChanged) {
       this.resetParticles()
       this.lightning = []
     }
 
     this.samples = samples
     this.airQualitySamples = airQualitySamples
+    this.jetStreamSamples = jetStreamSamples
     this.mode = mode
 
     if (samplesChanged) {
@@ -217,6 +232,11 @@ export class WeatherMapAnimation {
       return
     }
 
+    if (this.mode === 'jet-stream') {
+      this.drawJetStream(this.jetStreamSamples, deltaTime)
+      return
+    }
+
     if (this.samples.length === 0) {
       return
     }
@@ -238,11 +258,6 @@ export class WeatherMapAnimation {
 
     if (this.mode === 'wind') {
       this.drawWind(projectedSamples, deltaTime)
-      return
-    }
-
-    if (this.mode === 'jet-stream') {
-      this.drawJetStream(projectedSamples, deltaTime)
       return
     }
 
@@ -481,20 +496,15 @@ export class WeatherMapAnimation {
     this.context.fillText('72+ km/h', x + legendWidth, y + 29)
   }
 
-  private drawJetStream(samples: ProjectedSample[], deltaTime: number) {
-    const availableSamples = samples.filter(({ sample }) => (
-      sample.jetStreamSpeed !== undefined &&
-      sample.jetStreamAngle !== undefined
-    ))
-
-    if (availableSamples.length === 0) {
+  private drawJetStream(samples: JetStreamSample[], deltaTime: number) {
+    if (samples.length === 0) {
       return
     }
 
-    const averageSpeed = availableSamples.reduce(
-      (sum, { sample }) => sum + (sample.jetStreamSpeed ?? 0),
+    const averageSpeed = samples.reduce(
+      (sum, sample) => sum + sample.speed,
       0
-    ) / availableSamples.length
+    ) / samples.length
 
     this.context.fillStyle = `rgba(21, 12, 54, ${Math.min(0.12 + averageSpeed / 1100, 0.34)})`
     this.context.fillRect(0, 0, this.width, this.height)
@@ -521,11 +531,14 @@ export class WeatherMapAnimation {
         this.resetWindParticle(particle)
       }
 
-      const field = windFieldAt(
+      const location = this.map.containerPointToLatLng([
         particle.x,
-        particle.y,
-        availableSamples,
-        true
+        particle.y
+      ])
+      const field = jetStreamFieldAt(
+        location.lat,
+        location.lng,
+        samples
       )
       const speed = 24 + Math.min(field.speed, 320) * 0.72
       const tail = 12 + Math.min(field.speed, 320) * 0.17
@@ -729,8 +742,7 @@ export class WeatherMapAnimation {
 function windFieldAt(
   x: number,
   y: number,
-  samples: ProjectedSample[],
-  useJetStream = false
+  samples: ProjectedSample[]
 ) {
   let vectorX = 0
   let vectorY = 0
@@ -741,18 +753,8 @@ function windFieldAt(
     const distanceY = projected.y - y
     const distanceSquared = distanceX * distanceX + distanceY * distanceY
     const weight = 1 / Math.max(distanceSquared, 64)
-    const speed = useJetStream
-      ? projected.sample.jetStreamSpeed
-      : projected.sample.rawWindSpeed
-    const angle = useJetStream
-      ? projected.sample.jetStreamAngle
-      : projected.sample.windAngle
-
-    if (speed === undefined || angle === undefined) {
-      continue
-    }
-
-    const vector = windVector(angle)
+    const speed = projected.sample.rawWindSpeed
+    const vector = windVector(projected.sample.windAngle)
 
     vectorX += vector.x * speed * weight
     vectorY += vector.y * speed * weight
@@ -767,6 +769,42 @@ function windFieldAt(
   return {
     x: eastwardSpeed / length,
     y: southwardSpeed / length,
+    speed
+  }
+}
+
+function jetStreamFieldAt(
+  latitude: number,
+  longitude: number,
+  samples: JetStreamSample[]
+) {
+  let eastward = 0
+  let northward = 0
+  let totalWeight = 0
+
+  for (const sample of samples) {
+    const distanceSquared = geographicDistanceSquared(
+      latitude,
+      longitude,
+      sample.latitude,
+      sample.longitude
+    )
+    const weight = 1 / (distanceSquared + 90000)
+
+    eastward += sample.eastward * weight
+    northward += sample.northward * weight
+    totalWeight += weight
+  }
+
+  eastward /= totalWeight || 1
+  northward /= totalWeight || 1
+
+  const speed = Math.hypot(eastward, northward)
+  const length = speed || 1
+
+  return {
+    x: eastward / length,
+    y: -northward / length,
     speed
   }
 }

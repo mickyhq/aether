@@ -4,8 +4,10 @@ import { WeatherMapAnimation } from '../map/WeatherMapAnimation'
 import { WeatherRadarLayer } from '../map/WeatherRadarLayer'
 import { interpolateWeatherAt } from '../services/weatherGrid'
 import { interpolateAirQualityAt } from '../services/airQuality'
+import { interpolateJetStreamAt } from '../services/jetStream'
 import type {
   AirQualityMapSample,
+  JetStreamSample,
   MapWeatherPointer,
   WeatherLocation,
   WeatherMapSample,
@@ -22,6 +24,7 @@ type AetherMapProps = {
   location: WeatherLocation
   mode: WeatherMode
   samples: WeatherMapSample[]
+  jetStreamSamples: JetStreamSample[]
   airQualitySamples: AirQualityMapSample[]
   onViewportChange: (viewport: WeatherViewport) => void
   onPointerWeatherChange: (reading: MapWeatherPointer | null) => void
@@ -32,6 +35,7 @@ export function AetherMap({
   location,
   mode,
   samples,
+  jetStreamSamples,
   airQualitySamples,
   onViewportChange,
   onPointerWeatherChange,
@@ -44,6 +48,7 @@ export function AetherMap({
   const animationRef = useRef<WeatherMapAnimation | null>(null)
   const radarRef = useRef<WeatherRadarLayer | null>(null)
   const samplesRef = useRef(samples)
+  const jetStreamSamplesRef = useRef(jetStreamSamples)
   const airQualitySamplesRef = useRef(airQualitySamples)
   const pointerCallbackRef = useRef(onPointerWeatherChange)
   const clickCallbackRef = useRef(onMapClick)
@@ -63,6 +68,11 @@ export function AetherMap({
     samplesRef.current = samples
     pointerRefreshRef.current()
   }, [samples])
+
+  useEffect(() => {
+    jetStreamSamplesRef.current = jetStreamSamples
+    pointerRefreshRef.current()
+  }, [jetStreamSamples])
 
   useEffect(() => {
     airQualitySamplesRef.current = airQualitySamples
@@ -147,9 +157,15 @@ export function AetherMap({
         pointer.longitude,
         airQualitySamplesRef.current
       )
+      const jetStream = interpolateJetStreamAt(
+        pointer.latitude,
+        pointer.longitude,
+        jetStreamSamplesRef.current
+      )
 
       pointerCallbackRef.current({
         ...reading,
+        ...(jetStream ?? {}),
         ...(airQuality ?? {}),
         screenX: Math.max(12, Math.min(pointer.x + 16, size.x - 206)),
         screenY: Math.max(12, Math.min(pointer.y + 16, size.y - 206))
@@ -275,9 +291,14 @@ export function AetherMap({
   }, [samples, mode])
 
   useEffect(() => {
-    animationRef.current?.setData(samples, mode, airQualitySamples)
+    animationRef.current?.setData(
+      samples,
+      mode,
+      airQualitySamples,
+      jetStreamSamples
+    )
     radarRef.current?.setMode(mode)
-  }, [airQualitySamples, samples, mode])
+  }, [airQualitySamples, jetStreamSamples, samples, mode])
 
   return <div ref={elementRef} className="aether-map" aria-label="Global weather map" />
 }
@@ -304,9 +325,7 @@ function formatMetric(sample: WeatherMapSample, mode: WeatherMode) {
   }
 
   if (mode === 'jet-stream') {
-    return sample.jetStreamSpeed === undefined
-      ? '--'
-      : `${Math.round(sample.jetStreamSpeed)} km/h`
+    return '--'
   }
 
   if (mode === 'precipitation') {

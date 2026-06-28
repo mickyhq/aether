@@ -15,6 +15,10 @@ import { reverseGeocode, searchCity } from './services/geocoding'
 import { fetchOpenMeteoForecast } from './services/openMeteo'
 import { fetchOfficialHeatAlerts } from './services/heatAlerts'
 import {
+  JET_STREAM_REFRESH_INTERVAL,
+  fetchJetStreamSamples
+} from './services/jetStream'
+import {
   WEATHER_REFRESH_INTERVAL,
   cacheWeatherSample,
   fetchWeatherMapSamples,
@@ -29,6 +33,7 @@ import type {
   WeatherConfig,
   WeatherDataState,
   AirQualityMapSample,
+  JetStreamSample,
   WeatherLocation,
   WeatherMapSample,
   WeatherMode,
@@ -183,9 +188,11 @@ export default function App() {
   const [weatherMode, setWeatherMode] = useState<WeatherMode>(readUrlMode)
   const mapWeatherMode = useDeferredValue(weatherMode)
   const [viewport, setViewport] = useState<WeatherViewport | null>(null)
-  const previousViewportRef = useRef<WeatherViewport | null>(null)
+  const previousJetStreamViewportRef = useRef<WeatherViewport | null>(null)
   const jetStreamViewportRef = useRef<WeatherViewport | null>(null)
+  const jetStreamLocationRef = useRef('')
   const [mapSamples, setMapSamples] = useState<WeatherMapSample[]>([])
+  const [jetStreamSamples, setJetStreamSamples] = useState<JetStreamSample[]>([])
   const [airQualitySamples, setAirQualitySamples] = useState<AirQualityMapSample[]>([])
   const [pointerWeather, setPointerWeather] = useState<MapWeatherPointer | null>(null)
   const selectedAirQuality = useMemo(
@@ -271,10 +278,6 @@ export default function App() {
   }, [selectedLocation, weatherMode])
 
   useEffect(() => {
-    jetStreamViewportRef.current = null
-  }, [selectedLocation])
-
-  useEffect(() => {
     let cancelled = false
 
     setOfficialHeatAlerts([])
@@ -298,33 +301,18 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!viewport) {
+    if (!viewport || mapWeatherMode === 'jet-stream') {
       return
     }
 
-    const previousViewport = previousViewportRef.current
-    const zoomChanged = previousViewport !== null &&
-      previousViewport.zoom !== viewport.zoom
-
-    previousViewportRef.current = viewport
-
-    if (mapWeatherMode !== 'jet-stream') {
-      jetStreamViewportRef.current = null
-    } else if (!jetStreamViewportRef.current || !zoomChanged) {
-      jetStreamViewportRef.current = viewport
-    }
-
-    const samplingViewport = mapWeatherMode === 'jet-stream'
-      ? jetStreamViewportRef.current ?? viewport
-      : viewport
     let cancelled = false
     let loading = false
-    const cachedSamples = getCachedWeatherMapSamples(samplingViewport)
+    const cachedSamples = getCachedWeatherMapSamples(viewport)
 
     setMapSamples(current => current.length > 0 ? current : cachedSamples)
 
     const applyPersistentCache = async () => {
-      const samples = await hydrateWeatherMapCache(samplingViewport)
+      const samples = await hydrateWeatherMapCache(viewport)
 
       if (!cancelled && samples.length > 0) {
         setMapSamples(current => current.length > 0 ? current : samples)
@@ -348,7 +336,7 @@ export default function App() {
       loading = true
 
       try {
-        const samples = await fetchWeatherMapSamples(samplingViewport, controller.signal)
+        const samples = await fetchWeatherMapSamples(viewport, controller.signal)
 
         if (!cancelled && samples.length > 0) {
           setMapSamples(samples)
@@ -381,6 +369,65 @@ export default function App() {
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
   }, [mapWeatherMode, selectedForecastReady, viewport])
+
+  useEffect(() => {
+    if (!viewport || mapWeatherMode !== 'jet-stream') {
+      previousJetStreamViewportRef.current = null
+      jetStreamViewportRef.current = null
+      return
+    }
+
+    const locationKey = `${selectedLocation.latitude}:${selectedLocation.longitude}`
+    const locationChanged = jetStreamLocationRef.current !== locationKey
+    const previousViewport = previousJetStreamViewportRef.current
+    const zoomChanged = previousViewport !== null &&
+      previousViewport.zoom !== viewport.zoom
+
+    previousJetStreamViewportRef.current = viewport
+    jetStreamLocationRef.current = locationKey
+
+    if (locationChanged || !jetStreamViewportRef.current || !zoomChanged) {
+      jetStreamViewportRef.current = viewport
+    }
+
+    const samplingViewport = jetStreamViewportRef.current
+    const controller = new AbortController()
+    let cancelled = false
+    let loading = false
+
+    const refreshJetStream = async () => {
+      if (loading) {
+        return
+      }
+
+      loading = true
+
+      try {
+        const samples = await fetchJetStreamSamples(
+          samplingViewport,
+          controller.signal
+        )
+
+        if (!cancelled && samples.length > 0) {
+          setJetStreamSamples(samples)
+        }
+      } finally {
+        loading = false
+      }
+    }
+    const timeout = window.setTimeout(refreshJetStream, 120)
+    const interval = window.setInterval(
+      refreshJetStream,
+      JET_STREAM_REFRESH_INTERVAL
+    )
+
+    return () => {
+      cancelled = true
+      controller.abort()
+      window.clearTimeout(timeout)
+      window.clearInterval(interval)
+    }
+  }, [mapWeatherMode, selectedLocation, viewport])
 
   useEffect(() => {
     if (!viewport) {
@@ -466,6 +513,7 @@ export default function App() {
           location={selectedLocation}
           mode={mapWeatherMode}
           samples={displayedSamples}
+          jetStreamSamples={jetStreamSamples}
           airQualitySamples={airQualitySamples}
           onViewportChange={handleViewportChange}
           onPointerWeatherChange={handlePointerWeatherChange}
