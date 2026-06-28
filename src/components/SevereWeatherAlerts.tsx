@@ -93,14 +93,21 @@ export function getSevereWeatherAlerts(
   if (officialHeatAlerts.length === 0 && weather.heatRisk) {
     const heatRisk = weather.heatRisk
     const isHeatWave = heatRisk.kind === 'heat-wave'
+    const isExtremeHeat = heatRisk.kind === 'extreme-heat'
 
     alerts.push({
       id: `forecast-${heatRisk.kind}`,
       severity: heatRisk.maximumTemperature >= 40 ? 'error' : 'warning',
-      title: isHeatWave ? 'Heat wave forecast' : 'Extreme heat forecast',
+      title: isHeatWave
+        ? 'Heat wave forecast'
+        : isExtremeHeat
+          ? 'Extreme heat forecast'
+          : 'High heat',
       message: isHeatWave
         ? `${heatRisk.days} hot days forecast, reaching ${Math.round(heatRisk.maximumTemperature)}°C. Stay hydrated and avoid peak heat.`
-        : `Temperatures may reach ${Math.round(heatRisk.maximumTemperature)}°C. Stay hydrated and avoid peak heat.`
+        : isExtremeHeat
+          ? `Temperatures may reach ${Math.round(heatRisk.maximumTemperature)}°C. Stay hydrated and avoid peak heat.`
+          : `${Math.round(heatRisk.maximumTemperature)}°C detected or forecast. Stay hydrated and avoid peak heat.`
     })
   }
 

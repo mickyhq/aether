@@ -72,7 +72,7 @@ export type WeatherMode = 'temperature' | 'wind' | 'precipitation' | 'storm' | '
 export type WeatherDataState = 'loading' | 'live' | 'cached' | 'stale' | 'unavailable'
 
 export type HeatRisk = {
-  kind: 'extreme-heat' | 'heat-wave'
+  kind: 'high-heat' | 'extreme-heat' | 'heat-wave'
   days: number
   maximumTemperature: number
 }

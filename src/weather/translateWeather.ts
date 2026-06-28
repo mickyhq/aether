@@ -34,12 +34,22 @@ function buildHeatRisk(payload: OpenMeteoResponse) {
   const daily = payload.daily
 
   if (!daily) {
-    return null
+    return Math.round(payload.current.temperature_2m) >= 35
+      ? {
+          kind: 'high-heat' as const,
+          days: 1,
+          maximumTemperature: payload.current.temperature_2m
+        }
+      : null
   }
 
   const maximums = daily.temperature_2m_max ?? []
   const apparentMaximums = daily.apparent_temperature_max ?? []
-  const hottestTemperature = Math.max(...maximums, ...apparentMaximums)
+  const hottestTemperature = Math.max(
+    payload.current.temperature_2m,
+    ...maximums,
+    ...apparentMaximums
+  )
 
   if (!Number.isFinite(hottestTemperature)) {
     return null
@@ -73,6 +83,20 @@ function buildHeatRisk(payload: OpenMeteoResponse) {
       kind: 'extreme-heat' as const,
       days: 1,
       maximumTemperature: hottestTemperature
+    }
+  }
+
+  if (
+    Math.round(payload.current.temperature_2m) >= 35 ||
+    maximums.some(value => value >= 35)
+  ) {
+    return {
+      kind: 'high-heat' as const,
+      days: 1,
+      maximumTemperature: Math.max(
+        hottestTemperature,
+        payload.current.temperature_2m
+      )
     }
   }
 
