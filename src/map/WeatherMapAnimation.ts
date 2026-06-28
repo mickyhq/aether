@@ -1,5 +1,6 @@
 import L from 'leaflet'
 import type { AirQualityMapSample, WeatherMapSample, WeatherMode } from '../types/weather'
+import { JET_STREAM_SAMPLE_ZOOM } from '../weather/constants'
 
 type Particle = {
   x: number
@@ -510,6 +511,9 @@ export class WeatherMapAnimation {
     )
     const paths = JET_STREAM_COLORS.map(() => new Path2D())
     const usedBuckets = new Set<number>()
+    const smoothingDistanceSquared = 14000 * (
+      2 ** (2 * (this.map.getZoom() - JET_STREAM_SAMPLE_ZOOM))
+    )
 
     this.context.save()
     this.context.lineCap = 'round'
@@ -525,7 +529,8 @@ export class WeatherMapAnimation {
         particle.x,
         particle.y,
         availableSamples,
-        true
+        true,
+        smoothingDistanceSquared
       )
       const speed = 24 + Math.min(field.speed, 320) * 0.72
       const tail = 12 + Math.min(field.speed, 320) * 0.17
@@ -730,7 +735,8 @@ function windFieldAt(
   x: number,
   y: number,
   samples: ProjectedSample[],
-  useJetStream = false
+  useJetStream = false,
+  smoothingDistanceSquared = 14000
 ) {
   let vectorX = 0
   let vectorY = 0
@@ -740,7 +746,7 @@ function windFieldAt(
     const distanceX = projected.x - x
     const distanceY = projected.y - y
     const distanceSquared = distanceX * distanceX + distanceY * distanceY
-    const weight = 1 / (distanceSquared + 14000)
+    const weight = 1 / (distanceSquared + smoothingDistanceSquared)
     const speed = useJetStream
       ? projected.sample.jetStreamSpeed
       : projected.sample.rawWindSpeed

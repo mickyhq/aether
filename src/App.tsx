@@ -22,6 +22,7 @@ import {
   getCachedWeatherMapSamples,
   hydrateWeatherMapCache
 } from './services/weatherGrid'
+import { JET_STREAM_SAMPLE_ZOOM } from './weather/constants'
 import { translateWeather } from './weather/translateWeather'
 import type {
   MapWeatherPointer,
@@ -296,14 +297,20 @@ export default function App() {
       return
     }
 
+    const samplingViewport = mapWeatherMode === 'jet-stream'
+      ? {
+          ...viewport,
+          zoom: JET_STREAM_SAMPLE_ZOOM
+        }
+      : viewport
     let cancelled = false
     let loading = false
-    const cachedSamples = getCachedWeatherMapSamples(viewport)
+    const cachedSamples = getCachedWeatherMapSamples(samplingViewport)
 
     setMapSamples(current => current.length > 0 ? current : cachedSamples)
 
     const applyPersistentCache = async () => {
-      const samples = await hydrateWeatherMapCache(viewport)
+      const samples = await hydrateWeatherMapCache(samplingViewport)
 
       if (!cancelled && samples.length > 0) {
         setMapSamples(current => current.length > 0 ? current : samples)
@@ -327,7 +334,7 @@ export default function App() {
       loading = true
 
       try {
-        const samples = await fetchWeatherMapSamples(viewport, controller.signal)
+        const samples = await fetchWeatherMapSamples(samplingViewport, controller.signal)
 
         if (!cancelled && samples.length > 0) {
           setMapSamples(samples)
@@ -359,7 +366,7 @@ export default function App() {
       window.removeEventListener('online', refreshWhenVisible)
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
-  }, [selectedForecastReady, viewport])
+  }, [mapWeatherMode, selectedForecastReady, viewport])
 
   useEffect(() => {
     if (!viewport) {
