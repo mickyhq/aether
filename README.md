@@ -4,7 +4,7 @@
 
 Aether is an interactive full-screen weather map built with React, TypeScript, Material-UI, Leaflet, and Canvas. It displays live weather fields over OpenStreetMap and updates the visible area as the map moves.
 
-![Aether weather map](public/example.png)
+![Aether weather map](public/example.png?raw=true&v=2)
 
 ## Features
 
