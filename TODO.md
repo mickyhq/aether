@@ -18,7 +18,7 @@
 
 ## P2 — Product improvements
 
-- [ ] Add severe-weather alerts for thunderstorms, heavy rain, and snow.
+- [x] Add severe-weather alerts for thunderstorms, heavy rain, and snow.
 - [ ] Add favorite and recent locations.
 - [ ] Add a dark map tile option.
 - [ ] Add radar opacity controls.

@@ -6,6 +6,7 @@ import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import { Box, Stack, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import type { AirQualityReading, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
+import { SevereWeatherAlerts } from './SevereWeatherAlerts'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
@@ -23,6 +24,7 @@ export function WeatherDashboard({
   return (
     <Box className="weather-panel">
       <Stack spacing={1.25}>
+        <SevereWeatherAlerts weather={weather} />
         <Stack className="metric-grid">
           <Metric
             icon={<DeviceThermostatIcon />}
