@@ -61,6 +61,56 @@ function loadStoredLocation(): WeatherLocation | null {
   }
 }
 
+function readUrlLocation(): WeatherLocation | null {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const raw = params.get('coords')
+
+    if (!raw) {
+      return null
+    }
+
+    const parts = raw.split(',')
+
+    if (parts.length !== 2) {
+      return null
+    }
+
+    const latitude = parseFloat(parts[0])
+    const longitude = parseFloat(parts[1])
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return null
+    }
+
+    return {
+      latitude,
+      longitude,
+      label: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`
+    }
+  } catch {
+    return null
+  }
+}
+
+function updateUrlLocation(location: WeatherLocation) {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const value = `${location.latitude.toFixed(5)},${location.longitude.toFixed(5)}`
+
+    if (params.get('coords') === value) {
+      return
+    }
+
+    params.set('coords', value)
+    const search = params.toString()
+
+    window.history.replaceState(null, '', `?${search}`)
+  } catch {
+    return
+  }
+}
+
 function persistLocation(location: WeatherLocation) {
   try {
     window.localStorage.setItem(STORED_LOCATION_KEY, JSON.stringify({
@@ -102,7 +152,7 @@ export default function App() {
   const [weatherDataState, setWeatherDataState] = useState<WeatherDataState>('loading')
   const [officialHeatAlerts, setOfficialHeatAlerts] = useState<HeatAlert[]>([])
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
-    loadStoredLocation() ?? defaultCity
+    readUrlLocation() ?? loadStoredLocation() ?? defaultCity
   )
   const [selectedForecastReady, setSelectedForecastReady] = useState(false)
   const [weatherMode, setWeatherMode] = useState<WeatherMode>('temperature')
@@ -183,6 +233,7 @@ export default function App() {
 
     loadWeather()
     persistLocation(selectedLocation)
+    updateUrlLocation(selectedLocation)
 
     return () => {
       cancelled = true
