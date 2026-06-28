@@ -22,7 +22,12 @@ export const WEATHER_PARAMETER_CONFIG = {
     'wind_direction_10m',
     'wind_speed_10m'
   ]),
-  maxForecastDays: 2
+  dailyFields: new Set([
+    'apparent_temperature_max',
+    'temperature_2m_max',
+    'temperature_2m_min'
+  ]),
+  maxForecastDays: 7
 }
 
 export const AIR_QUALITY_PARAMETER_CONFIG = {
@@ -40,6 +45,10 @@ export function buildCanonicalOpenMeteoParams(input, config) {
 
   if (config.hourlyFields) {
     allowedParameters.add('hourly')
+  }
+
+  if (config.dailyFields) {
+    allowedParameters.add('daily')
   }
 
   if (config.maxForecastDays) {
@@ -92,6 +101,16 @@ export function buildCanonicalOpenMeteoParams(input, config) {
     }
 
     params.set('hourly', hourly.join(','))
+  }
+
+  if (config.dailyFields && input.has('daily')) {
+    const daily = parseFields(input.get('daily'), config.dailyFields)
+
+    if (!daily) {
+      return invalid('Invalid daily fields')
+    }
+
+    params.set('daily', daily.join(','))
   }
 
   if (config.maxForecastDays && input.has('forecast_days')) {

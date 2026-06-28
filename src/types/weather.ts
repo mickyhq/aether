@@ -37,12 +37,20 @@ export type OpenMeteoHourly = {
   wind_direction_10m: number[]
 }
 
+export type OpenMeteoDaily = {
+  time: string[]
+  temperature_2m_max: number[]
+  temperature_2m_min: number[]
+  apparent_temperature_max: number[]
+}
+
 export type OpenMeteoResponse = {
   latitude: number
   longitude: number
   timezone: string
   current: OpenMeteoCurrent
   hourly: OpenMeteoHourly
+  daily?: OpenMeteoDaily
 }
 
 export type OpenMeteoAirQualityCurrent = {
@@ -62,6 +70,20 @@ export type OpenMeteoAirQualityResponse = {
 export type WeatherMode = 'temperature' | 'wind' | 'precipitation' | 'storm' | 'air-quality'
 
 export type WeatherDataState = 'loading' | 'live' | 'cached' | 'stale' | 'unavailable'
+
+export type HeatRisk = {
+  kind: 'extreme-heat' | 'heat-wave'
+  days: number
+  maximumTemperature: number
+}
+
+export type HeatAlert = {
+  id: string
+  title: string
+  message: string
+  severity: 'warning' | 'error'
+  source: string
+}
 
 export type WeatherEvolutionFrame = {
   time: string
@@ -91,6 +113,7 @@ export type WeatherConfig = {
   isThunderstorm: boolean
   cloudOpacity: number
   evolution: WeatherEvolutionFrame[]
+  heatRisk: HeatRisk | null
 }
 
 export type WeatherMapSample = {

@@ -13,6 +13,7 @@ import {
 } from './services/airQuality'
 import { reverseGeocode, searchCity } from './services/geocoding'
 import { fetchOpenMeteoForecast } from './services/openMeteo'
+import { fetchOfficialHeatAlerts } from './services/heatAlerts'
 import {
   WEATHER_REFRESH_INTERVAL,
   cacheWeatherSample,
@@ -24,6 +25,7 @@ import {
 import { translateWeather } from './weather/translateWeather'
 import type {
   MapWeatherPointer,
+  HeatAlert,
   WeatherConfig,
   WeatherDataState,
   AirQualityMapSample,
@@ -98,6 +100,7 @@ export default function App() {
   const lastWeatherRef = useRef<WeatherConfig | null>(null)
   const [status, setStatus] = useState('Reading sky')
   const [weatherDataState, setWeatherDataState] = useState<WeatherDataState>('loading')
+  const [officialHeatAlerts, setOfficialHeatAlerts] = useState<HeatAlert[]>([])
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
     loadStoredLocation() ?? defaultCity
   )
@@ -180,6 +183,22 @@ export default function App() {
 
     loadWeather()
     persistLocation(selectedLocation)
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedLocation])
+
+  useEffect(() => {
+    let cancelled = false
+
+    setOfficialHeatAlerts([])
+
+    void fetchOfficialHeatAlerts(selectedLocation).then(alerts => {
+      if (!cancelled) {
+        setOfficialHeatAlerts(alerts)
+      }
+    })
 
     return () => {
       cancelled = true
@@ -362,6 +381,7 @@ export default function App() {
         <WeatherDashboard
           weather={weather}
           airQuality={selectedAirQuality}
+          officialHeatAlerts={officialHeatAlerts}
           mode={weatherMode}
           onModeChange={setWeatherMode}
         />

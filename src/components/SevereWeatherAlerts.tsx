@@ -1,6 +1,6 @@
 import { Alert, AlertTitle, Stack } from '@mui/material'
 import { useState } from 'react'
-import type { WeatherConfig } from '../types/weather'
+import type { HeatAlert, WeatherConfig } from '../types/weather'
 
 const THUNDERSTORM_CODES = new Set([95, 96, 99])
 const HEAVY_RAIN_CODES = new Set([65, 67, 82])
@@ -9,24 +9,30 @@ const HEAVY_RAIN_THRESHOLD = 7.5
 const SNOW_THRESHOLD = 0.5
 
 type SevereAlert = {
-  id: 'thunderstorm' | 'heavy-rain' | 'snow'
+  id: string
   severity: 'error' | 'warning'
   title: string
   message: string
 }
 
-export function SevereWeatherAlerts({ weather }: { weather: WeatherConfig | null }) {
-  const alerts = getSevereWeatherAlerts(weather)
+export function SevereWeatherAlerts({
+  weather,
+  officialHeatAlerts
+}: {
+  weather: WeatherConfig | null
+  officialHeatAlerts: HeatAlert[]
+}) {
+  const alerts = getSevereWeatherAlerts(weather, officialHeatAlerts)
   const signature = [
     weather?.zone,
     weather?.weatherCode,
     weather?.precipitation.toFixed(1),
     weather?.snowfall.toFixed(1),
-    ...alerts.map(alert => alert.id)
+    ...alerts.map(alert => `${alert.id}:${alert.message}`)
   ].join(':')
   const [dismissed, setDismissed] = useState<{
     signature: string
-    ids: SevereAlert['id'][]
+    ids: string[]
   }>({
     signature: '',
     ids: []
@@ -38,7 +44,7 @@ export function SevereWeatherAlerts({ weather }: { weather: WeatherConfig | null
     return null
   }
 
-  function dismiss(alertId: SevereAlert['id']) {
+  function dismiss(alertId: string) {
     setDismissed(current => ({
       signature,
       ids: current.signature === signature
@@ -66,13 +72,37 @@ export function SevereWeatherAlerts({ weather }: { weather: WeatherConfig | null
 }
 
 export function getSevereWeatherAlerts(
-  weather: WeatherConfig | null
+  weather: WeatherConfig | null,
+  officialHeatAlerts: HeatAlert[] = []
 ): SevereAlert[] {
   if (!weather) {
     return []
   }
 
   const alerts: SevereAlert[] = []
+
+  for (const alert of officialHeatAlerts) {
+    alerts.push({
+      id: `official-heat:${alert.id}`,
+      severity: alert.severity,
+      title: alert.title,
+      message: `${alert.message} Source: ${alert.source}.`
+    })
+  }
+
+  if (officialHeatAlerts.length === 0 && weather.heatRisk) {
+    const heatRisk = weather.heatRisk
+    const isHeatWave = heatRisk.kind === 'heat-wave'
+
+    alerts.push({
+      id: `forecast-${heatRisk.kind}`,
+      severity: heatRisk.maximumTemperature >= 40 ? 'error' : 'warning',
+      title: isHeatWave ? 'Heat wave forecast' : 'Extreme heat forecast',
+      message: isHeatWave
+        ? `${heatRisk.days} hot days forecast, reaching ${Math.round(heatRisk.maximumTemperature)}°C. Stay hydrated and avoid peak heat.`
+        : `Temperatures may reach ${Math.round(heatRisk.maximumTemperature)}°C. Stay hydrated and avoid peak heat.`
+    })
+  }
 
   if (
     weather.isThunderstorm ||

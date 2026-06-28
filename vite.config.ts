@@ -7,6 +7,10 @@ import {
   WEATHER_PARAMETER_CONFIG,
   buildCanonicalOpenMeteoParams
 } from './server/openMeteoParams.js'
+import {
+  getOfficialHeatAlerts,
+  parseHeatAlertCoordinates
+} from './server/heatAlerts.js'
 
 type WeatherCacheRecord = {
   body: string
@@ -132,6 +136,7 @@ function localWeatherApi(): Plugin {
     next: Next
   ) => {
     const requestUrl = new URL(request.url ?? '/', 'http://localhost')
+    const isHeatAlertsRequest = requestUrl.pathname === '/api/heat-alerts'
 
     const upstreamEndpoint = requestUrl.pathname === '/api/weather'
       ? 'https://api.open-meteo.com/v1/forecast'
@@ -139,7 +144,7 @@ function localWeatherApi(): Plugin {
         ? 'https://air-quality-api.open-meteo.com/v1/air-quality'
         : null
 
-    if (!upstreamEndpoint) {
+    if (!upstreamEndpoint && !isHeatAlertsRequest) {
       next()
       return
     }
@@ -147,6 +152,55 @@ function localWeatherApi(): Plugin {
     if (request.method !== 'GET') {
       response.statusCode = 405
       response.end(JSON.stringify({ error: 'Method not allowed' }))
+      return
+    }
+
+    if (isHeatAlertsRequest) {
+      const coordinates = parseHeatAlertCoordinates(
+        requestUrl.searchParams.get('latitude'),
+        requestUrl.searchParams.get('longitude')
+      )
+
+      if (!coordinates) {
+        response.statusCode = 400
+        response.setHeader('Content-Type', 'application/json')
+        response.end(JSON.stringify({ error: 'Invalid coordinates' }))
+        return
+      }
+
+      const cacheKey = `${requestUrl.pathname}?${coordinates.latitude.toFixed(3)}:${coordinates.longitude.toFixed(3)}`
+      const cached = cache.get(cacheKey)
+      const now = Date.now()
+
+      if (cached && cached.expiresAt > now) {
+        sendCachedWeather(response, cached, 'cached')
+        return
+      }
+
+      try {
+        const record = {
+          body: JSON.stringify({
+            alerts: await getOfficialHeatAlerts(
+              coordinates.latitude,
+              coordinates.longitude
+            )
+          }),
+          contentType: 'application/json',
+          expiresAt: now + 10 * 60 * 1000,
+          staleUntil: now + 24 * 60 * 60 * 1000
+        }
+
+        cache.set(cacheKey, record)
+        sendCachedWeather(response, record, 'live')
+      } catch (error) {
+        if (cached && cached.staleUntil > now) {
+          sendCachedWeather(response, cached, 'stale')
+          return
+        }
+
+        next(error)
+      }
+
       return
     }
 

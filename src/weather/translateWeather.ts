@@ -25,8 +25,58 @@ export function translateWeather(payload: OpenMeteoResponse, location: WeatherLo
     rainDensity: Math.round(clamp(precipitation, 0, 12) * 42),
     isThunderstorm: THUNDERSTORM_CODES.has(current.weather_code),
     cloudOpacity,
-    evolution: buildEvolution(payload)
+    evolution: buildEvolution(payload),
+    heatRisk: buildHeatRisk(payload)
   }
+}
+
+function buildHeatRisk(payload: OpenMeteoResponse) {
+  const daily = payload.daily
+
+  if (!daily) {
+    return null
+  }
+
+  const maximums = daily.temperature_2m_max ?? []
+  const apparentMaximums = daily.apparent_temperature_max ?? []
+  const hottestTemperature = Math.max(...maximums, ...apparentMaximums)
+
+  if (!Number.isFinite(hottestTemperature)) {
+    return null
+  }
+
+  let consecutiveHotDays = 0
+  let longestHotRun = 0
+
+  for (let index = 0; index < maximums.length; index += 1) {
+    const temperature = maximums[index] ?? 0
+    const apparentTemperature = apparentMaximums[index] ?? temperature
+
+    if (temperature >= 35 || apparentTemperature >= 38) {
+      consecutiveHotDays += 1
+      longestHotRun = Math.max(longestHotRun, consecutiveHotDays)
+    } else {
+      consecutiveHotDays = 0
+    }
+  }
+
+  if (longestHotRun >= 3) {
+    return {
+      kind: 'heat-wave' as const,
+      days: longestHotRun,
+      maximumTemperature: hottestTemperature
+    }
+  }
+
+  if (maximums.some(value => value >= 38) || apparentMaximums.some(value => value >= 40)) {
+    return {
+      kind: 'extreme-heat' as const,
+      days: 1,
+      maximumTemperature: hottestTemperature
+    }
+  }
+
+  return null
 }
 
 function buildEvolution(payload: OpenMeteoResponse) {

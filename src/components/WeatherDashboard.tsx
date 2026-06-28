@@ -5,12 +5,13 @@ import ThunderstormIcon from '@mui/icons-material/Thunderstorm'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import { Box, Stack, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
-import type { AirQualityReading, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
+import type { AirQualityReading, HeatAlert, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
 import { SevereWeatherAlerts } from './SevereWeatherAlerts'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
   airQuality: AirQualityReading | null
+  officialHeatAlerts: HeatAlert[]
   mode: WeatherMode
   onModeChange: (mode: WeatherMode) => void
 }
@@ -18,13 +19,17 @@ type WeatherDashboardProps = {
 export function WeatherDashboard({
   weather,
   airQuality,
+  officialHeatAlerts,
   mode,
   onModeChange
 }: WeatherDashboardProps) {
   return (
     <Box className="weather-panel">
       <Stack spacing={1.25}>
-        <SevereWeatherAlerts weather={weather} />
+        <SevereWeatherAlerts
+          weather={weather}
+          officialHeatAlerts={officialHeatAlerts}
+        />
         <Stack className="metric-grid">
           <Metric
             icon={<DeviceThermostatIcon />}

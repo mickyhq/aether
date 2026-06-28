@@ -33,6 +33,11 @@ const HOURLY_FIELDS = [
   'wind_speed_10m',
   'wind_direction_10m'
 ]
+const DAILY_FIELDS = [
+  'temperature_2m_max',
+  'temperature_2m_min',
+  'apparent_temperature_max'
+]
 const POPULAR_LOCATIONS = [
   { name: 'Ajaccio', latitude: 41.9192, longitude: 8.7386 },
   { name: 'Paris', latitude: 48.8566, longitude: 2.3522 },
@@ -128,7 +133,8 @@ function getLocationParams(location) {
     longitude: String(location.longitude),
     current: CURRENT_FIELDS.join(','),
     hourly: HOURLY_FIELDS.join(','),
-    forecast_days: '2'
+    daily: DAILY_FIELDS.join(','),
+    forecast_days: '7'
   })
   const canonical = buildCanonicalOpenMeteoParams(
     input,

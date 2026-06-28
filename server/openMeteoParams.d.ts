@@ -1,6 +1,7 @@
 export type OpenMeteoParameterConfig = {
   currentFields: Set<string>
   hourlyFields?: Set<string>
+  dailyFields?: Set<string>
   maxForecastDays?: number
 }
 

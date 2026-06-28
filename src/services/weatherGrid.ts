@@ -148,7 +148,8 @@ export async function getCachedWeatherForLocation(location: WeatherLocation): Pr
     rainDensity: Math.round(clamp(nearbySample.precipitation, 0, 12) * 42),
     isThunderstorm: nearbySample.isThunderstorm,
     cloudOpacity: nearbySample.cloudOpacity,
-    evolution: nearbySample.evolution ?? []
+    evolution: nearbySample.evolution ?? [],
+    heatRisk: null
   }
 }
 
