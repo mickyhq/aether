@@ -1,0 +1,399 @@
+import type {
+  MapWeatherPointer,
+  OpenMeteoResponse,
+  WeatherConfig,
+  WeatherLocation,
+  WeatherMapSample,
+  WeatherViewport
+} from '../types/weather'
+import { getWeatherCacheKey, loadPersistedWeatherSamples, persistWeatherSamples } from './weatherCache'
+
+type GridPoint = WeatherLocation & {
+  showBadge: false
+}
+
+const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
+const CURRENT_FIELDS = [
+  'temperature_2m',
+  'precipitation',
+  'rain',
+  'showers',
+  'snowfall',
+  'weather_code',
+  'cloud_cover',
+  'wind_speed_10m',
+  'wind_direction_10m'
+]
+const THUNDERSTORM_CODES = new Set([95, 96, 99])
+const FRESHNESS = 5 * 60 * 1000
+const BATCH_SIZE = 40
+const MAX_GRID_POINTS = 180
+const BASE_SPACING = 160
+const sampleCache = new Map<string, WeatherMapSample>()
+let persistentCachePromise: Promise<void> | null = null
+
+export const WEATHER_REFRESH_INTERVAL = FRESHNESS
+
+export async function fetchWeatherMapSamples(viewport: WeatherViewport) {
+  await loadPersistentCache()
+
+  const points = buildVisibleGrid(viewport)
+  const refreshPoints = points.filter(point => {
+    const sample = sampleCache.get(getWeatherCacheKey(point.latitude, point.longitude))
+
+    return needsRefresh(sample)
+  })
+  const settledBatches = await Promise.allSettled(
+    chunkPoints(refreshPoints, BATCH_SIZE).map(fetchWeatherBatch)
+  )
+  const freshSamples = settledBatches
+    .filter((result): result is PromiseFulfilledResult<WeatherMapSample[]> => result.status === 'fulfilled')
+    .flatMap(result => result.value)
+
+  rememberSamples(freshSamples)
+  void persistWeatherSamples(freshSamples)
+
+  return getSamplesForGrid(points)
+}
+
+export async function hydrateWeatherMapCache(viewport: WeatherViewport) {
+  await loadPersistentCache()
+
+  return getCachedWeatherMapSamples(viewport)
+}
+
+export function getCachedWeatherMapSamples(viewport: WeatherViewport) {
+  return getSamplesForGrid(buildVisibleGrid(viewport))
+}
+
+export function cacheWeatherSample(location: WeatherLocation, weather: WeatherConfig) {
+  const sample: WeatherMapSample = {
+    label: location.label,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    updatedAt: Date.now(),
+    showBadge: true,
+    temperature: weather.temperature,
+    precipitation: weather.precipitation,
+    snowfall: weather.snowfall,
+    weatherCode: weather.weatherCode,
+    windSpeed: weather.windSpeed,
+    rawWindSpeed: weather.rawWindSpeed,
+    windAngle: weather.windAngle,
+    cloudOpacity: weather.cloudOpacity,
+    isThunderstorm: weather.isThunderstorm
+  }
+
+  rememberSamples([sample])
+  void persistWeatherSamples([sample])
+}
+
+export function interpolateWeatherAt(
+  latitude: number,
+  longitude: number,
+  samples: WeatherMapSample[]
+): Omit<MapWeatherPointer, 'screenX' | 'screenY'> | null {
+  const nearbySamples = samples
+    .map(sample => ({
+      sample,
+      distance: distanceInKilometers(sample, { latitude, longitude })
+    }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 6)
+
+  if (nearbySamples.length === 0) {
+    return null
+  }
+
+  const totalWeight = nearbySamples.reduce((sum, item) => sum + inverseDistanceWeight(item.distance), 0)
+  const weighted = (pick: (sample: WeatherMapSample) => number) => (
+    nearbySamples.reduce(
+      (sum, item) => sum + pick(item.sample) * inverseDistanceWeight(item.distance),
+      0
+    ) / totalWeight
+  )
+  const eastwardWind = weighted(sample => -sample.rawWindSpeed * Math.sin(sample.windAngle))
+  const northwardWind = weighted(sample => -sample.rawWindSpeed * Math.cos(sample.windAngle))
+  const nearest = nearbySamples[0].sample
+
+  return {
+    latitude,
+    longitude,
+    temperature: weighted(sample => sample.temperature),
+    precipitation: weighted(sample => sample.precipitation),
+    rawWindSpeed: Math.hypot(eastwardWind, northwardWind),
+    windAngle: normalizeAngle(Math.atan2(-eastwardWind, -northwardWind)),
+    cloudOpacity: weighted(sample => sample.cloudOpacity),
+    isThunderstorm: nearest.isThunderstorm
+  }
+}
+
+async function fetchWeatherBatch(points: GridPoint[]): Promise<WeatherMapSample[]> {
+  if (points.length === 0) {
+    return []
+  }
+
+  const params = new URLSearchParams({
+    latitude: points.map(point => point.latitude.toFixed(5)).join(','),
+    longitude: points.map(point => point.longitude.toFixed(5)).join(','),
+    current: CURRENT_FIELDS.join(',')
+  })
+  const response = await fetch(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)
+
+  if (!response.ok) {
+    throw new Error(`Weather grid error ${response.status}`)
+  }
+
+  const body = (await response.json()) as OpenMeteoResponse | OpenMeteoResponse[]
+  const payloads = Array.isArray(body) ? body : [body]
+  const updatedAt = Date.now()
+
+  return payloads
+    .map((payload, index) => mapWeatherSample(points[index], payload, updatedAt))
+    .filter((sample): sample is WeatherMapSample => Boolean(sample))
+}
+
+function mapWeatherSample(point: GridPoint | undefined, payload: OpenMeteoResponse, updatedAt: number): WeatherMapSample | null {
+  if (!point) {
+    return null
+  }
+
+  const current = payload.current
+  const precipitation = current.precipitation
+  const rawWindSpeed = current.wind_speed_10m
+
+  return {
+    label: point.label,
+    latitude: point.latitude,
+    longitude: point.longitude,
+    updatedAt,
+    showBadge: false,
+    temperature: current.temperature_2m,
+    precipitation,
+    snowfall: current.snowfall,
+    weatherCode: current.weather_code,
+    windSpeed: clamp(rawWindSpeed / 80, 0, 1),
+    rawWindSpeed,
+    windAngle: degreesToRadians(current.wind_direction_10m),
+    cloudOpacity: clamp(current.cloud_cover / 100, 0, 1),
+    isThunderstorm: THUNDERSTORM_CODES.has(current.weather_code)
+  }
+}
+
+function buildVisibleGrid(viewport: WeatherViewport): GridPoint[] {
+  const sampleZoom = clamp(Math.floor(viewport.zoom), 2, 14)
+  const worldSize = 256 * 2 ** sampleZoom
+  const spacing = getGridSpacing(viewport)
+  const west = viewport.west
+  let east = viewport.east
+
+  while (east <= west) {
+    east += 360
+  }
+
+  east = Math.min(east, west + 360)
+
+  const westX = longitudeToWorldX(west, worldSize)
+  const eastX = longitudeToWorldX(east, worldSize)
+  const northY = latitudeToWorldY(clamp(viewport.north, -85, 85), worldSize)
+  const southY = latitudeToWorldY(clamp(viewport.south, -85, 85), worldSize)
+  const firstColumn = Math.floor(westX / spacing) - 1
+  const lastColumn = Math.ceil(eastX / spacing) + 1
+  const firstRow = Math.floor(northY / spacing) - 1
+  const lastRow = Math.ceil(southY / spacing) + 1
+  const points = new Map<string, GridPoint>()
+
+  for (let row = firstRow; row <= lastRow; row += 1) {
+    const latitude = worldYToLatitude(row * spacing, worldSize)
+
+    if (latitude < -85 || latitude > 85) {
+      continue
+    }
+
+    for (let column = firstColumn; column <= lastColumn; column += 1) {
+      const longitude = normalizeLongitude(worldXToLongitude(column * spacing, worldSize))
+      const key = getWeatherCacheKey(latitude, longitude)
+
+      points.set(key, {
+        label: `grid-${sampleZoom}-${column}-${row}`,
+        latitude,
+        longitude,
+        showBadge: false
+      })
+    }
+  }
+
+  return distributePoints(Array.from(points.values()), MAX_GRID_POINTS)
+}
+
+function getGridSpacing(viewport: WeatherViewport) {
+  const estimatedColumns = Math.ceil(viewport.width / BASE_SPACING) + 3
+  const estimatedRows = Math.ceil(viewport.height / BASE_SPACING) + 3
+  const estimatedPoints = estimatedColumns * estimatedRows
+  const scale = estimatedPoints > MAX_GRID_POINTS
+    ? Math.sqrt(estimatedPoints / MAX_GRID_POINTS)
+    : 1
+
+  return Math.ceil(BASE_SPACING * scale / 16) * 16
+}
+
+function getSamplesForGrid(points: GridPoint[]) {
+  return points
+    .map(point => {
+      const exactSample = sampleCache.get(getWeatherCacheKey(point.latitude, point.longitude))
+
+      if (exactSample) {
+        return {
+          ...exactSample,
+          label: point.label,
+          latitude: point.latitude,
+          longitude: point.longitude,
+          showBadge: false
+        }
+      }
+
+      return estimateSample(point)
+    })
+    .filter((sample): sample is WeatherMapSample => Boolean(sample))
+}
+
+function estimateSample(point: GridPoint): WeatherMapSample | null {
+  const nearbySamples = Array.from(sampleCache.values())
+    .map(sample => ({
+      sample,
+      distance: distanceInKilometers(sample, point)
+    }))
+    .filter(item => item.distance <= 350)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 6)
+
+  if (nearbySamples.length < 3) {
+    return null
+  }
+
+  const totalWeight = nearbySamples.reduce((sum, item) => sum + inverseDistanceWeight(item.distance), 0)
+  const weighted = (pick: (sample: WeatherMapSample) => number) => (
+    nearbySamples.reduce(
+      (sum, item) => sum + pick(item.sample) * inverseDistanceWeight(item.distance),
+      0
+    ) / totalWeight
+  )
+  const eastwardWind = weighted(sample => -sample.rawWindSpeed * Math.sin(sample.windAngle))
+  const northwardWind = weighted(sample => -sample.rawWindSpeed * Math.cos(sample.windAngle))
+  const rawWindSpeed = Math.hypot(eastwardWind, northwardWind)
+  const windAngle = normalizeAngle(Math.atan2(-eastwardWind, -northwardWind))
+  const nearest = nearbySamples[0].sample
+
+  return {
+    label: point.label,
+    latitude: point.latitude,
+    longitude: point.longitude,
+    showBadge: false,
+    estimated: true,
+    temperature: weighted(sample => sample.temperature),
+    precipitation: weighted(sample => sample.precipitation),
+    snowfall: weighted(sample => sample.snowfall),
+    weatherCode: nearest.weatherCode,
+    windSpeed: clamp(rawWindSpeed / 80, 0, 1),
+    rawWindSpeed,
+    windAngle,
+    cloudOpacity: weighted(sample => sample.cloudOpacity),
+    isThunderstorm: nearest.isThunderstorm
+  }
+}
+
+function rememberSamples(samples: WeatherMapSample[]) {
+  for (const sample of samples) {
+    sampleCache.set(getWeatherCacheKey(sample.latitude, sample.longitude), sample)
+  }
+}
+
+function loadPersistentCache() {
+  if (!persistentCachePromise) {
+    persistentCachePromise = loadPersistedWeatherSamples().then(rememberSamples)
+  }
+
+  return persistentCachePromise
+}
+
+function needsRefresh(sample: WeatherMapSample | undefined) {
+  return !sample?.updatedAt || Date.now() - sample.updatedAt >= FRESHNESS
+}
+
+function chunkPoints(points: GridPoint[], size: number) {
+  const chunks: GridPoint[][] = []
+
+  for (let index = 0; index < points.length; index += size) {
+    chunks.push(points.slice(index, index + size))
+  }
+
+  return chunks
+}
+
+function distributePoints(points: GridPoint[], limit: number) {
+  if (points.length <= limit) {
+    return points
+  }
+
+  return Array.from({ length: limit }, (_, index) => {
+    const pointIndex = Math.round(index * (points.length - 1) / (limit - 1))
+
+    return points[pointIndex]
+  })
+}
+
+function distanceInKilometers(
+  first: { latitude: number, longitude: number },
+  second: { latitude: number, longitude: number }
+) {
+  const latitudeDistance = (first.latitude - second.latitude) * 111.32
+  const longitudeScale = Math.cos(degreesToRadians((first.latitude + second.latitude) / 2))
+  const longitudeDistance = normalizeLongitude(first.longitude - second.longitude) * 111.32 * longitudeScale
+
+  return Math.hypot(latitudeDistance, longitudeDistance)
+}
+
+function inverseDistanceWeight(distance: number) {
+  return 1 / Math.max(distance * distance, 1)
+}
+
+function longitudeToWorldX(longitude: number, worldSize: number) {
+  return ((longitude + 180) / 360) * worldSize
+}
+
+function worldXToLongitude(x: number, worldSize: number) {
+  return x / worldSize * 360 - 180
+}
+
+function latitudeToWorldY(latitude: number, worldSize: number) {
+  const radians = degreesToRadians(latitude)
+  const mercator = Math.log(Math.tan(Math.PI / 4 + radians / 2))
+
+  return (1 - mercator / Math.PI) / 2 * worldSize
+}
+
+function worldYToLatitude(y: number, worldSize: number) {
+  const mercator = Math.PI * (1 - 2 * y / worldSize)
+
+  return radiansToDegrees(Math.atan(Math.sinh(mercator)))
+}
+
+function normalizeLongitude(longitude: number) {
+  return ((((longitude + 180) % 360) + 360) % 360) - 180
+}
+
+function normalizeAngle(angle: number) {
+  return ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)
+}
+
+function degreesToRadians(degrees: number) {
+  return degrees * Math.PI / 180
+}
+
+function radiansToDegrees(radians: number) {
+  return radians * 180 / Math.PI
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
