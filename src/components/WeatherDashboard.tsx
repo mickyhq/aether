@@ -280,14 +280,12 @@ function Metric({
       onClick={onClick}
     >
       <Box className="metric-icon">{icon}</Box>
-      <Box>
-        <Typography variant="caption" className="metric-label">
-          {label}
-        </Typography>
-        <Typography variant="body2" className="metric-value">
-          {value}
-        </Typography>
-      </Box>
+      <Typography variant="caption" className="metric-label">
+        {label}
+      </Typography>
+      <Typography variant="body2" className="metric-value">
+        {value}
+      </Typography>
     </button>
   )
 }
