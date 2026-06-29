@@ -22,6 +22,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 - Persistent browser cache using IndexedDB
 - Installable PWA with offline app shell and cached weather responses
 - Automatic background refresh while the app is open
+- Five-day ECMWF IFS visual forecast with timeline playback
 - Adaptive map sample density when the upstream request budget is low
 - Manual retry when weather data is stale or unavailable
 - Reduced-motion support for weather, radar, map, and interface animations
@@ -33,6 +34,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 ## Data sources
 
 - [Open-Meteo](https://open-meteo.com/) supplies modeled temperature, wind, precipitation, cloud, and storm data.
+- [ECMWF](https://www.ecmwf.int/) supplies the IFS forecast shown in the visual timeline through the Open-Meteo ECMWF API.
 - [Copernicus Atmosphere Monitoring Service (CAMS)](https://atmosphere.copernicus.eu/) supplies modeled air-quality data through the Open-Meteo Air Quality API.
 - [RainViewer](https://www.rainviewer.com/api.html) supplies precipitation radar tiles.
 - [OpenStreetMap](https://www.openstreetmap.org/) supplies the base map.
@@ -123,6 +125,10 @@ Set `METEOGATE_KEY` in Vercel to enable official European heat warnings:
 ```text
 METEOGATE_KEY=your-meteogate-api-key
 ```
+
+The visual timeline currently uses ECMWF IFS through Open-Meteo's JSON API.
+Native ECMWF API keys are intended for direct GRIB data workflows and are not
+sent to Open-Meteo or the browser.
 
 ## Main structure
 

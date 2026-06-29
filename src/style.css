@@ -830,6 +830,69 @@ body {
   margin-top: 4px;
 }
 
+.ecmwf-forecast {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid rgba(143, 229, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(38, 63, 83, 0.24);
+  color: rgba(230, 247, 255, 0.68);
+  font-size: 11px;
+}
+
+.ecmwf-forecast-fallback {
+  border-color: rgba(255, 229, 155, 0.34);
+  background: rgba(92, 69, 31, 0.24);
+}
+
+.ecmwf-forecast-heading,
+.ecmwf-forecast-values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ecmwf-forecast-model {
+  color: #f7fcff;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.ecmwf-forecast-time {
+  color: rgba(230, 247, 255, 0.58);
+  font-size: 10px !important;
+}
+
+.ecmwf-forecast-note {
+  color: rgba(255, 229, 155, 0.82);
+  font-size: 10px !important;
+  line-height: 1.35 !important;
+}
+
+.ecmwf-forecast-heading .MuiIconButton-root {
+  color: #8fe5ff;
+}
+
+.ecmwf-forecast-values {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.ecmwf-temperature-chart {
+  display: block;
+  width: 100%;
+  height: 42px;
+}
+
+.ecmwf-time-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: #8fe5ff;
+}
+
 .hourly-forecast-label {
   display: block;
   margin-bottom: 6px;

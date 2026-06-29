@@ -20,6 +20,7 @@ import {
   fetchGeocode,
   parseGeocodeRequest
 } from './server/geocodingProvider.js'
+import { fetchEcmwfForecast } from './server/ecmwfProvider.js'
 import { fetchWithTimeout } from './shared/fetchTimeout.js'
 
 type WeatherCacheRecord = {
@@ -169,6 +170,10 @@ export default defineConfig(({ mode }) => {
     process.env.METEOGATE_KEY = env.METEOGATE_KEY
   }
 
+  if (!process.env.ECMWF_KEY && env.ECMWF_KEY) {
+    process.env.ECMWF_KEY = env.ECMWF_KEY
+  }
+
   return {
     define: {
       'import.meta.env.VITE_AETHER_BUILD_VERSION': JSON.stringify(buildVersion)
@@ -250,6 +255,7 @@ function localWeatherApi(): Plugin {
     const requestUrl = new URL(request.url ?? '/', 'http://localhost')
     const isHeatAlertsRequest = requestUrl.pathname === '/api/heat-alerts'
     const isGeocodeRequest = requestUrl.pathname === '/api/geocode'
+    const isEcmwfRequest = requestUrl.pathname === '/api/ecmwf'
 
     const upstreamEndpoint = requestUrl.pathname === '/api/weather'
       ? 'https://api.open-meteo.com/v1/forecast'
@@ -257,7 +263,12 @@ function localWeatherApi(): Plugin {
         ? 'https://air-quality-api.open-meteo.com/v1/air-quality'
         : null
 
-    if (!upstreamEndpoint && !isHeatAlertsRequest && !isGeocodeRequest) {
+    if (
+      !upstreamEndpoint &&
+      !isHeatAlertsRequest &&
+      !isGeocodeRequest &&
+      !isEcmwfRequest
+    ) {
       next()
       return
     }
@@ -309,6 +320,72 @@ function localWeatherApi(): Plugin {
           error: error instanceof Error
             ? error.message
             : 'Geocoding unavailable'
+        }))
+      }
+
+      return
+    }
+
+    if (isEcmwfRequest) {
+      const latitude = Number(requestUrl.searchParams.get('latitude'))
+      const longitude = Number(requestUrl.searchParams.get('longitude'))
+      const forecastHours = Math.min(
+        360,
+        Math.max(
+          24,
+          Number(requestUrl.searchParams.get('forecast_hours')) || 120
+        )
+      )
+
+      if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
+      ) {
+        response.statusCode = 400
+        response.setHeader('Content-Type', 'application/json')
+        response.end(JSON.stringify({ error: 'Invalid coordinates' }))
+        return
+      }
+
+      const cacheKey = `${requestUrl.pathname}?${latitude.toFixed(3)}:${longitude.toFixed(3)}:${forecastHours}`
+      const cached = cache.get(cacheKey)
+      const now = Date.now()
+
+      if (cached && cached.expiresAt > now) {
+        sendCachedWeather(response, cached, 'cached')
+        return
+      }
+
+      try {
+        const record = {
+          body: JSON.stringify(await fetchEcmwfForecast(
+            latitude,
+            longitude,
+            forecastHours
+          )),
+          contentType: 'application/json',
+          expiresAt: now + 3 * 60 * 60 * 1000,
+          staleUntil: now + 24 * 60 * 60 * 1000
+        }
+
+        cache.set(cacheKey, record)
+        sendCachedWeather(response, record, 'live')
+      } catch (error) {
+        if (cached && cached.staleUntil > now) {
+          sendCachedWeather(response, cached, 'stale')
+          return
+        }
+
+        response.statusCode = 502
+        response.setHeader('Content-Type', 'application/json')
+        response.end(JSON.stringify({
+          error: error instanceof Error
+            ? error.message
+            : 'ECMWF forecast unavailable'
         }))
       }
 

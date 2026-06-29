@@ -100,6 +100,13 @@ export type WeatherEvolutionFrame = {
   isThunderstorm: boolean
 }
 
+export type EcmwfForecast = {
+  model: string
+  latitude: number
+  longitude: number
+  frames: WeatherEvolutionFrame[]
+}
+
 export type WeatherConfig = {
   zone: string
   temperature: number

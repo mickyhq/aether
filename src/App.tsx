@@ -21,6 +21,7 @@ import {
   updateUrlLocation
 } from './services/appState'
 import { fetchOpenMeteoForecast } from './services/openMeteo'
+import { fetchEcmwfLocationForecast } from './services/ecmwf'
 import { fetchOfficialHeatAlerts } from './services/heatAlerts'
 import {
   JET_STREAM_REFRESH_INTERVAL,
@@ -36,6 +37,7 @@ import {
 } from './services/weatherGrid'
 import { translateWeather } from './weather/translateWeather'
 import type {
+  EcmwfForecast,
   MapWeatherPointer,
   HeatAlert,
   WeatherConfig,
@@ -86,6 +88,8 @@ export default function App() {
   const [weatherRequest, setWeatherRequest] = useState(0)
   const forceWeatherRefreshRef = useRef(false)
   const [officialHeatAlerts, setOfficialHeatAlerts] = useState<HeatAlert[]>([])
+  const [ecmwfForecast, setEcmwfForecast] = useState<EcmwfForecast | null>(null)
+  const [ecmwfLoading, setEcmwfLoading] = useState(true)
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
     loadInitialLocation
   )
@@ -192,6 +196,34 @@ export default function App() {
       cancelled = true
     }
   }, [selectedLocation, weatherRequest])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    setEcmwfLoading(true)
+
+    void fetchEcmwfLocationForecast(
+      selectedLocation,
+      controller.signal
+    )
+      .then(forecast => {
+        if (!controller.signal.aborted) {
+          setEcmwfForecast(forecast)
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setEcmwfForecast(null)
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setEcmwfLoading(false)
+        }
+      })
+
+    return () => controller.abort()
+  }, [selectedLocation])
 
   useEffect(() => {
     updateUrlLocation(selectedLocation, weatherMode)
@@ -514,6 +546,8 @@ export default function App() {
           <Suspense fallback={<div className="weather-panel">Loading forecast</div>}>
             <WeatherDashboard
               weather={weather}
+              ecmwfForecast={ecmwfForecast}
+              ecmwfLoading={ecmwfLoading}
               airQuality={selectedAirQuality}
               officialHeatAlerts={officialHeatAlerts}
               mode={weatherMode}

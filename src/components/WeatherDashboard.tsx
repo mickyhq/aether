@@ -5,13 +5,16 @@ import FlightIcon from '@mui/icons-material/Flight'
 import ThunderstormIcon from '@mui/icons-material/Thunderstorm'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import { Box, Stack, Typography } from '@mui/material'
-import type { ReactNode } from 'react'
-import type { AirQualityReading, HeatAlert, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
+import { useMemo, type ReactNode } from 'react'
+import type { AirQualityReading, EcmwfForecast, HeatAlert, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
+import { EcmwfForecastTimeline } from './EcmwfForecastTimeline'
 import { SevereWeatherAlerts } from './SevereWeatherAlerts'
 import { SunTimes } from './SunTimes'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
+  ecmwfForecast: EcmwfForecast | null
+  ecmwfLoading: boolean
   airQuality: AirQualityReading | null
   officialHeatAlerts: HeatAlert[]
   mode: WeatherMode
@@ -20,11 +23,30 @@ type WeatherDashboardProps = {
 
 export function WeatherDashboard({
   weather,
+  ecmwfForecast,
+  ecmwfLoading,
   airQuality,
   officialHeatAlerts,
   mode,
   onModeChange
 }: WeatherDashboardProps) {
+  const visualForecast = useMemo(() => {
+    if (ecmwfForecast) {
+      return ecmwfForecast
+    }
+
+    if (!weather?.evolution.length) {
+      return null
+    }
+
+    return {
+      model: 'Standard forecast',
+      latitude: 0,
+      longitude: 0,
+      frames: weather.evolution
+    }
+  }, [ecmwfForecast, weather])
+
   return (
     <Box component="aside" className="weather-panel" aria-label="Weather layers and forecast">
       <Stack spacing={1.25}>
@@ -80,6 +102,10 @@ export function WeatherDashboard({
         <SunTimes
           sunrise={weather?.sunrise ?? null}
           sunset={weather?.sunset ?? null}
+        />
+        <EcmwfForecastTimeline
+          forecast={visualForecast}
+          loading={ecmwfLoading && !visualForecast}
         />
         <HourlyForecast frames={weather?.evolution ?? []} />
       </Stack>

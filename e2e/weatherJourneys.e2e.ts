@@ -46,6 +46,12 @@ test.beforeEach(async ({ page }) => {
       body: JSON.stringify({ alerts: [] })
     })
   ))
+  await page.route('**/api/ecmwf?**', route => (
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(buildForecast(48, 2))
+    })
+  ))
   await page.route('**/api/geocode?**', route => {
     const url = new URL(route.request().url())
 
@@ -96,6 +102,8 @@ test('loads the selected location forecast', async ({ page }) => {
       name: '12-hour temperature and precipitation forecast'
     })
   ).toBeVisible()
+  await expect(page.getByLabel('ECMWF visual forecast')).toBeVisible()
+  await expect(page.getByLabel('ECMWF forecast time')).toBeVisible()
 })
 
 test('shows saved-data status when the browser goes offline', async ({
