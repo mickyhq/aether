@@ -14,12 +14,18 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 - Interpolated temperature layer and legend
 - European AQI layer with PM2.5 readings
 - Animated precipitation radar
+- Saved radar opacity control
 - Storm and lightning effects
 - Weather values at the mouse position
 - City search and animated map navigation
+- Debounced, cancellable reverse geocoding that respects Nominatim request limits
 - Persistent browser cache using IndexedDB
 - Installable PWA with offline app shell and cached weather responses
 - Automatic background refresh while the app is open
+- Adaptive map sample density when the upstream request budget is low
+- Manual retry when weather data is stale or unavailable
+- Reduced-motion support for weather, radar, map, and interface animations
+- Isolated map and forecast error recovery
 - Responsive, compact map controls
 - Standard OpenStreetMap and CARTO Dark Matter tile styles
 - Vercel deployment configuration
@@ -64,6 +70,24 @@ npm run dev
 
 Open the local URL printed by Vite. Nodemon restarts Vite when API, server, or Vite configuration files change; React source changes continue to use Vite hot reload.
 
+## Cache version and invalidation
+
+Disposable caches share `CACHE_VERSION` from `shared/cacheVersion.js`. The version is included in browser forecast keys, IndexedDB names, PWA API caches, and Vercel Runtime Cache namespaces. The latest successful location forecast remains available offline for 24 hours.
+
+To invalidate cached data:
+
+1. Increment `CACHE_VERSION` in `shared/cacheVersion.js`.
+2. Deploy the application.
+3. Verify the new application version in the Aether header.
+
+The new deployment writes to fresh cache namespaces, so incompatible old data is ignored. Old browser and server cache entries expire naturally. Favorites, recent locations, the selected location, and map-style preferences are user data and are intentionally not cleared by a cache-version change.
+
+Increment the cache version when a cached payload or storage schema becomes incompatible, or when a forced cache reset is required. Normal data refreshes do not need a version change.
+
+## Cache monitoring
+
+Vercel function logs emit structured `aether.cache` events for weather, air quality, and heat alerts. Sum `cacheHitCount`, `cacheMissCount`, `staleCount`, and `upstreamRequestCount` to monitor cache behavior. Coalesced requests count only the real upstream fetch.
+
 ## Production build
 
 ```bash
@@ -71,6 +95,10 @@ npm run build
 ```
 
 The production output is written to `dist`.
+
+Run the unit tests with `npm test`.
+
+Run browser journeys against the existing Vite server with `npm run test:e2e`. Set `E2E_BASE_URL` when the server uses another URL.
 
 To inspect the production build locally:
 

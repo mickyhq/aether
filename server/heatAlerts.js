@@ -50,7 +50,9 @@ async function getNwsHeatAlerts(latitude, longitude) {
   const response = await fetchCoalesced(
     `nws-heat:${point}`,
     url.toString(),
-    'Aether Weather Map (https://aether-five-rose.vercel.app)'
+    'Aether Weather Map (https://aether-five-rose.vercel.app)',
+    {},
+    'heat-alerts'
   )
 
   if (response.status === 400) {
@@ -97,7 +99,8 @@ async function getMeteoGateHeatAlerts(latitude, longitude) {
     'Aether Weather Map (https://aether-five-rose.vercel.app)',
     {
       apikey: process.env.METEOGATE_KEY
-    }
+    },
+    'heat-alerts'
   )
 
   if (response.status === 204) {

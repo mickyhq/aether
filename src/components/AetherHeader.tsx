@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import type { WeatherDataState, WeatherLocation } from '../types/weather'
 import { LocationBookmarks } from './LocationBookmarks'
+import { WeatherRetryButton } from './WeatherRetryButton'
 
 type AetherHeaderProps = {
   location: WeatherLocation
@@ -11,6 +12,7 @@ type AetherHeaderProps = {
   dataState: WeatherDataState
   onSearch: (query: string) => void
   onLocationSelect: (location: WeatherLocation) => void
+  onWeatherRetry: () => void
 }
 
 export function AetherHeader({
@@ -18,7 +20,8 @@ export function AetherHeader({
   status,
   dataState,
   onSearch,
-  onLocationSelect
+  onLocationSelect,
+  onWeatherRetry
 }: AetherHeaderProps) {
   const [query, setQuery] = useState('')
 
@@ -41,7 +44,7 @@ const DATA_STATE_TOOLTIP = (
 ) as unknown as React.ReactNode
 
   return (
-    <Box className="aether-header">
+    <Box component="header" className="aether-header" aria-label="Aether controls">
       <Stack direction="row" alignItems="center" gap={1.25} className="brand-block">
         <Box className="brand-mark">
           <img src="/aether.svg" alt="" className="brand-logo" />
@@ -66,7 +69,12 @@ const DATA_STATE_TOOLTIP = (
           onSelect={onLocationSelect}
         />
 
-        <Box component="form" className="map-search" onSubmit={handleSubmit}>
+        <Box
+          component="form"
+          className="map-search"
+          aria-label="Location search"
+          onSubmit={handleSubmit}
+        >
           <TextField
             size="small"
             value={query}
@@ -78,20 +86,26 @@ const DATA_STATE_TOOLTIP = (
           <IconButton type="submit" aria-label="Search" className="city-search-button">
             <SearchIcon fontSize="small" />
           </IconButton>
-          <Tooltip
-            title={DATA_STATE_TOOLTIP}
-            componentsProps={{ tooltip: { className: 'data-state-tooltip' } }}
-            enterDelay={200}
-            leaveDelay={200}
-          >
-            <Typography
-              variant="caption"
-              role="status"
-              className={`search-status search-status-${dataState}`}
+          <Box className="weather-status-group">
+            <Tooltip
+              title={DATA_STATE_TOOLTIP}
+              componentsProps={{ tooltip: { className: 'data-state-tooltip' } }}
+              enterDelay={200}
+              leaveDelay={200}
             >
-              {status}
-            </Typography>
-          </Tooltip>
+              <Typography
+                variant="caption"
+                role="status"
+                className={`search-status search-status-${dataState}`}
+              >
+                {status}
+              </Typography>
+            </Tooltip>
+            <WeatherRetryButton
+              visible={dataState === 'stale' || dataState === 'unavailable'}
+              onRetry={onWeatherRetry}
+            />
+          </Box>
         </Box>
       </Box>
     </Box>

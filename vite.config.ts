@@ -5,6 +5,9 @@ import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import {
+  getCacheNamespace
+} from './shared/cacheVersion.js'
+import {
   AIR_QUALITY_PARAMETER_CONFIG,
   WEATHER_PARAMETER_CONFIG,
   buildCanonicalOpenMeteoParams
@@ -18,14 +21,20 @@ type WeatherCacheRecord = {
   body: string
   contentType: string
   expiresAt: number
+  rateLimitLimit?: string | null
+  rateLimitRemaining?: string | null
   staleUntil: number
+  upstreamBudget?: string | null
 }
 
 type UpstreamResult = {
   status: number
   body: string
   contentType: string
+  rateLimitLimit: string | null
+  rateLimitRemaining: string | null
   retryAfter?: string
+  upstreamBudget: string | null
 }
 
 type Next = (error?: unknown) => void
@@ -58,7 +67,10 @@ function scheduleUpstream(url: string): Promise<UpstreamResult> {
         retryAfter: blockedFor
       }),
       contentType: 'application/json',
-      retryAfter: String(blockedFor)
+      rateLimitLimit: null,
+      rateLimitRemaining: null,
+      retryAfter: String(blockedFor),
+      upstreamBudget: 'critical'
     })
   }
 
@@ -92,7 +104,20 @@ async function fetchUpstream(url: string): Promise<UpstreamResult> {
   const result: UpstreamResult = {
     status: response.status,
     body,
-    contentType: response.headers.get('content-type') ?? 'application/json'
+    contentType: response.headers.get('content-type') ?? 'application/json',
+    rateLimitLimit: readFirstHeader(response.headers, [
+      'ratelimit-limit',
+      'x-aether-ratelimit-limit',
+      'x-ratelimit-limit',
+      'x-rate-limit-limit'
+    ]),
+    rateLimitRemaining: readFirstHeader(response.headers, [
+      'ratelimit-remaining',
+      'x-aether-ratelimit-remaining',
+      'x-ratelimit-remaining',
+      'x-rate-limit-remaining'
+    ]),
+    upstreamBudget: response.headers.get('x-aether-upstream-budget')
   }
 
   if (response.status === 429) {
@@ -148,9 +173,11 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
+          id: '/',
           name: 'Aether Weather Map',
           short_name: 'Aether',
           description: 'Interactive live weather map with wind, radar, air quality, and Jet Stream layers.',
+          categories: ['weather', 'utilities'],
           theme_color: '#071014',
           background_color: '#071014',
           display: 'standalone',
@@ -172,7 +199,7 @@ export default defineConfig(({ mode }) => {
               src: '/pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
-              purpose: 'maskable'
+              purpose: 'any maskable'
             }
           ]
         },
@@ -188,7 +215,7 @@ export default defineConfig(({ mode }) => {
               ),
               handler: 'NetworkFirst',
               options: {
-                cacheName: 'aether-api',
+                cacheName: getCacheNamespace('api'),
                 networkTimeoutSeconds: 4,
                 cacheableResponse: {
                   statuses: [0, 200]
@@ -326,7 +353,10 @@ function localWeatherApi(): Plugin {
           body: result.body,
           contentType: result.contentType,
           expiresAt: now + freshness,
-          staleUntil: now + 24 * 60 * 60 * 1000
+          rateLimitLimit: result.rateLimitLimit,
+          rateLimitRemaining: result.rateLimitRemaining,
+          staleUntil: now + 24 * 60 * 60 * 1000,
+          upstreamBudget: result.upstreamBudget
         }
 
         cache.set(cacheKey, record)
@@ -344,6 +374,26 @@ function localWeatherApi(): Plugin {
 
       if (result.retryAfter) {
         response.setHeader('Retry-After', result.retryAfter)
+      }
+
+      if (result.rateLimitLimit) {
+        response.setHeader('X-Aether-RateLimit-Limit', result.rateLimitLimit)
+      }
+
+      if (result.rateLimitRemaining) {
+        response.setHeader(
+          'X-Aether-RateLimit-Remaining',
+          result.rateLimitRemaining
+        )
+      }
+
+      if (result.status === 429) {
+        response.setHeader('X-Aether-Upstream-Budget', 'critical')
+      } else if (result.upstreamBudget) {
+        response.setHeader(
+          'X-Aether-Upstream-Budget',
+          result.upstreamBudget
+        )
       }
 
       response.end(result.body)
@@ -377,5 +427,35 @@ function sendCachedWeather(
   response.setHeader('Content-Type', record.contentType)
   response.setHeader('Cache-Control', 'public, max-age=60')
   response.setHeader('X-Aether-Cache', cacheStatus)
+
+  if (record.rateLimitLimit) {
+    response.setHeader('X-Aether-RateLimit-Limit', record.rateLimitLimit)
+  }
+
+  if (record.rateLimitRemaining) {
+    response.setHeader(
+      'X-Aether-RateLimit-Remaining',
+      record.rateLimitRemaining
+    )
+  }
+
+  if (cacheStatus === 'stale') {
+    response.setHeader('X-Aether-Upstream-Budget', 'low')
+  } else if (record.upstreamBudget) {
+    response.setHeader('X-Aether-Upstream-Budget', record.upstreamBudget)
+  }
+
   response.end(record.body)
+}
+
+function readFirstHeader(headers: Headers, names: string[]) {
+  for (const name of names) {
+    const value = headers.get(name)
+
+    if (value !== null) {
+      return value
+    }
+  }
+
+  return null
 }

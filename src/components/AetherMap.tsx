@@ -1,10 +1,15 @@
 import L from 'leaflet'
 import { useEffect, useRef } from 'react'
+import type { KeyboardEvent } from 'react'
 import { WeatherMapAnimation } from '../map/WeatherMapAnimation'
 import { WeatherRadarLayer } from '../map/WeatherRadarLayer'
 import { interpolateWeatherAt } from '../services/weatherGrid'
 import { interpolateAirQualityAt } from '../services/airQuality'
 import { interpolateJetStreamAt } from '../services/jetStream'
+import {
+  REDUCED_MOTION_QUERY,
+  prefersReducedMotion
+} from '../utils/motion'
 import type {
   AirQualityMapSample,
   JetStreamSample,
@@ -29,6 +34,7 @@ type AetherMapProps = {
   samples: WeatherMapSample[]
   jetStreamSamples: JetStreamSample[]
   airQualitySamples: AirQualityMapSample[]
+  radarOpacity: number
   onViewportChange: (viewport: WeatherViewport) => void
   onPointerWeatherChange: (reading: MapWeatherPointer | null) => void
   onMapClick: (location: WeatherLocation) => void
@@ -40,12 +46,14 @@ export function AetherMap({
   samples,
   jetStreamSamples,
   airQualitySamples,
+  radarOpacity,
   onViewportChange,
   onPointerWeatherChange,
   onMapClick
 }: AetherMapProps) {
   const elementRef = useRef<HTMLDivElement | null>(null)
   const initialLocationRef = useRef(location)
+  const locationRef = useRef(location)
   const mapRef = useRef<L.Map | null>(null)
   const badgeLayerRef = useRef<L.LayerGroup | null>(null)
   const animationRef = useRef<WeatherMapAnimation | null>(null)
@@ -66,6 +74,10 @@ export function AetherMap({
   } | null>(null)
   const frameRef = useRef(0)
   const pointerFrameRef = useRef(0)
+
+  useEffect(() => {
+    locationRef.current = location
+  }, [location])
 
   useEffect(() => {
     samplesRef.current = samples
@@ -93,10 +105,18 @@ export function AetherMap({
     }
 
     const initialLocation = initialLocationRef.current
+    const reducedMotion = prefersReducedMotion()
+    const motionQuery = window.matchMedia(REDUCED_MOTION_QUERY)
     const map = L.map(elementRef.current, {
       center: [initialLocation.latitude, initialLocation.longitude],
+      fadeAnimation: !reducedMotion,
+      inertia: !reducedMotion,
       zoom: 10,
+      zoomAnimation: !reducedMotion,
+      markerZoomAnimation: !reducedMotion,
       zoomControl: true,
+      keyboard: true,
+      keyboardPanDelta: 80,
       maxBounds: WORLD_BOUNDS,
       maxBoundsViscosity: 1,
       worldCopyJump: false
@@ -237,6 +257,16 @@ export function AetherMap({
       animation.invalidate()
       scheduleViewport()
     }
+    const handleMotionPreferenceChange = (event: MediaQueryListEvent) => {
+      map.options.fadeAnimation = !event.matches
+      map.options.inertia = !event.matches
+      map.options.zoomAnimation = !event.matches
+      map.options.markerZoomAnimation = !event.matches
+
+      if (event.matches) {
+        map.stop()
+      }
+    }
     map.on('moveend zoomend resize', scheduleViewport)
     map.on('move zoom resize', animation.invalidate, animation)
     map.on('mousemove', handleMouseMove)
@@ -244,6 +274,7 @@ export function AetherMap({
     map.on('movestart zoomstart', clearPointerWeather)
     elementRef.current.addEventListener('mouseleave', clearPointerWeather)
     window.addEventListener('resize', handleWindowResize)
+    motionQuery.addEventListener('change', handleMotionPreferenceChange)
     emitViewport()
     mapRef.current = map
 
@@ -251,6 +282,7 @@ export function AetherMap({
       window.cancelAnimationFrame(frameRef.current)
       window.cancelAnimationFrame(pointerFrameRef.current)
       window.removeEventListener('resize', handleWindowResize)
+      motionQuery.removeEventListener('change', handleMotionPreferenceChange)
       map.off('moveend zoomend resize', scheduleViewport)
       map.off('move zoom resize', animation.invalidate, animation)
       map.off('mousemove', handleMouseMove)
@@ -294,10 +326,16 @@ export function AetherMap({
       return
     }
 
-    map.flyTo(nextCenter, Math.max(map.getZoom(), 10), {
-      animate: true,
-      duration: 1.1
-    })
+    const nextZoom = Math.max(map.getZoom(), 10)
+
+    if (prefersReducedMotion()) {
+      map.setView(nextCenter, nextZoom, { animate: false })
+    } else {
+      map.flyTo(nextCenter, nextZoom, {
+        animate: true,
+        duration: 1.1
+      })
+    }
   }, [location])
 
   useEffect(() => {
@@ -336,9 +374,58 @@ export function AetherMap({
       jetStreamSamples
     )
     radarRef.current?.setMode(mode)
-  }, [airQualitySamples, jetStreamSamples, samples, mode])
+    radarRef.current?.setOpacity(radarOpacity)
+  }, [airQualitySamples, jetStreamSamples, samples, mode, radarOpacity])
 
-  return <div ref={elementRef} className="aether-map" aria-label="Global weather map" />
+  function handleMapKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const map = mapRef.current
+
+    if (!map || event.target !== event.currentTarget) {
+      return
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+
+      const center = map.getCenter()
+
+      clickCallbackRef.current({
+        label: `${center.lat.toFixed(3)}, ${center.lng.toFixed(3)}`,
+        latitude: center.lat,
+        longitude: center.lng
+      })
+      return
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault()
+
+      const selectedLocation = locationRef.current
+
+      map.panTo(
+        [selectedLocation.latitude, selectedLocation.longitude],
+        { animate: !prefersReducedMotion() }
+      )
+    }
+  }
+
+  return (
+    <>
+      <div
+        ref={elementRef}
+        className="aether-map"
+        role="region"
+        tabIndex={0}
+        aria-label={`Interactive weather map for ${location.label}`}
+        aria-describedby="map-keyboard-instructions"
+        onKeyDown={handleMapKeyDown}
+      />
+      <p id="map-keyboard-instructions" className="visually-hidden">
+        Use arrow keys to pan, plus and minus to zoom, Enter to select the
+        center of the map, and Home to return to the selected location.
+      </p>
+    </>
+  )
 }
 
 function renderBadge(sample: WeatherMapSample, mode: WeatherMode) {

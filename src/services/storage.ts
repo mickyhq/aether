@@ -4,7 +4,9 @@
  * limits and fragmentation.
  */
 
-const DATABASE_NAME = 'aether-data'
+import { getCacheNamespace } from '../../shared/cacheVersion.js'
+
+const DATABASE_NAME = getCacheNamespace('data')
 const DATABASE_VERSION = 1
 const STORES = ['weather-samples', 'air-quality-samples'] as const
 

@@ -3,6 +3,7 @@ import {
   readSharedCache,
   writeSharedCache
 } from '../server/sharedCache.js'
+import { logCacheMetric } from '../server/cacheMetrics.js'
 import {
   UPSTREAM_BLOCK_KEY,
   blockUpstream,
@@ -17,6 +18,7 @@ import {
   STALE_CACHE_TTL,
   WEATHER_FRESH_CACHE_TTL
 } from '../server/cachePolicy.js'
+import { getCacheNamespace } from '../shared/cacheVersion.js'
 
 const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
 
@@ -39,13 +41,15 @@ export default async function handler(request, response) {
 
   const params = canonical.params
   const cacheKey = params.toString()
-  const sharedCache = getSharedCache('aether-weather-v1')
+  const sharedCache = getSharedCache(getCacheNamespace('weather'))
   const cached = await readSharedCache(sharedCache, `fresh:${cacheKey}`)
 
   if (cached) {
     sendWeather(response, cached, 'runtime')
     return
   }
+
+  logCacheMetric('weather', 'miss')
 
   const blockedUntil = await readSharedCache(sharedCache, UPSTREAM_BLOCK_KEY)
   const blockedFor = getRemainingBlockSeconds(blockedUntil)
@@ -72,7 +76,9 @@ export default async function handler(request, response) {
     if (upstream.ok) {
       const record = {
         body: upstream.body,
-        contentType: upstream.contentType
+        contentType: upstream.contentType,
+        rateLimitLimit: upstream.rateLimitLimit,
+        rateLimitRemaining: upstream.rateLimitRemaining
       }
 
       await Promise.all([
@@ -112,6 +118,7 @@ export default async function handler(request, response) {
       response.setHeader('Retry-After', String(retryAfter))
     }
 
+    sendBudgetHeaders(response, upstream)
     response.send(upstream.body)
   } catch {
     const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
@@ -126,6 +133,12 @@ export default async function handler(request, response) {
 }
 
 function sendWeather(response, record, cacheStatus) {
+  if (cacheStatus === 'runtime') {
+    logCacheMetric('weather', 'hit')
+  } else if (cacheStatus === 'stale') {
+    logCacheMetric('weather', 'stale')
+  }
+
   response.status(200)
   response.setHeader('Content-Type', record.contentType)
   response.setHeader('Cache-Control', 'public, max-age=60')
@@ -134,6 +147,12 @@ function sendWeather(response, record, cacheStatus) {
     'public, s-maxage=600, stale-while-revalidate=86400'
   )
   response.setHeader('X-Aether-Cache', cacheStatus)
+  sendBudgetHeaders(response, record)
+
+  if (cacheStatus === 'stale') {
+    response.setHeader('X-Aether-Upstream-Budget', 'low')
+  }
+
   response.send(record.body)
 }
 
@@ -142,10 +161,27 @@ function sendRateLimited(response, retryAfter) {
   response.setHeader('Content-Type', 'application/json')
   response.setHeader('Cache-Control', 'no-store')
   response.setHeader('Retry-After', String(retryAfter))
+  response.setHeader('X-Aether-Upstream-Budget', 'critical')
   response.json({
     error: 'Weather provider rate limited',
     retryAfter
   })
+}
+
+function sendBudgetHeaders(response, record) {
+  if (record.rateLimitLimit !== null && record.rateLimitLimit !== undefined) {
+    response.setHeader('X-Aether-RateLimit-Limit', record.rateLimitLimit)
+  }
+
+  if (
+    record.rateLimitRemaining !== null &&
+    record.rateLimitRemaining !== undefined
+  ) {
+    response.setHeader(
+      'X-Aether-RateLimit-Remaining',
+      record.rateLimitRemaining
+    )
+  }
 }
 
 function getRequestParams(query) {

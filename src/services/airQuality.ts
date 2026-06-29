@@ -7,6 +7,7 @@ import type {
 } from '../types/weather'
 import { getVisibleWeatherGrid } from './weatherGrid'
 import { getWeatherCacheKey } from './weatherCache'
+import { getMapSampleLimit, observeUpstreamBudget } from './upstreamBudget'
 import { openStorage } from './storage'
 import { distanceInKilometers, inverseDistanceWeight } from '../utils/geo'
 
@@ -42,7 +43,18 @@ export async function fetchAirQualityMapSamples(viewport: WeatherViewport) {
   })
   const freshSamples: AirQualityMapSample[] = []
 
-  for (const batch of chunkPoints(refreshPoints, BATCH_SIZE)) {
+  for (let index = 0; index < refreshPoints.length;) {
+    const remainingBudget = getMapSampleLimit() - index
+
+    if (remainingBudget <= 0) {
+      break
+    }
+
+    const batch = refreshPoints.slice(
+      index,
+      index + Math.min(BATCH_SIZE, remainingBudget)
+    )
+    index += batch.length
     await throttleBatchDelay()
 
     try {
@@ -113,6 +125,8 @@ async function fetchAirQualityBatch(points: WeatherLocation[]) {
     current: CURRENT_FIELDS.join(',')
   })
   const response = await fetch(`${AIR_QUALITY_ENDPOINT}?${params.toString()}`)
+
+  observeUpstreamBudget(response)
 
   if (!response.ok) {
     throw new Error(`Air quality error ${response.status}`)
@@ -262,14 +276,4 @@ async function throttleBatchDelay() {
   }
 
   lastBatchFetchTime = Date.now()
-}
-
-function chunkPoints(points: WeatherLocation[], size: number) {
-  const chunks: WeatherLocation[][] = []
-
-  for (let index = 0; index < points.length; index += size) {
-    chunks.push(points.slice(index, index + size))
-  }
-
-  return chunks
 }

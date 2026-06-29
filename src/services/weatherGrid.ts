@@ -7,6 +7,7 @@ import type {
   WeatherViewport
 } from '../types/weather'
 import { getWeatherCacheKey, loadPersistedWeatherSamples, persistWeatherSamples } from './weatherCache'
+import { getMapSampleLimit, observeUpstreamBudget } from './upstreamBudget'
 import { clamp, degreesToRadians, distanceInKilometers, inverseDistanceWeight, normalizeAngle, normalizeLongitude, radiansToDegrees } from '../utils/geo'
 
 type GridPoint = WeatherLocation & {
@@ -31,9 +32,9 @@ const HOURLY_FIELDS = [
 const THUNDERSTORM_CODES = new Set([95, 96, 99])
 const FRESHNESS = 5 * 60 * 1000
 const BATCH_SIZE = 32
-const MAX_GRID_POINTS = 48
 const BATCH_DELAY_MS = 250
 const BASE_SPACING = 260
+const NORMAL_GRID_POINTS = 48
 const sampleCache = new Map<string, WeatherMapSample>()
 let persistentCachePromise: Promise<void> | null = null
 let lastBatchFetchTime = 0
@@ -64,7 +65,18 @@ export async function fetchWeatherMapSamples(
   })
   const freshSamples: WeatherMapSample[] = []
 
-  for (const batch of chunkPoints(refreshPoints, BATCH_SIZE)) {
+  for (let index = 0; index < refreshPoints.length;) {
+    const remainingBudget = getMapSampleLimit() - index
+
+    if (remainingBudget <= 0) {
+      break
+    }
+
+    const batch = refreshPoints.slice(
+      index,
+      index + Math.min(BATCH_SIZE, remainingBudget)
+    )
+    index += batch.length
     signal?.throwIfAborted()
     await throttleBatchDelay()
     signal?.throwIfAborted()
@@ -220,6 +232,8 @@ async function fetchWeatherBatch(
     signal
   })
 
+  observeUpstreamBudget(response)
+
   if (!response.ok) {
     throw new Error(`Weather grid error ${response.status}`)
   }
@@ -262,6 +276,7 @@ function mapWeatherSample(point: GridPoint | undefined, payload: OpenMeteoRespon
 }
 
 function buildVisibleGrid(viewport: WeatherViewport): GridPoint[] {
+  const maxGridPoints = getMapSampleLimit()
   const sampleZoom = clamp(Math.floor(viewport.zoom), 2, 14)
   const worldSize = 256 * 2 ** sampleZoom
   const spacing = getGridSpacing(viewport)
@@ -317,7 +332,7 @@ function buildVisibleGrid(viewport: WeatherViewport): GridPoint[] {
     Array.from(points.values()).filter(point => (
       getWeatherCacheKey(point.latitude, point.longitude) !== centerKey
     )),
-    MAX_GRID_POINTS - 1
+    maxGridPoints - 1
   )
 
   return [centerPoint, ...distributed]
@@ -327,8 +342,8 @@ function getGridSpacing(viewport: WeatherViewport) {
   const estimatedColumns = Math.ceil(viewport.width / BASE_SPACING) + 3
   const estimatedRows = Math.ceil(viewport.height / BASE_SPACING) + 3
   const estimatedPoints = estimatedColumns * estimatedRows
-  const scale = estimatedPoints > MAX_GRID_POINTS
-    ? Math.sqrt(estimatedPoints / MAX_GRID_POINTS)
+  const scale = estimatedPoints > NORMAL_GRID_POINTS
+    ? Math.sqrt(estimatedPoints / NORMAL_GRID_POINTS)
     : 1
 
   return Math.ceil(BASE_SPACING * scale / 16) * 16
@@ -418,16 +433,6 @@ function needsRefresh(sample: WeatherMapSample | undefined) {
     !sample?.updatedAt ||
     Date.now() - sample.updatedAt >= FRESHNESS
   )
-}
-
-function chunkPoints(points: GridPoint[], size: number) {
-  const chunks: GridPoint[][] = []
-
-  for (let index = 0; index < points.length; index += size) {
-    chunks.push(points.slice(index, index + size))
-  }
-
-  return chunks
 }
 
 function distributePoints(points: GridPoint[], limit: number) {

@@ -3,10 +3,11 @@ import {
   parseHeatAlertCoordinates
 } from '../server/heatAlerts.js'
 import {
-  getSharedCache,
-  readSharedCache,
-  writeSharedCache
+  getSharedCache
 } from '../server/sharedCache.js'
+import { logCacheMetric } from '../server/cacheMetrics.js'
+import { loadCachedResource } from '../server/cachedResource.js'
+import { getCacheNamespace } from '../shared/cacheVersion.js'
 
 const FRESH_CACHE_TTL = 10 * 60
 const STALE_CACHE_TTL = 24 * 60 * 60
@@ -29,40 +30,36 @@ export default async function handler(request, response) {
   }
 
   const cacheKey = `${coordinates.latitude.toFixed(3)}:${coordinates.longitude.toFixed(3)}`
-  const cache = getSharedCache('aether-heat-alerts-v2')
-  const cached = await readSharedCache(cache, `fresh:${cacheKey}`)
-
-  if (cached) {
-    sendAlerts(response, cached, 'runtime')
-    return
-  }
+  const cache = getSharedCache(getCacheNamespace('heat-alerts'))
 
   try {
-    const record = {
-      alerts: await getOfficialHeatAlerts(
-        coordinates.latitude,
-        coordinates.longitude
-      )
-    }
+    const result = await loadCachedResource({
+      cache,
+      cacheKey,
+      freshTtl: FRESH_CACHE_TTL,
+      staleTtl: STALE_CACHE_TTL,
+      load: async () => ({
+        alerts: await getOfficialHeatAlerts(
+          coordinates.latitude,
+          coordinates.longitude
+        )
+      }),
+      onFreshMiss: () => logCacheMetric('heat-alerts', 'miss')
+    })
 
-    await Promise.all([
-      writeSharedCache(cache, `fresh:${cacheKey}`, record, FRESH_CACHE_TTL),
-      writeSharedCache(cache, `stale:${cacheKey}`, record, STALE_CACHE_TTL)
-    ])
-    sendAlerts(response, record, 'upstream')
+    sendAlerts(response, result.record, result.source)
   } catch {
-    const stale = await readSharedCache(cache, `stale:${cacheKey}`)
-
-    if (stale) {
-      sendAlerts(response, stale, 'stale')
-      return
-    }
-
     response.status(502).json({ error: 'Official heat alerts unavailable' })
   }
 }
 
 function sendAlerts(response, record, cacheStatus) {
+  if (cacheStatus === 'runtime') {
+    logCacheMetric('heat-alerts', 'hit')
+  } else if (cacheStatus === 'stale') {
+    logCacheMetric('heat-alerts', 'stale')
+  }
+
   response.status(200)
   response.setHeader('Cache-Control', 'public, max-age=60')
   response.setHeader(

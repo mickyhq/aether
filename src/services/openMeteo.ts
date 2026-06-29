@@ -1,10 +1,11 @@
 import type { OpenMeteoResponse, WeatherLocation } from '../types/weather'
 import type { WeatherDataState } from '../types/weather'
+import { getClientCacheKey } from '../../shared/cacheVersion.js'
 
 const OPEN_METEO_ENDPOINT = '/api/weather'
-const FORECAST_CACHE_KEY = 'aether:forecast-cache-v3'
+const FORECAST_CACHE_KEY = getClientCacheKey('forecast')
 const FORECAST_FRESHNESS = 5 * 60 * 1000
-const FORECAST_STALE_AGE = 6 * 60 * 60 * 1000
+const FORECAST_STALE_AGE = 24 * 60 * 60 * 1000
 const CURRENT_FIELDS = [
   'temperature_2m',
   'relative_humidity_2m',
@@ -34,12 +35,16 @@ const DAILY_FIELDS = [
 ]
 
 export async function fetchOpenMeteoForecast(
-  location: WeatherLocation
+  location: WeatherLocation,
+  forceRefresh = false
 ): Promise<ForecastResult> {
   const cacheKey = getLocationCacheKey(location)
   const cachedForecast = readCachedForecast(cacheKey)
+  const cachedAge = cachedForecast
+    ? Date.now() - cachedForecast.updatedAt
+    : Number.POSITIVE_INFINITY
 
-  if (cachedForecast && Date.now() - cachedForecast.updatedAt < FORECAST_FRESHNESS) {
+  if (!forceRefresh && cachedForecast && cachedAge < FORECAST_FRESHNESS) {
     return {
       payload: cachedForecast.payload,
       source: 'cached'
@@ -56,10 +61,23 @@ export async function fetchOpenMeteoForecast(
     timezone: 'auto'
   })
 
-  const response = await fetch(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)
+  let response: Response
+
+  try {
+    response = await fetch(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)
+  } catch (error) {
+    if (cachedForecast && cachedAge < FORECAST_STALE_AGE) {
+      return {
+        payload: cachedForecast.payload,
+        source: 'stale'
+      }
+    }
+
+    throw error
+  }
 
   if (!response.ok) {
-    if (cachedForecast && Date.now() - cachedForecast.updatedAt < FORECAST_STALE_AGE) {
+    if (cachedForecast && cachedAge < FORECAST_STALE_AGE) {
       return {
         payload: cachedForecast.payload,
         source: 'stale'

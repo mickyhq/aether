@@ -8,6 +8,10 @@ import {
   normalizeAngle,
   normalizeLongitude
 } from '../utils/geo'
+import {
+  getJetStreamGridSize,
+  observeUpstreamBudget
+} from './upstreamBudget'
 
 type JetStreamResponse = {
   current: {
@@ -18,8 +22,6 @@ type JetStreamResponse = {
 
 const OPEN_METEO_ENDPOINT = '/api/weather'
 const CURRENT_FIELDS = 'wind_speed_250hPa,wind_direction_250hPa'
-const COLUMN_COUNT = 9
-const ROW_COUNT = 5
 const BATCH_SIZE = 32
 const FRESHNESS = 5 * 60 * 1000
 const MINIMUM_LATITUDE_SPAN = 20
@@ -41,9 +43,19 @@ export async function fetchJetStreamSamples(
   })
 
   for (let index = 0; index < missing.length; index += BATCH_SIZE) {
+    const gridSize = getJetStreamGridSize()
+    const remainingBudget = gridSize.columns * gridSize.rows - index
+
+    if (remainingBudget <= 0) {
+      break
+    }
+
     signal?.throwIfAborted()
 
-    const batch = missing.slice(index, index + BATCH_SIZE)
+    const batch = missing.slice(
+      index,
+      index + Math.min(BATCH_SIZE, remainingBudget)
+    )
     const params = new URLSearchParams({
       latitude: batch.map(point => point.latitude.toFixed(5)).join(','),
       longitude: batch.map(point => point.longitude.toFixed(5)).join(','),
@@ -52,6 +64,8 @@ export async function fetchJetStreamSamples(
     const response = await fetch(`${OPEN_METEO_ENDPOINT}?${params}`, {
       signal
     })
+
+    observeUpstreamBudget(response)
 
     if (!response.ok) {
       continue
@@ -146,6 +160,7 @@ export function geographicDistanceSquared(
 }
 
 function buildJetStreamGrid(viewport: WeatherViewport) {
+  const { columns, rows } = getJetStreamGridSize()
   const west = viewport.west
   let east = viewport.east
 
@@ -167,15 +182,15 @@ function buildJetStreamGrid(viewport: WeatherViewport) {
   const south = clamp(centerLatitude - latitudeSpan / 2, -85, 85)
   const points: Array<{ latitude: number, longitude: number }> = []
 
-  for (let row = 0; row < ROW_COUNT; row += 1) {
-    const latitude = north + (south - north) * row / (ROW_COUNT - 1)
+  for (let row = 0; row < rows; row += 1) {
+    const latitude = north + (south - north) * row / (rows - 1)
 
-    for (let column = 0; column < COLUMN_COUNT; column += 1) {
+    for (let column = 0; column < columns; column += 1) {
       points.push({
         latitude,
         longitude: normalizeLongitude(
           centerLongitude - longitudeSpan / 2 +
-          longitudeSpan * column / (COLUMN_COUNT - 1)
+          longitudeSpan * column / (columns - 1)
         )
       })
     }

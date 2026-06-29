@@ -3,7 +3,10 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { AetherHeader } from './components/AetherHeader'
 import { AetherMap } from './components/AetherMap'
 import { MapWeatherTooltip } from './components/MapWeatherTooltip'
+import { OfflineStatus } from './components/OfflineStatus'
+import { RadarOpacityControl } from './components/RadarOpacityControl'
 import { WeatherDashboard } from './components/WeatherDashboard'
+import { WeatherErrorBoundary } from './components/WeatherErrorBoundary'
 import { defaultCity } from './data/cityCatalog'
 import {
   AIR_QUALITY_REFRESH_INTERVAL,
@@ -41,6 +44,8 @@ import type {
 } from './types/weather'
 
 const STORED_LOCATION_KEY = 'aether:location'
+const RADAR_OPACITY_KEY = 'aether:radar-opacity'
+const REVERSE_GEOCODE_DEBOUNCE_MS = 350
 
 function loadStoredLocation(): WeatherLocation | null {
   try {
@@ -180,6 +185,8 @@ export default function App() {
   const lastWeatherRef = useRef<WeatherConfig | null>(null)
   const [status, setStatus] = useState('Reading sky')
   const [weatherDataState, setWeatherDataState] = useState<WeatherDataState>('loading')
+  const [weatherRequest, setWeatherRequest] = useState(0)
+  const forceWeatherRefreshRef = useRef(false)
   const [officialHeatAlerts, setOfficialHeatAlerts] = useState<HeatAlert[]>([])
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
     readUrlLocation() ?? loadStoredLocation() ?? defaultCity
@@ -195,6 +202,10 @@ export default function App() {
   const [jetStreamSamples, setJetStreamSamples] = useState<JetStreamSample[]>([])
   const [airQualitySamples, setAirQualitySamples] = useState<AirQualityMapSample[]>([])
   const [pointerWeather, setPointerWeather] = useState<MapWeatherPointer | null>(null)
+  const [radarOpacity, setRadarOpacity] = useState(loadRadarOpacity)
+  const reverseGeocodeAbortRef = useRef<AbortController | null>(null)
+  const reverseGeocodeTimeoutRef = useRef(0)
+  const reverseGeocodeRequestRef = useRef(0)
   const selectedAirQuality = useMemo(
     () => interpolateAirQualityAt(
       selectedLocation.latitude,
@@ -224,16 +235,27 @@ export default function App() {
     }]
   }, [mapSamples, selectedLocation, weather])
 
+  useEffect(() => () => {
+    window.clearTimeout(reverseGeocodeTimeoutRef.current)
+    reverseGeocodeAbortRef.current?.abort()
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
     async function loadWeather() {
+      const forceRefresh = forceWeatherRefreshRef.current
+
+      forceWeatherRefreshRef.current = false
       setSelectedForecastReady(false)
       setWeatherDataState('loading')
 
       try {
         setStatus('Reading sky')
-        const forecast = await fetchOpenMeteoForecast(selectedLocation)
+        const forecast = await fetchOpenMeteoForecast(
+          selectedLocation,
+          forceRefresh
+        )
         const nextWeather = translateWeather(forecast.payload, selectedLocation)
         cacheWeatherSample(selectedLocation, nextWeather)
 
@@ -271,7 +293,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedLocation])
+  }, [selectedLocation, weatherRequest])
 
   useEffect(() => {
     updateUrlLocation(selectedLocation, weatherMode)
@@ -476,25 +498,43 @@ export default function App() {
     }
   }, [viewport])
 
-  async function handleMapClick(location: WeatherLocation) {
+  function handleMapClick(location: WeatherLocation) {
+    cancelPendingReverseGeocode()
     setSelectedForecastReady(false)
     setSelectedLocation(location)
     setStatus('Locating')
 
-    try {
-      const label = await reverseGeocode(location.latitude, location.longitude)
+    const requestId = reverseGeocodeRequestRef.current
+    const controller = new AbortController()
 
-      setSelectedForecastReady(false)
-      setSelectedLocation(prev => ({
-        ...prev,
-        label
-      }))
-    } catch {
-      return
-    }
+    reverseGeocodeAbortRef.current = controller
+    reverseGeocodeTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        const label = await reverseGeocode(
+          location.latitude,
+          location.longitude,
+          controller.signal
+        )
+
+        if (requestId !== reverseGeocodeRequestRef.current) {
+          return
+        }
+
+        reverseGeocodeAbortRef.current = null
+        setSelectedForecastReady(false)
+        setSelectedLocation(prev => ({
+          ...prev,
+          label
+        }))
+      } catch {
+        return
+      }
+    }, REVERSE_GEOCODE_DEBOUNCE_MS)
   }
 
   async function handleCitySearch(query: string) {
+    cancelPendingReverseGeocode()
+
     try {
       setStatus('Searching city')
       const nextLocation = await searchCity(query)
@@ -506,40 +546,84 @@ export default function App() {
   }
 
   function handleSavedLocationSelect(location: WeatherLocation) {
+    cancelPendingReverseGeocode()
     setSelectedForecastReady(false)
     setSelectedLocation(location)
     setStatus('Reading sky')
+  }
+
+  function handleRadarOpacityChange(opacity: number) {
+    setRadarOpacity(opacity)
+
+    try {
+      window.localStorage.setItem(RADAR_OPACITY_KEY, String(opacity))
+    } catch {
+      return
+    }
+  }
+
+  function handleWeatherRetry() {
+    forceWeatherRefreshRef.current = true
+    setStatus('Reading sky')
+    setWeatherDataState('loading')
+    setSelectedForecastReady(false)
+    setWeatherRequest(current => current + 1)
+  }
+
+  function cancelPendingReverseGeocode() {
+    reverseGeocodeRequestRef.current += 1
+    window.clearTimeout(reverseGeocodeTimeoutRef.current)
+    reverseGeocodeAbortRef.current?.abort()
+    reverseGeocodeAbortRef.current = null
   }
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <main className="app-shell">
-        <AetherMap
-          location={selectedLocation}
-          mode={mapWeatherMode}
-          samples={displayedSamples}
-          jetStreamSamples={jetStreamSamples}
-          airQualitySamples={airQualitySamples}
-          onViewportChange={handleViewportChange}
-          onPointerWeatherChange={handlePointerWeatherChange}
-          onMapClick={handleMapClick}
-        />
-        <MapWeatherTooltip reading={pointerWeather} />
+        <WeatherErrorBoundary
+          area="map"
+          resetKey={`${selectedLocation.latitude}:${selectedLocation.longitude}:${mapWeatherMode}`}
+        >
+          <AetherMap
+            location={selectedLocation}
+            mode={mapWeatherMode}
+            samples={displayedSamples}
+            jetStreamSamples={jetStreamSamples}
+            airQualitySamples={airQualitySamples}
+            radarOpacity={radarOpacity}
+            onViewportChange={handleViewportChange}
+            onPointerWeatherChange={handlePointerWeatherChange}
+            onMapClick={handleMapClick}
+          />
+          <RadarOpacityControl
+            mode={weatherMode}
+            opacity={radarOpacity}
+            onChange={handleRadarOpacityChange}
+          />
+          <MapWeatherTooltip reading={pointerWeather} />
+        </WeatherErrorBoundary>
+        <OfflineStatus />
         <AetherHeader
           location={selectedLocation}
           status={status}
           dataState={weatherDataState}
           onSearch={handleCitySearch}
           onLocationSelect={handleSavedLocationSelect}
+          onWeatherRetry={handleWeatherRetry}
         />
-        <WeatherDashboard
-          weather={weather}
-          airQuality={selectedAirQuality}
-          officialHeatAlerts={officialHeatAlerts}
-          mode={weatherMode}
-          onModeChange={setWeatherMode}
-        />
+        <WeatherErrorBoundary
+          area="forecast"
+          resetKey={`${selectedLocation.latitude}:${selectedLocation.longitude}:${weatherMode}`}
+        >
+          <WeatherDashboard
+            weather={weather}
+            airQuality={selectedAirQuality}
+            officialHeatAlerts={officialHeatAlerts}
+            mode={weatherMode}
+            onModeChange={setWeatherMode}
+          />
+        </WeatherErrorBoundary>
       </main>
     </ThemeProvider>
   )
@@ -547,4 +631,22 @@ export default function App() {
 
 function formatDataState(state: Exclude<WeatherDataState, 'loading' | 'unavailable'>) {
   return state.charAt(0).toUpperCase() + state.slice(1)
+}
+
+function loadRadarOpacity() {
+  try {
+    const stored = window.localStorage.getItem(RADAR_OPACITY_KEY)
+
+    if (stored === null) {
+      return 0.58
+    }
+
+    const opacity = Number(stored)
+
+    return Number.isFinite(opacity) && opacity >= 0 && opacity <= 1
+      ? opacity
+      : 0.58
+  } catch {
+    return 0.58
+  }
 }

@@ -1,5 +1,6 @@
 import type { WeatherConfig, WeatherEvolutionFrame, WeatherMapSample, WeatherMode, WeatherViewport } from '../types/weather'
 import { normalizeLongitude } from '../utils/geo'
+import { REDUCED_MOTION_QUERY } from '../utils/motion'
 import { Vector2D } from './Vector2D'
 
 type SimulationParticle = {
@@ -41,7 +42,33 @@ export class WeatherSimulation {
   private pixelRatio = 1
   private flashAlpha = 0
   private lightningClock = 0
-  private resizeHandler = () => this.resize()
+  private resizeHandler = () => {
+    this.resize()
+
+    if (this.reducedMotion) {
+      this.render(0, 0)
+    }
+  }
+  private motionQuery = window.matchMedia(REDUCED_MOTION_QUERY)
+  private reducedMotion = this.motionQuery.matches
+  private running = false
+  private motionChangeHandler = (event: MediaQueryListEvent) => {
+    this.reducedMotion = event.matches
+    cancelAnimationFrame(this.animationFrame)
+    this.animationFrame = 0
+    this.lastTime = 0
+
+    if (this.reducedMotion) {
+      this.lightningSegments = []
+      this.flashAlpha = 0
+    }
+
+    this.render(0, 0)
+
+    if (!this.reducedMotion && this.running) {
+      this.animationFrame = requestAnimationFrame(time => this.tick(time))
+    }
+  }
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -62,14 +89,24 @@ export class WeatherSimulation {
   }
 
   start() {
+    this.running = true
     this.resize()
     window.addEventListener('resize', this.resizeHandler)
+    this.motionQuery.addEventListener('change', this.motionChangeHandler)
+
+    if (this.reducedMotion) {
+      this.render(0, 0)
+      return
+    }
+
     this.animationFrame = requestAnimationFrame(time => this.tick(time))
   }
 
   stop() {
+    this.running = false
     cancelAnimationFrame(this.animationFrame)
     window.removeEventListener('resize', this.resizeHandler)
+    this.motionQuery.removeEventListener('change', this.motionChangeHandler)
   }
 
   private createPool(size: number) {
@@ -103,6 +140,10 @@ export class WeatherSimulation {
   }
 
   private tick(time: number) {
+    if (!this.running || this.reducedMotion) {
+      return
+    }
+
     const deltaTime = Math.min((time - this.lastTime) / 1000 || 0.016, 0.033)
     this.lastTime = time
 

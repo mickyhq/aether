@@ -1,5 +1,6 @@
 import L from 'leaflet'
 import { geographicDistanceSquared } from '../services/jetStream'
+import { REDUCED_MOTION_QUERY } from '../utils/motion'
 import type {
   AirQualityMapSample,
   JetStreamSample,
@@ -89,7 +90,26 @@ export class WeatherMapAnimation {
   private width = 1
   private height = 1
   private pixelRatio = 1
-  private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  private motionQuery = window.matchMedia(REDUCED_MOTION_QUERY)
+  private reducedMotion = this.motionQuery.matches
+  private running = false
+  private motionChangeHandler = (event: MediaQueryListEvent) => {
+    this.reducedMotion = event.matches
+    window.cancelAnimationFrame(this.animationFrame)
+    this.animationFrame = 0
+    this.lastTime = 0
+
+    if (this.reducedMotion) {
+      this.lightning = []
+    }
+
+    this.resize()
+    this.render(0, 0)
+
+    if (!this.reducedMotion && this.running) {
+      this.animationFrame = window.requestAnimationFrame(time => this.tick(time))
+    }
+  }
 
   constructor(map: L.Map, container: HTMLElement) {
     this.map = map
@@ -129,6 +149,8 @@ export class WeatherMapAnimation {
   }
 
   start() {
+    this.running = true
+    this.motionQuery.addEventListener('change', this.motionChangeHandler)
     this.resize()
 
     if (this.reducedMotion) {
@@ -140,7 +162,9 @@ export class WeatherMapAnimation {
   }
 
   destroy() {
+    this.running = false
     window.cancelAnimationFrame(this.animationFrame)
+    this.motionQuery.removeEventListener('change', this.motionChangeHandler)
     this.canvas.remove()
   }
 
@@ -194,6 +218,10 @@ export class WeatherMapAnimation {
   }
 
   private tick(time: number) {
+    if (!this.running || this.reducedMotion) {
+      return
+    }
+
     const deltaTime = Math.min((time - this.lastTime) / 1000 || 0.016, 0.04)
     this.lastTime = time
     this.resize()

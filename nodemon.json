@@ -2,7 +2,8 @@
   "watch": [
     "vite.config.ts",
     "server",
-    "api"
+    "api",
+    "shared"
   ],
   "ext": "ts,js,json",
   "ignore": [

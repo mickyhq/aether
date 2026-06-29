@@ -6,6 +6,7 @@ import {
   WEATHER_PARAMETER_CONFIG,
   buildCanonicalOpenMeteoParams
 } from '../server/openMeteoParams.js'
+import { getCacheNamespace } from '../shared/cacheVersion.js'
 import {
   getSharedCache,
   readSharedCache,
@@ -57,7 +58,7 @@ if (process.env.VERCEL_ENV !== 'production') {
 }
 
 async function warmWeatherCache() {
-  const cache = getSharedCache('aether-weather-v1')
+  const cache = getSharedCache(getCacheNamespace('weather'))
 
   if (!cache) {
     console.log('Weather cache warm skipped: Runtime Cache unavailable')

@@ -27,6 +27,18 @@ body {
   overflow: hidden;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .app-shell {
   position: relative;
   width: 100vw;
@@ -34,6 +46,69 @@ body {
   min-height: 520px;
   overflow: hidden;
   background: #071014;
+}
+
+.render-error {
+  display: grid;
+  gap: 8px;
+  color: #ffe6e6;
+  font-size: 13px;
+}
+
+.render-error-map {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  place-content: center;
+  padding: 24px;
+  background: #0c1b20;
+  text-align: center;
+}
+
+.render-error span {
+  color: rgba(255, 230, 230, 0.68);
+}
+
+.render-error button {
+  justify-self: start;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 150, 150, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 118, 118, 0.14);
+  color: #fff4f4;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.render-error-map button {
+  justify-self: center;
+}
+
+.offline-status {
+  position: fixed;
+  top: calc(var(--header-height) + 12px);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 214, 102, 0.42);
+  border-radius: 999px;
+  background: rgba(37, 28, 8, 0.9);
+  box-shadow: var(--glass-shadow);
+  color: #ffe59b;
+  font-size: 12px;
+  font-weight: 700;
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+}
+
+.offline-status svg {
+  width: 17px;
+  height: 17px;
 }
 
 .aether-map {
@@ -125,6 +200,44 @@ body {
   color: #f7fcff;
   pointer-events: none;
   backdrop-filter: blur(14px) saturate(135%);
+}
+
+.radar-opacity-control {
+  position: fixed;
+  top: calc(var(--header-height) + 142px);
+  right: 10px;
+  z-index: 3;
+  width: 150px;
+  padding: 9px 12px 5px;
+  border: 1px solid var(--glass-line);
+  border-radius: 9px;
+  background: rgba(7, 17, 22, 0.86);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+.radar-opacity-heading {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  color: #c7edff;
+}
+
+.radar-opacity-heading svg {
+  width: 17px;
+  height: 17px;
+  color: #8fe5ff;
+}
+
+.radar-opacity-heading .MuiTypography-root {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.radar-opacity-control .MuiSlider-root {
+  padding: 8px 0 5px;
+  color: #8fe5ff;
 }
 
 .map-weather-tooltip-coordinates {
@@ -409,6 +522,34 @@ body {
   font-weight: 750;
   letter-spacing: 0.02em;
   white-space: nowrap;
+}
+
+.weather-status-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weather-retry-slot {
+  width: 28px;
+  height: 28px;
+  visibility: hidden;
+}
+
+.weather-retry-visible {
+  visibility: visible;
+}
+
+.weather-retry-button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 196, 112, 0.42);
+  background: rgba(255, 196, 112, 0.13);
+  color: #ffe8c2;
+}
+
+.weather-retry-button:hover {
+  background: rgba(255, 196, 112, 0.24);
 }
 
 .search-status::before {
@@ -712,6 +853,17 @@ body {
   text-align: center;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @media (max-width: 560px) {
   :root {
     --header-height: 84px;
@@ -740,11 +892,14 @@ body {
     height: 34px;
   }
 
-  .search-status {
+  .weather-status-group {
     grid-column: 1 / -1;
+    justify-self: end;
+  }
+
+  .search-status {
     min-height: 24px;
     padding: 3px 8px;
-    justify-self: end;
   }
 
   .brand-place,

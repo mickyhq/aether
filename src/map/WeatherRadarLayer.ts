@@ -1,5 +1,6 @@
 import L from 'leaflet'
 import type { WeatherMode } from '../types/weather'
+import { REDUCED_MOTION_QUERY } from '../utils/motion'
 
 type RadarFrame = {
   time: number
@@ -30,6 +31,19 @@ export class WeatherRadarLayer {
   private metadataInterval = 0
   private visible = false
   private destroyed = false
+  private opacity = 0.58
+  private motionQuery = window.matchMedia(REDUCED_MOTION_QUERY)
+  private reducedMotion = this.motionQuery.matches
+  private motionChangeHandler = (event: MediaQueryListEvent) => {
+    this.reducedMotion = event.matches
+
+    if (this.reducedMotion) {
+      this.stopFrameLoop()
+      this.showLatestFrame()
+    } else if (this.visible) {
+      this.startFrameLoop()
+    }
+  }
 
   constructor(map: L.Map) {
     this.map = map
@@ -42,6 +56,7 @@ export class WeatherRadarLayer {
   }
 
   start() {
+    this.motionQuery.addEventListener('change', this.motionChangeHandler)
     void this.refreshMetadata()
     this.metadataInterval = window.setInterval(() => {
       void this.refreshMetadata()
@@ -67,10 +82,16 @@ export class WeatherRadarLayer {
     this.removeLayers()
   }
 
+  setOpacity(opacity: number) {
+    this.opacity = Math.max(0, Math.min(1, opacity))
+    this.currentLayer?.setOpacity(this.opacity)
+  }
+
   destroy() {
     this.destroyed = true
     this.stopFrameLoop()
     window.clearInterval(this.metadataInterval)
+    this.motionQuery.removeEventListener('change', this.motionChangeHandler)
     this.removeLayers()
   }
 
@@ -111,7 +132,7 @@ export class WeatherRadarLayer {
   }
 
   private startFrameLoop() {
-    if (this.frameInterval || this.frames.length < 2) {
+    if (this.reducedMotion || this.frameInterval || this.frames.length < 2) {
       return
     }
 
@@ -152,7 +173,7 @@ export class WeatherRadarLayer {
         return
       }
 
-      nextLayer.setOpacity(0.58)
+      nextLayer.setOpacity(this.opacity)
       this.currentLayer?.remove()
       this.currentLayer = nextLayer
       this.loadingLayer = null

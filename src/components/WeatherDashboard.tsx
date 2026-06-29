@@ -26,7 +26,7 @@ export function WeatherDashboard({
   onModeChange
 }: WeatherDashboardProps) {
   return (
-    <Box className="weather-panel">
+    <Box component="aside" className="weather-panel" aria-label="Weather layers and forecast">
       <Stack spacing={1.25}>
         <SevereWeatherAlerts
           weather={weather}
@@ -152,6 +152,7 @@ function HourlyForecast({ frames }: { frames: WeatherEvolutionFrame[] }) {
           width={chartWidth}
           height={chartHeight + 22}
           preserveAspectRatio="xMinYMid meet"
+          role="img"
           aria-label="12-hour temperature and precipitation forecast"
         >
           <defs>
@@ -243,7 +244,12 @@ function Metric({
   onClick: () => void
 }) {
   return (
-    <button className={`metric ${selected ? 'metric-selected' : ''}`} onClick={onClick}>
+    <button
+      className={`metric ${selected ? 'metric-selected' : ''}`}
+      aria-label={`${label}: ${value}`}
+      aria-pressed={selected}
+      onClick={onClick}
+    >
       <Box className="metric-icon">{icon}</Box>
       <Box>
         <Typography variant="caption" className="metric-label">
