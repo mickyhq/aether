@@ -133,48 +133,7 @@ export default function App() {
 
     return weatherFromEvolutionFrame(weather, ecmwfFrame)
   }, [ecmwfFrame, weather, weatherMode])
-  const displayedSamples = useMemo(() => {
-    if (
-      displayedWeather &&
-      ecmwfFrame &&
-      weatherMode !== 'jet-stream' &&
-      weatherMode !== 'air-quality'
-    ) {
-      return [{
-        label: selectedLocation.label,
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude,
-        temperature: displayedWeather.temperature,
-        precipitation: displayedWeather.precipitation,
-        snowfall: displayedWeather.snowfall,
-        weatherCode: displayedWeather.weatherCode,
-        windSpeed: displayedWeather.windSpeed,
-        rawWindSpeed: displayedWeather.rawWindSpeed,
-        windAngle: displayedWeather.windAngle,
-        cloudOpacity: displayedWeather.cloudOpacity,
-        isThunderstorm: displayedWeather.isThunderstorm
-      }]
-    }
-
-    if (mapSamples.length > 0 || !displayedWeather) {
-      return mapSamples
-    }
-
-    return [{
-      label: selectedLocation.label,
-      latitude: selectedLocation.latitude,
-      longitude: selectedLocation.longitude,
-      temperature: displayedWeather.temperature,
-      precipitation: displayedWeather.precipitation,
-      snowfall: displayedWeather.snowfall,
-      weatherCode: displayedWeather.weatherCode,
-      windSpeed: displayedWeather.windSpeed,
-      rawWindSpeed: displayedWeather.rawWindSpeed,
-      windAngle: displayedWeather.windAngle,
-      cloudOpacity: displayedWeather.cloudOpacity,
-      isThunderstorm: displayedWeather.isThunderstorm
-    }]
-  }, [displayedWeather, ecmwfFrame, mapSamples, selectedLocation, weatherMode])
+  const displayedSamples = mapSamples
 
   useEffect(() => () => {
     window.clearTimeout(reverseGeocodeTimeoutRef.current)
@@ -301,7 +260,7 @@ export default function App() {
     let loading = false
     const cachedSamples = getCachedWeatherMapSamples(viewport)
 
-    setMapSamples(current => current.length > 0 ? current : cachedSamples)
+    setMapSamples(cachedSamples)
 
     const applyPersistentCache = async () => {
       const samples = await hydrateWeatherMapCache(viewport)
