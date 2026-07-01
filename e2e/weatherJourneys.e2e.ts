@@ -104,6 +104,12 @@ test('loads the selected location forecast', async ({ page }) => {
   ).toBeVisible()
   await expect(page.getByLabel('ECMWF visual forecast')).toBeVisible()
   await expect(page.getByLabel('ECMWF forecast time')).toBeVisible()
+  await expect(page.getByLabel('Forecast date')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Play ECMWF forecast' }).click()
+  await expect(page.getByLabel('Forecast date')).toContainText('Forecast')
+  await page.getByRole('button', { name: 'Pause ECMWF forecast' }).click()
+  await expect(page.getByLabel('Forecast date')).toBeVisible()
 })
 
 test('shows saved-data status when the browser goes offline', async ({

@@ -189,10 +189,11 @@ export function AetherMap({
       window.cancelAnimationFrame(frameRef.current)
       frameRef.current = window.requestAnimationFrame(emitViewport)
     }
+    let pointerWeatherBlocked = false
     const emitPointerWeather = () => {
       const pointer = lastPointerRef.current
 
-      if (!pointer) {
+      if (pointerWeatherBlocked || !pointer) {
         pointerCallbackRef.current(null)
         return
       }
@@ -243,6 +244,23 @@ export function AetherMap({
       lastPointerRef.current = null
       pointerCallbackRef.current(null)
     }
+    const pointerBlockingControls = [
+      tileControl.getContainer(),
+      map.zoomControl.getContainer()
+    ]
+    const blockPointerWeather = () => {
+      pointerWeatherBlocked = true
+      clearPointerWeather()
+    }
+    const unblockPointerWeather = () => {
+      pointerWeatherBlocked = false
+    }
+
+    for (const control of pointerBlockingControls) {
+      control?.addEventListener('mouseenter', blockPointerWeather)
+      control?.addEventListener('mouseleave', unblockPointerWeather)
+    }
+
     const handleMapClick = (event: L.LeafletMouseEvent) => {
       clickedLatRef.current = event.latlng.lat
       clickedLngRef.current = event.latlng.lng
@@ -284,6 +302,10 @@ export function AetherMap({
       window.cancelAnimationFrame(pointerFrameRef.current)
       window.removeEventListener('resize', handleWindowResize)
       motionQuery.removeEventListener('change', handleMotionPreferenceChange)
+      for (const control of pointerBlockingControls) {
+        control?.removeEventListener('mouseenter', blockPointerWeather)
+        control?.removeEventListener('mouseleave', unblockPointerWeather)
+      }
       map.off('moveend zoomend resize', scheduleViewport)
       map.off('moveend zoomend resize', animation.invalidate, animation)
       map.off('mousemove', handleMouseMove)

@@ -49,6 +49,7 @@ const pending = new Map<string, Promise<UpstreamResult>>()
 const blockedUntil = new Map<string, number>()
 let lastUpstreamTime = 0
 const MIN_SPACING_MS = 300
+const LOCAL_UPSTREAM_TIMEOUT_MS = 8000
 const DEFAULT_RETRY_AFTER_SECONDS = 15 * 60
 const DEPLOYED_API_ORIGIN = 'https://aether-five-rose.vercel.app'
 const packageVersion = (
@@ -104,7 +105,7 @@ async function fetchUpstream(url: string): Promise<UpstreamResult> {
       Accept: 'application/json',
       'User-Agent': 'Aether Local Development'
     }
-  })
+  }, LOCAL_UPSTREAM_TIMEOUT_MS)
   lastUpstreamTime = Date.now()
   const body = await response.text()
   const result: UpstreamResult = {
@@ -435,7 +436,7 @@ function localWeatherApi(): Plugin {
           return
         }
 
-        next(error)
+        sendUpstreamFailure(response, error, 'Official heat alerts')
       }
 
       return
@@ -533,7 +534,13 @@ function localWeatherApi(): Plugin {
         return
       }
 
-      next(error)
+      sendUpstreamFailure(
+        response,
+        error,
+        requestUrl.pathname === '/api/air-quality'
+          ? 'Air quality provider'
+          : 'Weather provider'
+      )
     }
   }
 
@@ -546,6 +553,26 @@ function localWeatherApi(): Plugin {
       server.middlewares.use(handleWeatherRequest)
     }
   }
+}
+
+function sendUpstreamFailure(
+  response: ServerResponse,
+  error: unknown,
+  service: string
+) {
+  const timedOut = error instanceof Error && (
+    error.name === 'TimeoutError' ||
+    error.message === 'Request timed out'
+  )
+
+  response.statusCode = timedOut ? 504 : 502
+  response.setHeader('Content-Type', 'application/json')
+  response.setHeader('Cache-Control', 'no-store')
+  response.end(JSON.stringify({
+    error: timedOut
+      ? `${service} timed out`
+      : `${service} unavailable`
+  }))
 }
 
 function sendCachedWeather(

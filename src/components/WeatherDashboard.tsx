@@ -16,6 +16,7 @@ type WeatherDashboardProps = {
   ecmwfForecast: EcmwfForecast | null
   ecmwfLoading: boolean
   onEcmwfFrameChange: ((frame: EcmwfForecast['frames'][number] | null) => void) | null
+  onEcmwfPlaybackChange: (time: string | null) => void
   airQuality: AirQualityReading | null
   officialHeatAlerts: HeatAlert[]
   mode: WeatherMode
@@ -27,6 +28,7 @@ export function WeatherDashboard({
   ecmwfForecast,
   ecmwfLoading,
   onEcmwfFrameChange,
+  onEcmwfPlaybackChange,
   airQuality,
   officialHeatAlerts,
   mode,
@@ -109,6 +111,7 @@ export function WeatherDashboard({
           forecast={visualForecast}
           loading={ecmwfLoading && !visualForecast}
           onFrameChange={onEcmwfFrameChange ?? undefined}
+          onPlaybackChange={onEcmwfPlaybackChange}
         />
         <HourlyForecast frames={weather?.evolution ?? []} />
       </Stack>

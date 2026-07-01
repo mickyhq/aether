@@ -1,6 +1,7 @@
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { AetherHeader } from './components/AetherHeader'
+import { ForecastDateLabel } from './components/ForecastDateLabel'
 import { MapWeatherTooltip } from './components/MapWeatherTooltip'
 import { OfflineStatus } from './components/OfflineStatus'
 import { RadarOpacityControl } from './components/RadarOpacityControl'
@@ -93,6 +94,7 @@ export default function App() {
   const [ecmwfForecast, setEcmwfForecast] = useState<EcmwfForecast | null>(null)
   const [ecmwfLoading, setEcmwfLoading] = useState(true)
   const [ecmwfFrame, setEcmwfFrame] = useState<WeatherEvolutionFrame | null>(null)
+  const [ecmwfPlaybackTime, setEcmwfPlaybackTime] = useState<string | null>(null)
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
     loadInitialLocation
   )
@@ -577,6 +579,7 @@ export default function App() {
           onLocationSelect={handleSavedLocationSelect}
           onWeatherRetry={handleWeatherRetry}
         />
+        <ForecastDateLabel time={ecmwfPlaybackTime} />
         <WeatherErrorBoundary
           area="forecast"
           resetKey={`${selectedLocation.latitude}:${selectedLocation.longitude}:${weatherMode}`}
@@ -591,6 +594,7 @@ export default function App() {
                   ? null
                   : setEcmwfFrame
               }
+              onEcmwfPlaybackChange={setEcmwfPlaybackTime}
               airQuality={selectedAirQuality}
               officialHeatAlerts={officialHeatAlerts}
               mode={weatherMode}

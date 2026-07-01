@@ -342,6 +342,26 @@ body {
   z-index: 3;
 }
 
+.forecast-date-label {
+  position: fixed;
+  top: calc(var(--header-height) + 8px);
+  left: 50%;
+  z-index: 4;
+  padding: 7px 12px;
+  border: 1px solid rgba(143, 229, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(7, 20, 27, 0.86);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  color: #dff8ff;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
 .brand-block {
   min-width: 0;
   flex: 1 1 0;

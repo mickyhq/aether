@@ -10,15 +10,18 @@ type EcmwfForecastTimelineProps = {
   forecast: EcmwfForecast | null
   loading: boolean
   onFrameChange?: (frame: EcmwfForecast['frames'][number] | null) => void
+  onPlaybackChange?: (time: string | null) => void
 }
 
 export function EcmwfForecastTimeline({
   forecast,
   loading,
-  onFrameChange
+  onFrameChange,
+  onPlaybackChange
 }: EcmwfForecastTimelineProps) {
   const [frameIndex, setFrameIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [hasPlayed, setHasPlayed] = useState(false)
   const frames = forecast?.frames ?? []
   const selected = frames[frameIndex]
   const points = useMemo(() => buildTemperaturePoints(frames), [frames])
@@ -32,11 +35,20 @@ export function EcmwfForecastTimeline({
 
     setFrameIndex(Math.max(0, currentIndex))
     setPlaying(false)
+    setHasPlayed(false)
   }, [forecast])
 
   useEffect(() => {
     onFrameChange?.(selected ?? null)
   }, [onFrameChange, selected])
+
+  useEffect(() => {
+    onPlaybackChange?.(hasPlayed && selected ? selected.time : null)
+  }, [hasPlayed, onPlaybackChange, selected])
+
+  useEffect(() => (
+    () => onPlaybackChange?.(null)
+  ), [onPlaybackChange])
 
   useEffect(() => {
     if (!playing || frames.length < 2 || prefersReducedMotion()) {
@@ -75,7 +87,10 @@ export function EcmwfForecastTimeline({
         <IconButton
           size="small"
           aria-label={playing ? 'Pause ECMWF forecast' : 'Play ECMWF forecast'}
-          onClick={() => setPlaying(current => !current)}
+          onClick={() => {
+            setHasPlayed(true)
+            setPlaying(current => !current)
+          }}
           disabled={prefersReducedMotion()}
         >
           {playing ? <PauseIcon /> : <PlayArrowIcon />}
