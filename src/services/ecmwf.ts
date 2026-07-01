@@ -1,17 +1,16 @@
 import type {
   EcmwfForecast,
   OpenMeteoHourly,
-  WeatherEvolutionFrame,
   WeatherLocation
 } from '../types/weather'
-import { clamp, degreesToRadians } from '../utils/geo'
-import { THUNDERSTORM_CODES } from '../weather/weatherCode'
+import { buildWeatherEvolution } from '../weather/translateWeather'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 
 type EcmwfResponse = {
   latitude: number
   longitude: number
   model?: string
+  utc_offset_seconds?: number
   hourly: OpenMeteoHourly
 }
 
@@ -37,23 +36,11 @@ export async function fetchEcmwfLocationForecast(
     throw new Error('ECMWF forecast is empty')
   }
 
-  const frames = hourly.time.map((time, index): WeatherEvolutionFrame => {
-    const weatherCode = hourly.weather_code[index] ?? 0
-    const rawWindSpeed = hourly.wind_speed_10m[index] ?? 0
-
-    return {
-      time,
-      temperature: hourly.temperature_2m[index] ?? 0,
-      precipitation: hourly.precipitation[index] ?? 0,
-      snowfall: hourly.snowfall[index] ?? 0,
-      weatherCode,
-      cloudOpacity: clamp((hourly.cloud_cover[index] ?? 0) / 100, 0, 1),
-      windSpeed: clamp(rawWindSpeed / 80, 0, 1),
-      rawWindSpeed,
-      windAngle: degreesToRadians(hourly.wind_direction_10m[index] ?? 0),
-      isThunderstorm: THUNDERSTORM_CODES.has(weatherCode)
-    }
-  })
+  const frames = buildWeatherEvolution(
+    hourly,
+    payload.utc_offset_seconds,
+    hourly.time.length
+  )
 
   return {
     model: payload.model ?? 'ECMWF IFS 9 km',

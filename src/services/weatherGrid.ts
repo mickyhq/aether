@@ -12,6 +12,7 @@ import { clamp, degreesToRadians, distanceInKilometers, interpolateWindVectors, 
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { isWeatherResponse } from '../../shared/providerValidation.js'
 import { mapCurrentWeather } from '../weather/mapCurrentWeather'
+import { buildWeatherEvolution } from '../weather/translateWeather'
 import { describeWeatherCode } from '../weather/weatherCode'
 
 type GridPoint = WeatherLocation & {
@@ -31,7 +32,13 @@ const CURRENT_FIELDS = [
 ]
 
 const HOURLY_FIELDS = [
-  'precipitation'
+  'temperature_2m',
+  'precipitation',
+  'snowfall',
+  'weather_code',
+  'cloud_cover',
+  'wind_speed_10m',
+  'wind_direction_10m'
 ]
 const FRESHNESS = 5 * 60 * 1000
 const BATCH_SIZE = 32
@@ -220,6 +227,42 @@ export function interpolateWeatherAt(
   }
 }
 
+export function getWeatherMapSamplesAtTime(
+  samples: WeatherMapSample[],
+  time: string | null
+) {
+  if (!time) {
+    return samples
+  }
+
+  const targetTime = Date.parse(time)
+
+  if (!Number.isFinite(targetTime)) {
+    return samples
+  }
+
+  return samples.map(sample => {
+    const frame = findNearestEvolutionFrame(sample, targetTime)
+
+    if (!frame) {
+      return sample
+    }
+
+    return {
+      ...sample,
+      temperature: frame.temperature,
+      precipitation: frame.precipitation,
+      snowfall: frame.snowfall,
+      weatherCode: frame.weatherCode,
+      windSpeed: frame.windSpeed,
+      rawWindSpeed: frame.rawWindSpeed,
+      windAngle: frame.windAngle,
+      cloudOpacity: frame.cloudOpacity,
+      isThunderstorm: frame.isThunderstorm
+    }
+  })
+}
+
 async function fetchWeatherBatch(
   points: GridPoint[],
   signal?: AbortSignal
@@ -233,7 +276,8 @@ async function fetchWeatherBatch(
     longitude: points.map(point => point.longitude.toFixed(5)).join(','),
     current: CURRENT_FIELDS.join(','),
     hourly: HOURLY_FIELDS.join(','),
-    forecast_days: '1'
+    forecast_days: '6',
+    timezone: 'auto'
   })
   const response = await fetchWithTimeout(`${OPEN_METEO_ENDPOINT}?${params.toString()}`, {
     signal
@@ -275,6 +319,11 @@ function mapWeatherSample(point: GridPoint | undefined, payload: OpenMeteoRespon
     longitude: point.longitude,
     updatedAt,
     showBadge: false,
+    evolution: buildWeatherEvolution(
+      payload.hourly,
+      payload.utc_offset_seconds,
+      payload.hourly.time.length
+    ),
     ...mapped
   }
 }
@@ -448,9 +497,30 @@ function loadPersistentCache() {
 
 function needsRefresh(sample: WeatherMapSample | undefined) {
   return (
+    !sample?.evolution?.length ||
     !sample?.updatedAt ||
     Date.now() - sample.updatedAt >= FRESHNESS
   )
+}
+
+function findNearestEvolutionFrame(
+  sample: WeatherMapSample,
+  targetTime: number
+) {
+  let nearest = null
+  let nearestDistance = Number.POSITIVE_INFINITY
+
+  for (const frame of sample.evolution ?? []) {
+    const frameTime = Date.parse(frame.time)
+    const distance = Math.abs(frameTime - targetTime)
+
+    if (Number.isFinite(frameTime) && distance < nearestDistance) {
+      nearest = frame
+      nearestDistance = distance
+    }
+  }
+
+  return nearestDistance <= 60 * 60 * 1000 ? nearest : null
 }
 
 function distributePoints(points: GridPoint[], limit: number) {

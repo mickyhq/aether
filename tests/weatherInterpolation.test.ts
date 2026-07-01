@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import { interpolateWeatherAt } from '../src/services/weatherGrid'
+import {
+  getWeatherMapSamplesAtTime,
+  interpolateWeatherAt
+} from '../src/services/weatherGrid'
 import type { WeatherMapSample } from '../src/types/weather'
 import { degreesToRadians } from '../src/utils/geo'
 
@@ -36,6 +39,34 @@ describe('interpolateWeatherAt', () => {
       )
     ).toBeCloseTo(0, 5)
   })
+
+  test('uses each map point forecast for the played time', () => {
+    const first = buildSample(-1, 10, 0, 0.2, false)
+    const second = buildSample(1, 20, 0, 0.4, false)
+
+    first.evolution = [
+      buildFrame('2026-07-02T12:00:00.000Z', 30, 25, 90)
+    ]
+    second.evolution = [
+      buildFrame('2026-07-02T12:00:00.000Z', 5, 60, 270)
+    ]
+
+    const displayed = getWeatherMapSamplesAtTime(
+      [first, second],
+      '2026-07-02T12:00:00.000Z'
+    )
+
+    expect(displayed[0]).toMatchObject({
+      temperature: 30,
+      rawWindSpeed: 25
+    })
+    expect(displayed[1]).toMatchObject({
+      temperature: 5,
+      rawWindSpeed: 60
+    })
+    expect(first.temperature).toBe(10)
+    expect(second.temperature).toBe(20)
+  })
 })
 
 function buildSample(
@@ -59,5 +90,25 @@ function buildSample(
     windAngle: degreesToRadians(windDirection),
     cloudOpacity,
     isThunderstorm
+  }
+}
+
+function buildFrame(
+  time: string,
+  temperature: number,
+  rawWindSpeed: number,
+  windDirection: number
+) {
+  return {
+    time,
+    temperature,
+    precipitation: 2,
+    snowfall: 0,
+    weatherCode: 3,
+    windSpeed: rawWindSpeed / 80,
+    rawWindSpeed,
+    windAngle: degreesToRadians(windDirection),
+    cloudOpacity: 0.75,
+    isThunderstorm: false
   }
 }

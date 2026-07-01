@@ -34,6 +34,7 @@ import {
   fetchWeatherMapSamples,
   getCachedWeatherForLocation,
   getCachedWeatherMapSamples,
+  getWeatherMapSamplesAtTime,
   hydrateWeatherMapCache
 } from './services/weatherGrid'
 import { translateWeather } from './weather/translateWeather'
@@ -133,7 +134,10 @@ export default function App() {
 
     return weatherFromEvolutionFrame(weather, ecmwfFrame)
   }, [ecmwfFrame, weather, weatherMode])
-  const displayedSamples = mapSamples
+  const displayedSamples = useMemo(
+    () => getWeatherMapSamplesAtTime(mapSamples, ecmwfPlaybackTime),
+    [ecmwfPlaybackTime, mapSamples]
+  )
 
   useEffect(() => () => {
     window.clearTimeout(reverseGeocodeTimeoutRef.current)

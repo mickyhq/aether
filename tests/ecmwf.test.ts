@@ -12,6 +12,7 @@ test('maps ECMWF hourly data into visual forecast frames', async () => {
   ) => new Response(JSON.stringify({
     latitude: 48,
     longitude: 2,
+    utc_offset_seconds: 7200,
     hourly: {
       time: ['2026-06-29T12:00'],
       temperature_2m: [24],
@@ -40,6 +41,7 @@ test('maps ECMWF hourly data into visual forecast frames', async () => {
 
   expect(result.model).toBe('Standard forecast')
   expect(result.frames[0]).toMatchObject({
+    time: '2026-06-29T10:00:00.000Z',
     temperature: 24,
     precipitation: 1.2,
     rawWindSpeed: 32,

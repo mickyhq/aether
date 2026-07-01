@@ -1,4 +1,4 @@
-import type { OpenMeteoResponse, WeatherConfig, WeatherLocation } from '../types/weather'
+import type { OpenMeteoHourly, OpenMeteoResponse, WeatherConfig, WeatherLocation } from '../types/weather'
 import { clamp, degreesToRadians } from '../utils/geo'
 import { mapCurrentWeather } from './mapCurrentWeather'
 import { describeWeatherCode, THUNDERSTORM_CODES } from './weatherCode'
@@ -14,7 +14,10 @@ export function translateWeather(payload: OpenMeteoResponse, location: WeatherLo
     humidity: current.relative_humidity_2m,
     description: describeWeatherCode(current.weather_code),
     rainDensity: Math.round(clamp(mapped.precipitation, 0, 12) * 42),
-    evolution: buildEvolution(payload),
+    evolution: buildWeatherEvolution(
+      payload.hourly,
+      payload.utc_offset_seconds
+    ),
     sunrise: payload.daily?.sunrise?.[0] ?? null,
     sunset: payload.daily?.sunset?.[0] ?? null,
     heatRisk: buildHeatRisk(payload)
@@ -94,16 +97,19 @@ function buildHeatRisk(payload: OpenMeteoResponse) {
   return null
 }
 
-function buildEvolution(payload: OpenMeteoResponse) {
-  const hourly = payload.hourly
-  const count = Math.min(hourly.time.length, 36)
+export function buildWeatherEvolution(
+  hourly: OpenMeteoHourly,
+  utcOffsetSeconds = 0,
+  maximumFrames = 36
+) {
+  const count = Math.min(hourly.time.length, maximumFrames)
 
   return Array.from({ length: count }, (_, index) => {
     const rawWindSpeed = hourly.wind_speed_10m[index] ?? 0
     const weatherCode = hourly.weather_code[index] ?? 0
 
     return {
-      time: hourly.time[index],
+      time: normalizeForecastTime(hourly.time[index], utcOffsetSeconds),
       temperature: hourly.temperature_2m[index] ?? 0,
       precipitation: hourly.precipitation[index] ?? 0,
       snowfall: hourly.snowfall[index] ?? 0,
@@ -115,4 +121,18 @@ function buildEvolution(payload: OpenMeteoResponse) {
       isThunderstorm: THUNDERSTORM_CODES.has(weatherCode)
     }
   })
+}
+
+function normalizeForecastTime(value: string, utcOffsetSeconds: number) {
+  if (/[zZ]$|[+-]\d{2}:\d{2}$/.test(value)) {
+    return value
+  }
+
+  const wallClockTime = Date.parse(`${value}Z`)
+
+  if (!Number.isFinite(wallClockTime)) {
+    return value
+  }
+
+  return new Date(wallClockTime - utcOffsetSeconds * 1000).toISOString()
 }

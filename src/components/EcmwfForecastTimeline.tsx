@@ -154,6 +154,7 @@ export function EcmwfForecastTimeline({
         aria-label="ECMWF forecast time"
         onChange={event => {
           setPlaying(false)
+          setHasPlayed(true)
           setFrameIndex(Number(event.target.value))
         }}
       />

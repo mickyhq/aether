@@ -50,6 +50,7 @@ export type OpenMeteoResponse = {
   latitude: number
   longitude: number
   timezone: string
+  utc_offset_seconds?: number
   current: OpenMeteoCurrent
   hourly: OpenMeteoHourly
   daily?: OpenMeteoDaily
