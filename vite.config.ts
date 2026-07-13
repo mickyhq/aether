@@ -30,6 +30,12 @@ import {
   buildFireTileUrl,
   parseFireTileCoordinates
 } from './server/fireTile.js'
+import { fetchTileCoalesced } from './server/coalescedTileFetch.js'
+import {
+  consumeRequestLimit,
+  getRequestClientId,
+  setRequestLimitHeaders
+} from './server/requestRateLimit.js'
 import { fetchWithTimeout } from './shared/fetchTimeout.js'
 
 type WeatherCacheRecord = {
@@ -60,6 +66,8 @@ let lastUpstreamTime = 0
 const MIN_SPACING_MS = 300
 const LOCAL_UPSTREAM_TIMEOUT_MS = 8000
 const DEFAULT_RETRY_AFTER_SECONDS = 15 * 60
+const FIRE_TILE_RATE_LIMIT = 240
+const FIRE_TILE_RATE_WINDOW_MS = 60 * 1000
 const DEPLOYED_API_ORIGIN = 'https://aether-five-rose.vercel.app'
 const packageVersion = (
   JSON.parse(
@@ -383,6 +391,25 @@ function localWeatherApi(): Plugin {
     }
 
     if (isFireTileRequest) {
+      const rateLimit = consumeRequestLimit(
+        `firms:${getRequestClientId(request)}`,
+        FIRE_TILE_RATE_LIMIT,
+        FIRE_TILE_RATE_WINDOW_MS
+      )
+
+      setRequestLimitHeaders(response, rateLimit)
+
+      if (!rateLimit.allowed) {
+        response.statusCode = 429
+        response.setHeader('Content-Type', 'application/json')
+        response.setHeader('Cache-Control', 'no-store')
+        response.setHeader('Retry-After', String(rateLimit.retryAfter))
+        response.end(JSON.stringify({
+          error: 'NASA FIRMS tile rate limit exceeded'
+        }))
+        return
+      }
+
       const tile = parseFireTileCoordinates(
         requestUrl.searchParams.get('z'),
         requestUrl.searchParams.get('x'),
@@ -405,12 +432,12 @@ function localWeatherApi(): Plugin {
       }
 
       try {
-        const upstream = await fetchWithTimeout(
+        const upstream = await fetchTileCoalesced(
+          `firms:${tile.z}:${tile.x}:${tile.y}`,
           buildFireTileUrl(mapKey, tile),
-          { headers: { Accept: 'image/png' } },
           LOCAL_UPSTREAM_TIMEOUT_MS
         )
-        const contentType = upstream.headers.get('content-type') ?? ''
+        const contentType = upstream.contentType
 
         if (!upstream.ok || !contentType.includes('image/png')) {
           throw new Error('Invalid NASA FIRMS tile')
@@ -419,7 +446,7 @@ function localWeatherApi(): Plugin {
         response.statusCode = 200
         response.setHeader('Content-Type', 'image/png')
         response.setHeader('Cache-Control', 'public, max-age=900')
-        response.end(Buffer.from(await upstream.arrayBuffer()))
+        response.end(Buffer.from(upstream.body))
       } catch (error) {
         sendUpstreamFailure(response, error, 'NASA FIRMS tile')
       }

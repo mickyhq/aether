@@ -69,6 +69,8 @@ These four outline categories make the major jet regions easier to distinguish. 
 
 The optional heat-detection overlay shows NASA FIRMS combined VIIRS heat detections from the last 24 hours. FIRMS updates its WMS data about every 15 minutes.
 
+The FIRMS tile proxy limits each client to 240 requests per minute and coalesces simultaneous requests for the same tile into one upstream fetch. Successful tiles stay fresh in the browser and CDN for 15 minutes. The CDN may serve stale tiles while revalidating for one day, or during upstream failure for up to seven days.
+
 These points are recent satellite hotspots, not confirmed fire perimeters or a guarantee that a fire is still burning. A detection may be an extinguished fire, volcano, industrial heat source, or another hot surface. Clouds, smoke, satellite timing, and sensor limits can also hide active fires. Use the layer for awareness, not emergency decisions.
 
 The separate reported open-wildfire overlay uses recent NASA EONET events that remain marked open. Prescribed burns are removed. These reports are more meaningful than raw heat detections, but global coverage is incomplete and closure updates can lag. The United States, Canada, and Europe have stronger regional agency feeds; there is no single authoritative worldwide live incident feed.
