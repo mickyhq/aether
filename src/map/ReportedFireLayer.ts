@@ -1,5 +1,6 @@
 import L from 'leaflet'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
+import type { FireLayerStatusPatch } from './fireLayerStatus'
 
 type ReportedFire = {
   id: string
@@ -18,11 +19,16 @@ const REQUEST_TIMEOUT_MS = 8000
 export class ReportedFireLayer {
   private readonly layer = L.layerGroup()
   private readonly map: L.Map
+  private readonly onStatusChange: (status: FireLayerStatusPatch) => void
   private abortController: AbortController | null = null
   private refreshTimeout = 0
 
-  constructor(map: L.Map) {
+  constructor(
+    map: L.Map,
+    onStatusChange: (status: FireLayerStatusPatch) => void
+  ) {
     this.map = map
+    this.onStatusChange = onStatusChange
   }
 
   getLeafletLayer() {
@@ -55,30 +61,49 @@ export class ReportedFireLayer {
 
   private async load() {
     this.stopRefresh()
-    this.abortController = new AbortController()
+    const controller = new AbortController()
+
+    this.abortController = controller
+    this.onStatusChange({ state: 'loading' })
 
     try {
       const response = await fetchWithTimeout(
         '/api/reported-fires',
-        { signal: this.abortController.signal },
+        { signal: controller.signal },
         REQUEST_TIMEOUT_MS
       )
 
       if (!response.ok) {
+        this.onStatusChange({ state: 'unavailable' })
         return
       }
 
       const payload = await response.json() as { fires?: ReportedFire[] }
 
-      if (!Array.isArray(payload.fires) || !this.map.hasLayer(this.layer)) {
+      if (!Array.isArray(payload.fires)) {
+        this.onStatusChange({ state: 'unavailable' })
+        return
+      }
+
+      if (!this.map.hasLayer(this.layer)) {
         return
       }
 
       this.render(payload.fires)
+      this.onStatusChange({
+        state: 'available',
+        lastUpdated: Date.now(),
+        itemCount: payload.fires.length
+      })
     } catch {
+      if (!controller.signal.aborted) {
+        this.onStatusChange({ state: 'unavailable' })
+      }
       return
     } finally {
-      this.abortController = null
+      if (this.abortController === controller) {
+        this.abortController = null
+      }
 
       if (this.map.hasLayer(this.layer)) {
         this.refreshTimeout = window.setTimeout(

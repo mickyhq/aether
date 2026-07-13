@@ -270,6 +270,7 @@ function localWeatherApi(): Plugin {
     const isHeatAlertsRequest = requestUrl.pathname === '/api/heat-alerts'
     const isGeocodeRequest = requestUrl.pathname === '/api/geocode'
     const isEcmwfRequest = requestUrl.pathname === '/api/ecmwf'
+    const isFireLayerStatusRequest = requestUrl.pathname === '/api/fire-layer-status'
     const isFireTileRequest = requestUrl.pathname === '/api/fire-tile'
     const isReportedFiresRequest = requestUrl.pathname === '/api/reported-fires'
     const isEffisFireTileRequest = requestUrl.pathname === '/api/effis-fire-tile'
@@ -285,6 +286,7 @@ function localWeatherApi(): Plugin {
       !isHeatAlertsRequest &&
       !isGeocodeRequest &&
       !isEcmwfRequest &&
+      !isFireLayerStatusRequest &&
       !isFireTileRequest &&
       !isReportedFiresRequest &&
       !isEffisFireTileRequest
@@ -296,6 +298,16 @@ function localWeatherApi(): Plugin {
     if (request.method !== 'GET') {
       response.statusCode = 405
       response.end(JSON.stringify({ error: 'Method not allowed' }))
+      return
+    }
+
+    if (isFireLayerStatusRequest) {
+      response.statusCode = 200
+      response.setHeader('Content-Type', 'application/json')
+      response.setHeader('Cache-Control', 'no-store')
+      response.end(JSON.stringify({
+        firmsConfigured: Boolean(process.env.FIRMS_MAP_KEY?.trim())
+      }))
       return
     }
 

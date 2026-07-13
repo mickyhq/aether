@@ -1,9 +1,18 @@
 import L from 'leaflet'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import { FireLayerStatus } from './FireLayerStatus'
 import { WeatherMapAnimation } from '../map/WeatherMapAnimation'
 import { WeatherRadarLayer } from '../map/WeatherRadarLayer'
 import { ReportedFireLayer } from '../map/ReportedFireLayer'
+import {
+  INITIAL_FIRE_LAYER_STATUSES
+} from '../map/fireLayerStatus'
+import type {
+  FireLayerId,
+  FireLayerStatusPatch
+} from '../map/fireLayerStatus'
+import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { interpolateWeatherAt } from '../services/weatherGrid'
 import { interpolateAirQualityAt } from '../services/airQuality'
 import { interpolateJetStreamAt } from '../services/jetStream'
@@ -81,6 +90,9 @@ export function AetherMap({
   } | null>(null)
   const frameRef = useRef(0)
   const pointerFrameRef = useRef(0)
+  const [fireLayerStatuses, setFireLayerStatuses] = useState(
+    INITIAL_FIRE_LAYER_STATUSES
+  )
 
   useEffect(() => {
     locationRef.current = location
@@ -112,6 +124,14 @@ export function AetherMap({
     }
 
     const initialLocation = initialLocationRef.current
+    const updateFireLayerStatus = (
+      id: FireLayerId,
+      patch: FireLayerStatusPatch
+    ) => {
+      setFireLayerStatuses(current => current.map(status => (
+        status.id === id ? { ...status, ...patch } : status
+      )))
+    }
     const reducedMotion = prefersReducedMotion()
     const motionQuery = window.matchMedia(REDUCED_MOTION_QUERY)
     const map = L.map(elementRef.current, {
@@ -148,7 +168,10 @@ export function AetherMap({
     )
     const tileStyle = loadMapTileStyle()
     const initialTiles = tileStyle === 'dark' ? darkTiles : standardTiles
-    const reportedFires = new ReportedFireLayer(map)
+    const reportedFires = new ReportedFireLayer(
+      map,
+      status => updateFireLayerStatus('reported-wildfires', status)
+    )
     const fireTiles = L.tileLayer(
       '/api/fire-tile?z={z}&x={x}&y={y}',
       {
@@ -224,8 +247,115 @@ export function AetherMap({
     const handleTileStyleChange = (event: L.LayersControlEvent) => {
       saveMapTileStyle(event.name === 'Dark' ? 'dark' : 'standard')
     }
+    let firmsConfigured: boolean | null = null
+    let firmsLoadedTiles = 0
+    let effisLoadedTiles = 0
+    const fireStatusController = new AbortController()
+    const handleFireOverlayAdd = (event: L.LayersControlEvent) => {
+      if (event.layer === fireTiles) {
+        updateFireLayerStatus('heat-detections', {
+          enabled: true,
+          state: firmsConfigured === false ? 'missing-key' : 'loading'
+        })
+      } else if (event.layer === reportedFires.getLeafletLayer()) {
+        updateFireLayerStatus('reported-wildfires', {
+          enabled: true,
+          state: 'loading'
+        })
+      } else if (event.layer === effisFireTiles) {
+        updateFireLayerStatus('europe-detections', {
+          enabled: true,
+          state: 'loading'
+        })
+      }
+    }
+    const handleFireOverlayRemove = (event: L.LayersControlEvent) => {
+      const layerId = getFireLayerId(
+        event.layer,
+        fireTiles,
+        reportedFires.getLeafletLayer(),
+        effisFireTiles
+      )
+
+      if (layerId) {
+        updateFireLayerStatus(layerId, { enabled: false, state: 'idle' })
+      }
+    }
+    const handleFirmsLoading = () => {
+      firmsLoadedTiles = 0
+
+      if (map.hasLayer(fireTiles)) {
+        updateFireLayerStatus('heat-detections', {
+          state: firmsConfigured === false ? 'missing-key' : 'loading'
+        })
+      }
+    }
+    const handleFirmsTileLoad = () => {
+      firmsLoadedTiles += 1
+    }
+    const handleFirmsLoad = () => {
+      if (!map.hasLayer(fireTiles)) {
+        return
+      }
+
+      updateFireLayerStatus('heat-detections', {
+        state: firmsConfigured === false
+          ? 'missing-key'
+          : firmsLoadedTiles > 0 ? 'available' : 'unavailable',
+        ...(firmsLoadedTiles > 0 ? { lastUpdated: Date.now() } : {})
+      })
+    }
+    const handleEffisLoading = () => {
+      effisLoadedTiles = 0
+
+      if (map.hasLayer(effisFireTiles)) {
+        updateFireLayerStatus('europe-detections', { state: 'loading' })
+      }
+    }
+    const handleEffisTileLoad = () => {
+      effisLoadedTiles += 1
+    }
+    const handleEffisLoad = () => {
+      if (!map.hasLayer(effisFireTiles)) {
+        return
+      }
+
+      updateFireLayerStatus('europe-detections', {
+        state: effisLoadedTiles > 0 ? 'available' : 'unavailable',
+        ...(effisLoadedTiles > 0 ? { lastUpdated: Date.now() } : {})
+      })
+    }
 
     map.on('baselayerchange', handleTileStyleChange)
+    map.on('overlayadd', handleFireOverlayAdd)
+    map.on('overlayremove', handleFireOverlayRemove)
+    fireTiles.on('loading', handleFirmsLoading)
+    fireTiles.on('tileload', handleFirmsTileLoad)
+    fireTiles.on('load', handleFirmsLoad)
+    effisFireTiles.on('loading', handleEffisLoading)
+    effisFireTiles.on('tileload', handleEffisTileLoad)
+    effisFireTiles.on('load', handleEffisLoad)
+    void fetchWithTimeout(
+      '/api/fire-layer-status',
+      { signal: fireStatusController.signal },
+      5000
+    ).then(async response => {
+      if (!response.ok) {
+        throw new Error('Fire layer status unavailable')
+      }
+
+      const payload = await response.json() as { firmsConfigured?: boolean }
+
+      firmsConfigured = payload.firmsConfigured === true
+
+      if (!firmsConfigured && map.hasLayer(fireTiles)) {
+        updateFireLayerStatus('heat-detections', { state: 'missing-key' })
+      }
+    }).catch(() => {
+      if (!fireStatusController.signal.aborted && map.hasLayer(fireTiles)) {
+        updateFireLayerStatus('heat-detections', { state: 'unavailable' })
+      }
+    })
     map.attributionControl.addAttribution(
       'Weather <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> · Air quality <a href="https://atmosphere.copernicus.eu/" target="_blank">CAMS</a> · Heat detections <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank">NASA FIRMS</a> · Europe fires <a href="https://forest-fire.emergency.copernicus.eu/" target="_blank">Copernicus EFFIS</a>'
     )
@@ -366,6 +496,7 @@ export function AetherMap({
     return () => {
       window.cancelAnimationFrame(frameRef.current)
       window.cancelAnimationFrame(pointerFrameRef.current)
+      fireStatusController.abort()
       window.removeEventListener('resize', handleWindowResize)
       motionQuery.removeEventListener('change', handleMotionPreferenceChange)
       for (const control of pointerBlockingControls) {
@@ -377,6 +508,14 @@ export function AetherMap({
       map.off('mousemove', handleMouseMove)
       map.off('click', handleMapClick)
       map.off('baselayerchange', handleTileStyleChange)
+      map.off('overlayadd', handleFireOverlayAdd)
+      map.off('overlayremove', handleFireOverlayRemove)
+      fireTiles.off('loading', handleFirmsLoading)
+      fireTiles.off('tileload', handleFirmsTileLoad)
+      fireTiles.off('load', handleFirmsLoad)
+      effisFireTiles.off('loading', handleEffisLoading)
+      effisFireTiles.off('tileload', handleEffisTileLoad)
+      effisFireTiles.off('load', handleEffisLoad)
       map.off('movestart zoomstart', clearPointerWeather)
       elementRef.current?.removeEventListener('mouseleave', clearPointerWeather)
       pointerRefreshRef.current = () => {}
@@ -514,8 +653,26 @@ export function AetherMap({
         Use arrow keys to pan, plus and minus to zoom, Enter to select the
         center of the map, and Home to return to the selected location.
       </p>
+      <FireLayerStatus statuses={fireLayerStatuses} />
     </>
   )
+}
+
+function getFireLayerId(
+  layer: L.Layer,
+  firmsLayer: L.Layer,
+  reportedLayer: L.Layer,
+  effisLayer: L.Layer
+): FireLayerId | null {
+  if (layer === firmsLayer) {
+    return 'heat-detections'
+  }
+
+  if (layer === reportedLayer) {
+    return 'reported-wildfires'
+  }
+
+  return layer === effisLayer ? 'europe-detections' : null
 }
 
 function loadMapTileStyle(): MapTileStyle {

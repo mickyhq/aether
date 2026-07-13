@@ -74,6 +74,8 @@ The separate reported open-wildfire overlay uses recent NASA EONET events that r
 
 The Europe fire-detection overlay uses the Copernicus European Forest Fire Information System (EFFIS) VIIRS layer for the last 48 hours. EFFIS filters likely agricultural burns and false alarms using land cover, distance from artificial surfaces, and hotspot confidence. It covers Europe and the Mediterranean region and normally updates several times per day. These remain satellite detections, not firefighter-confirmed incidents, and can be hidden by cloud, smoke, satellite timing, or sensor limits.
 
+When any fire layer is enabled, a map status card shows whether it is loading, ready, unavailable, or missing the NASA FIRMS key. It also shows when successful data last loaded and the number of reported incidents when available.
+
 ## Requirements
 
 - Node.js 20.19 or newer
