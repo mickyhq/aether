@@ -1,0 +1,122 @@
+:root {
+  color: #f4fbff;
+  background: #071014;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --glass-bg: rgba(10, 21, 27, 0.56);
+  --glass-line: rgba(190, 237, 255, 0.2);
+  --glass-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+  --header-height: 56px;
+  --footer-height: 38px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-shell {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 520px;
+  overflow: hidden;
+  background: #071014;
+}
+
+.map-loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #0c1b20;
+  color: rgba(230, 247, 255, 0.68);
+}
+
+.render-error {
+  display: grid;
+  gap: 8px;
+  color: #ffe6e6;
+  font-size: 13px;
+}
+
+.render-error-map {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  place-content: center;
+  padding: 24px;
+  background: #0c1b20;
+  text-align: center;
+}
+
+.render-error span {
+  color: rgba(255, 230, 230, 0.68);
+}
+
+.render-error button {
+  justify-self: start;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 150, 150, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 118, 118, 0.14);
+  color: #fff4f4;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.render-error-map button {
+  justify-self: center;
+}
+
+.offline-status {
+  position: fixed;
+  top: calc(var(--header-height) + 12px);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 214, 102, 0.42);
+  border-radius: 999px;
+  background: rgba(37, 28, 8, 0.9);
+  box-shadow: var(--glass-shadow);
+  color: #ffe59b;
+  font-size: 12px;
+  font-weight: 700;
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+}
+
+.offline-status svg {
+  width: 17px;
+  height: 17px;
+}

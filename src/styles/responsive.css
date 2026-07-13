@@ -1,0 +1,92 @@
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .data-source-carousel-window {
+    overflow-x: auto;
+  }
+
+  .data-source-carousel-track {
+    animation: none !important;
+  }
+
+  .data-source-carousel-copy {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --header-height: 84px;
+  }
+
+  .app-shell {
+    min-height: 100dvh;
+  }
+
+  .aether-header {
+    gap: 8px;
+  }
+
+  .map-search {
+    grid-template-columns: minmax(110px, 1fr) 34px;
+    gap: 6px;
+  }
+
+  .city-search-input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .city-search-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .weather-status-group {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+
+  .search-status {
+    min-height: 24px;
+    padding: 3px 8px;
+  }
+
+  .brand-place,
+  .brand-divider {
+    display: none;
+  }
+
+  .weather-panel {
+    top: auto;
+    bottom: calc(var(--footer-height) + 8px);
+    width: min(278px, calc(100vw - 12px));
+    max-height: calc(
+      100dvh - var(--header-height) - var(--footer-height) - 16px
+    );
+    padding: 12px;
+  }
+
+  .fire-layer-status {
+    right: 6px;
+    bottom: calc(var(--footer-height) + 6px);
+    width: min(250px, calc(100vw - 12px));
+  }
+
+  .data-source-carousel {
+    grid-template-columns: minmax(0, 1fr);
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .data-source-carousel-label {
+    display: none;
+  }
+}

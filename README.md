@@ -165,6 +165,7 @@ src/
   components/   React interface and map components
   map/          Weather animation and radar layers
   services/     Weather, geocoding, and browser cache services
+  styles/       Base, map, header, forecast, and responsive styles
   weather/      Weather response translation
   types/        Shared TypeScript data types
 ```

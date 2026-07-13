@@ -1,0 +1,381 @@
+.weather-panel {
+  position: fixed;
+  top: calc(var(--header-height) + 10px);
+  left: 0;
+  width: min(286px, calc(100vw - 12px));
+  max-height: calc(
+    100dvh - var(--header-height) - var(--footer-height) - 18px
+  );
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--glass-line);
+  border-left: 0;
+  border-radius: 0 12px 12px 0;
+  background:
+    linear-gradient(140deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.025)),
+    rgba(7, 17, 22, 0.72);
+  box-shadow: 14px 16px 44px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(20px) saturate(140%);
+  z-index: 2;
+}
+
+.severe-weather-alert {
+  padding: 3px 8px;
+  border-color: rgba(255, 196, 112, 0.45);
+  background: rgba(20, 14, 8, 0.68);
+  color: #fff4df;
+  font-size: 11px;
+}
+
+.severe-weather-alert .MuiAlert-icon {
+  padding: 5px 0;
+  font-size: 18px;
+}
+
+.severe-weather-alert .MuiAlert-message {
+  padding: 4px 0;
+}
+
+.severe-weather-alert .MuiAlert-action {
+  padding: 1px 0 0 6px;
+}
+
+.severe-weather-alert .MuiAlertTitle-root {
+  margin-bottom: 1px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.panel-title {
+  color: #f7fcff;
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
+
+.panel-subtitle {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: rgba(230, 247, 255, 0.68);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-heading {
+  min-width: 0;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.metric:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.metric {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 5px 7px;
+  border: 1px solid rgba(190, 237, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.metric:hover {
+  border-color: rgba(143, 229, 255, 0.4);
+  background: rgba(143, 229, 255, 0.1);
+}
+
+.metric-selected {
+  border-color: rgba(183, 245, 199, 0.7);
+  background:
+    linear-gradient(135deg, rgba(183, 245, 199, 0.18), rgba(143, 229, 255, 0.1)),
+    rgba(255, 255, 255, 0.07);
+  transform: translateY(-1px);
+}
+
+.metric-icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: #8fe5ff;
+}
+
+.metric-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.metric-label {
+  min-width: 0;
+  color: rgba(230, 247, 255, 0.58);
+  font-size: 10px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.metric-value {
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sun-times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.sun-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 210, 112, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 210, 112, 0.06);
+}
+
+.sun-time > svg {
+  width: 20px;
+  height: 20px;
+  color: #ffd270;
+}
+
+.sun-time:last-child > svg {
+  color: #a9b7ff;
+}
+
+.sun-time .MuiTypography-caption {
+  display: block;
+  color: rgba(230, 247, 255, 0.54);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.sun-time .MuiTypography-body2 {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.hourly-forecast {
+  margin-top: 4px;
+}
+
+.ecmwf-forecast {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid rgba(143, 229, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(38, 63, 83, 0.24);
+  color: rgba(230, 247, 255, 0.68);
+  font-size: 11px;
+}
+
+.ecmwf-forecast-fallback {
+  border-color: rgba(255, 229, 155, 0.34);
+  background: rgba(92, 69, 31, 0.24);
+}
+
+.ecmwf-forecast-heading,
+.ecmwf-forecast-values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ecmwf-forecast-model {
+  color: #f7fcff;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.ecmwf-forecast-time {
+  color: rgba(230, 247, 255, 0.58);
+  font-size: 10px !important;
+}
+
+.ecmwf-forecast-note {
+  color: rgba(255, 229, 155, 0.82);
+  font-size: 10px !important;
+  line-height: 1.35 !important;
+}
+
+.ecmwf-forecast-heading .MuiIconButton-root {
+  color: #8fe5ff;
+}
+
+.ecmwf-forecast-values {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.ecmwf-visual-preview {
+  position: relative;
+  overflow: hidden;
+  min-height: 86px;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at calc(18% + var(--ecmwf-warmth) * 48%) 24%, rgba(255, 232, 151, calc(0.18 + var(--ecmwf-warmth) * 0.42)), transparent 28%),
+    linear-gradient(160deg, hsl(var(--ecmwf-sky-hue) 78% calc(18% + var(--ecmwf-warmth) * 20%)), hsl(calc(var(--ecmwf-sky-hue) + 22) 74% 9%));
+  box-shadow:
+    inset 0 0 32px rgba(255, 229, 155, calc(var(--ecmwf-warmth) * 0.22)),
+    inset 0 -18px 28px rgba(3, 8, 12, 0.42);
+  transition: background 420ms ease, box-shadow 420ms ease;
+}
+
+.ecmwf-visual-sky,
+.ecmwf-visual-clouds,
+.ecmwf-visual-rain,
+.ecmwf-visual-snow,
+.ecmwf-visual-storm,
+.ecmwf-visual-ground {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ecmwf-visual-clouds {
+  opacity: calc(0.16 + var(--ecmwf-cloud) * 0.78);
+  background:
+    radial-gradient(ellipse at 20% 34%, rgba(238, 250, 255, 0.55) 0 12%, transparent 28%),
+    radial-gradient(ellipse at 55% 28%, rgba(238, 250, 255, 0.46) 0 16%, transparent 34%),
+    radial-gradient(ellipse at 88% 42%, rgba(238, 250, 255, 0.38) 0 12%, transparent 30%);
+  transform: translateX(calc(var(--ecmwf-wind) * 12px));
+  transition: opacity 420ms ease, transform 420ms ease;
+}
+
+.ecmwf-visual-rain {
+  opacity: var(--ecmwf-rain);
+  background-image: repeating-linear-gradient(
+    104deg,
+    rgba(143, 229, 255, 0) 0 9px,
+    rgba(143, 229, 255, 0.72) 10px 11px,
+    rgba(143, 229, 255, 0) 12px 18px
+  );
+  transform: translateX(calc(var(--ecmwf-wind) * -8px));
+  transition: opacity 420ms ease, transform 420ms ease;
+}
+
+.ecmwf-visual-snow {
+  opacity: var(--ecmwf-snow);
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.7) 0 1px, transparent 1.5px);
+  background-position: 0 0, 12px 16px;
+  background-size: 24px 24px, 32px 32px;
+  transition: opacity 420ms ease;
+}
+
+.ecmwf-visual-storm {
+  background: radial-gradient(circle at 68% 20%, rgba(255, 245, 194, 0.9), transparent 18%);
+  mix-blend-mode: screen;
+}
+
+.ecmwf-visual-ground {
+  top: auto;
+  height: 22px;
+  background: linear-gradient(180deg, rgba(5, 16, 18, 0), rgba(6, 18, 16, 0.78));
+}
+
+.ecmwf-visual-wind {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, calc(0.45 + var(--ecmwf-wind) * 0.55));
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.ecmwf-visual-wind span {
+  transform: rotate(var(--ecmwf-wind-angle)) scale(calc(0.78 + var(--ecmwf-wind) * 0.42));
+  transition: transform 420ms ease;
+}
+
+.ecmwf-visual-caption {
+  position: absolute;
+  left: 10px;
+  bottom: 9px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 10px;
+  font-weight: 800;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+.ecmwf-temperature-chart {
+  display: block;
+  width: 100%;
+  height: 42px;
+}
+
+.ecmwf-time-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: #8fe5ff;
+}
+
+.hourly-forecast-label {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(230, 247, 255, 0.48);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hourly-forecast-chart {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(190, 237, 255, 0.08);
+}
+
+.hourly-forecast-chart svg {
+  display: block;
+  min-width: 288px;
+}
+
+.hourly-forecast-empty {
+  padding: 14px 0;
+  color: rgba(230, 247, 255, 0.38);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
