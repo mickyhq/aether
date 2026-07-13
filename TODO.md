@@ -19,7 +19,7 @@
 
 ## Priority 3 — Architecture and performance
 
-- [ ] Share API handlers between local Vite development and Vercel production to prevent behavior drift.
+- [x] Share API handlers between local Vite development and Vercel production to prevent behavior drift.
 - [x] Split `WeatherMapAnimation.ts` into smaller rendering and particle modules.
 - [x] Split `style.css` into component or feature styles.
 - [ ] Extract polling and data-loading hooks from `App.tsx`.

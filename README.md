@@ -102,6 +102,8 @@ npm run dev
 
 Open the local URL printed by Vite. Nodemon restarts Vite when API, server, or Vite configuration files change; React source changes continue to use Vite hot reload.
 
+Local Vite development and Vercel production execute the same handlers from `api/`. Vite only adapts Node request and response objects and provides an in-memory version of the shared cache, so route validation, caching rules, rate limits, headers, and error responses stay aligned.
+
 ## Cache version and invalidation
 
 Disposable caches share `CACHE_VERSION` from `shared/cacheVersion.js`. The version is included in browser forecast keys, IndexedDB names, PWA API caches, and Vercel Runtime Cache namespaces. The latest successful location forecast remains available offline for 24 hours. NASA FIRMS and Copernicus EFFIS tiles use a separate PWA cache with a 15-minute lifetime and a 192-tile limit, so map tiles cannot evict weather API responses. Fire API routes also use shared Vercel Runtime Cache records: tiles stay fresh for 15 minutes with a seven-day stale fallback, while reported incidents use a 15-minute fresh record and a 24-hour stale fallback.
