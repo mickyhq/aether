@@ -26,6 +26,11 @@ const WORLD_BOUNDS = L.latLngBounds(
   [85.05112878, 180]
 )
 const MAP_TILE_STYLE_KEY = 'aether:map-tile-style'
+const FIRE_LAYER_DESCRIPTION = [
+  'Satellite heat detections from the last 24 hours.',
+  'They may include extinguished fires or other hot sources,',
+  'and clouds can hide active fires.'
+].join(' ')
 
 type MapTileStyle = 'standard' | 'dark'
 
@@ -142,6 +147,16 @@ export function AetherMap({
     )
     const tileStyle = loadMapTileStyle()
     const initialTiles = tileStyle === 'dark' ? darkTiles : standardTiles
+    const fireTiles = L.tileLayer(
+      '/api/fire-tile?z={z}&x={x}&y={y}',
+      {
+        maxNativeZoom: 12,
+        maxZoom: 19,
+        noWrap: true,
+        opacity: 0.9,
+        attribution: 'Heat detections NASA FIRMS'
+      }
+    )
 
     initialTiles.addTo(map)
 
@@ -150,19 +165,31 @@ export function AetherMap({
         Standard: standardTiles,
         Dark: darkTiles
       },
-      undefined,
+      {
+        'Heat detections · 24h': fireTiles
+      },
       {
         collapsed: true,
         position: 'topright'
       }
     ).addTo(map)
+    const fireLayerInput = tileControl.getContainer()?.querySelector(
+      'input.leaflet-control-layers-selector[type="checkbox"]'
+    )
+    const fireLayerLabel = fireLayerInput?.closest('label')
+
+    fireLayerLabel?.setAttribute('title', FIRE_LAYER_DESCRIPTION)
+    fireLayerInput?.setAttribute(
+      'aria-label',
+      `Heat detections from the last 24 hours. ${FIRE_LAYER_DESCRIPTION}`
+    )
     const handleTileStyleChange = (event: L.LayersControlEvent) => {
       saveMapTileStyle(event.name === 'Dark' ? 'dark' : 'standard')
     }
 
     map.on('baselayerchange', handleTileStyleChange)
     map.attributionControl.addAttribution(
-      'Weather <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> · Air quality <a href="https://atmosphere.copernicus.eu/" target="_blank">CAMS</a>'
+      'Weather <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> · Air quality <a href="https://atmosphere.copernicus.eu/" target="_blank">CAMS</a> · Heat detections <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank">NASA FIRMS</a>'
     )
     badgeLayerRef.current = L.layerGroup().addTo(map)
     const animation = new WeatherMapAnimation(map, elementRef.current)

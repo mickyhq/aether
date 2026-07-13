@@ -14,6 +14,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 - Interpolated temperature layer and legend
 - European AQI layer with PM2.5 readings
 - Animated precipitation radar
+- Optional NASA FIRMS heat-detection layer for the last 24 hours
 - Saved radar opacity control
 - Storm and lightning effects
 - Weather values at the mouse position
@@ -40,6 +41,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 - [OpenStreetMap](https://www.openstreetmap.org/) supplies the base map.
 - [CARTO](https://carto.com/basemaps/) supplies the optional Dark Matter base map.
 - [MeteoGate](https://meteogate.eu/) supplies official European high-temperature warnings from MeteoAlarm members.
+- [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) supplies global VIIRS active-fire and thermal-anomaly detections from the last 24 hours.
 
 Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). Air-quality data requires attribution to both CAMS and Open-Meteo. RainViewer requires attribution and its free API is intended for personal, educational, and small-scale community use. OpenStreetMap tiles must follow the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
@@ -58,6 +60,12 @@ Particle colors have two meanings:
 
 These four outline categories make the major jet regions easier to distinguish. They are latitude-based visualization bands, not detected jet-axis boundaries.
 
+## Heat-detection layer
+
+The optional heat-detection overlay shows NASA FIRMS combined VIIRS heat detections from the last 24 hours. FIRMS updates its WMS data about every 15 minutes.
+
+These points are recent satellite hotspots, not confirmed fire perimeters or a guarantee that a fire is still burning. A detection may be an extinguished fire, volcano, industrial heat source, or another hot surface. Clouds, smoke, satellite timing, and sensor limits can also hide active fires. Use the layer for awareness, not emergency decisions.
+
 ## Requirements
 
 - Node.js 20.19 or newer
@@ -65,7 +73,10 @@ These four outline categories make the major jet regions easier to distinguish. 
 
 ## Local development
 
+Request a free [NASA FIRMS map key](https://firms.modaps.eosdis.nasa.gov/api/map_key/) and set `FIRMS_MAP_KEY` to enable the heat-detection overlay. The key stays on the server.
+
 ```bash
+FIRMS_MAP_KEY=your_key_here
 npm install
 npm run dev
 ```

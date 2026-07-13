@@ -21,6 +21,10 @@ import {
   parseGeocodeRequest
 } from './server/geocodingProvider.js'
 import { fetchEcmwfForecast } from './server/ecmwfProvider.js'
+import {
+  buildFireTileUrl,
+  parseFireTileCoordinates
+} from './server/fireTile.js'
 import { fetchWithTimeout } from './shared/fetchTimeout.js'
 
 type WeatherCacheRecord = {
@@ -175,6 +179,10 @@ export default defineConfig(({ mode }) => {
     process.env.ECMWF_KEY = env.ECMWF_KEY
   }
 
+  if (!process.env.FIRMS_MAP_KEY && env.FIRMS_MAP_KEY) {
+    process.env.FIRMS_MAP_KEY = env.FIRMS_MAP_KEY
+  }
+
   return {
     define: {
       'import.meta.env.VITE_AETHER_BUILD_VERSION': JSON.stringify(buildVersion)
@@ -257,6 +265,7 @@ function localWeatherApi(): Plugin {
     const isHeatAlertsRequest = requestUrl.pathname === '/api/heat-alerts'
     const isGeocodeRequest = requestUrl.pathname === '/api/geocode'
     const isEcmwfRequest = requestUrl.pathname === '/api/ecmwf'
+    const isFireTileRequest = requestUrl.pathname === '/api/fire-tile'
 
     const upstreamEndpoint = requestUrl.pathname === '/api/weather'
       ? 'https://api.open-meteo.com/v1/forecast'
@@ -268,7 +277,8 @@ function localWeatherApi(): Plugin {
       !upstreamEndpoint &&
       !isHeatAlertsRequest &&
       !isGeocodeRequest &&
-      !isEcmwfRequest
+      !isEcmwfRequest &&
+      !isFireTileRequest
     ) {
       next()
       return
@@ -322,6 +332,51 @@ function localWeatherApi(): Plugin {
             ? error.message
             : 'Geocoding unavailable'
         }))
+      }
+
+      return
+    }
+
+    if (isFireTileRequest) {
+      const tile = parseFireTileCoordinates(
+        requestUrl.searchParams.get('z'),
+        requestUrl.searchParams.get('x'),
+        requestUrl.searchParams.get('y')
+      )
+      const mapKey = process.env.FIRMS_MAP_KEY
+
+      if (!tile) {
+        response.statusCode = 400
+        response.setHeader('Content-Type', 'application/json')
+        response.end(JSON.stringify({ error: 'Invalid tile coordinates' }))
+        return
+      }
+
+      if (!mapKey) {
+        response.statusCode = 503
+        response.setHeader('Content-Type', 'application/json')
+        response.end(JSON.stringify({ error: 'Fire layer is not configured' }))
+        return
+      }
+
+      try {
+        const upstream = await fetchWithTimeout(
+          buildFireTileUrl(mapKey, tile),
+          { headers: { Accept: 'image/png' } },
+          LOCAL_UPSTREAM_TIMEOUT_MS
+        )
+        const contentType = upstream.headers.get('content-type') ?? ''
+
+        if (!upstream.ok || !contentType.includes('image/png')) {
+          throw new Error('Invalid NASA FIRMS tile')
+        }
+
+        response.statusCode = 200
+        response.setHeader('Content-Type', 'image/png')
+        response.setHeader('Cache-Control', 'public, max-age=900')
+        response.end(Buffer.from(await upstream.arrayBuffer()))
+      } catch (error) {
+        sendUpstreamFailure(response, error, 'NASA FIRMS tile')
       }
 
       return
