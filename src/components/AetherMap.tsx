@@ -38,6 +38,12 @@ const WORLD_BOUNDS = L.latLngBounds(
   [85.05112878, 180]
 )
 const MAP_TILE_STYLE_KEY = 'aether:map-tile-style'
+const MAP_OVERLAYS_KEY = 'aether:map-overlays'
+const MAP_OVERLAY_IDS: FireLayerId[] = [
+  'heat-detections',
+  'reported-wildfires',
+  'europe-detections'
+]
 const FIRE_LAYER_DESCRIPTION = [
   'Satellite heat detections from the last 24 hours.',
   'They may include extinguished fires or other hot sources,',
@@ -211,6 +217,11 @@ export function AetherMap({
         attribution: 'European fire detections Copernicus EFFIS'
       }
     )
+    const mapOverlayLayers: Record<FireLayerId, L.Layer> = {
+      'heat-detections': fireTiles,
+      'reported-wildfires': reportedFires.getLeafletLayer(),
+      'europe-detections': effisFireTiles
+    }
 
     initialTiles.addTo(map)
 
@@ -286,6 +297,15 @@ export function AetherMap({
           state: 'loading'
         })
       }
+
+      if (getFireLayerId(
+        event.layer,
+        fireTiles,
+        reportedFires.getLeafletLayer(),
+        effisFireTiles
+      )) {
+        saveEnabledMapOverlays(map, mapOverlayLayers)
+      }
     }
     const handleFireOverlayRemove = (event: L.LayersControlEvent) => {
       const layerId = getFireLayerId(
@@ -297,6 +317,7 @@ export function AetherMap({
 
       if (layerId) {
         updateFireLayerStatus(layerId, { enabled: false, state: 'idle' })
+        saveEnabledMapOverlays(map, mapOverlayLayers)
       }
     }
     const handleFirmsLoading = () => {
@@ -382,6 +403,10 @@ export function AetherMap({
     radar.start()
     radarRef.current = radar
     reportedFires.start()
+
+    for (const layerId of loadEnabledMapOverlays()) {
+      mapOverlayLayers[layerId].addTo(map)
+    }
 
     const emitViewport = () => {
       const bounds = map.getBounds()
@@ -713,6 +738,38 @@ function loadMapTileStyle(): MapTileStyle {
 function saveMapTileStyle(style: MapTileStyle) {
   try {
     window.localStorage.setItem(MAP_TILE_STYLE_KEY, style)
+  } catch {
+    return
+  }
+}
+
+function loadEnabledMapOverlays() {
+  try {
+    const value = window.localStorage.getItem(MAP_OVERLAYS_KEY)
+    const parsed: unknown = value ? JSON.parse(value) : []
+
+    if (!Array.isArray(parsed)) {
+      return new Set<FireLayerId>()
+    }
+
+    return new Set(
+      MAP_OVERLAY_IDS.filter(layerId => parsed.includes(layerId))
+    )
+  } catch {
+    return new Set<FireLayerId>()
+  }
+}
+
+function saveEnabledMapOverlays(
+  map: L.Map,
+  layers: Record<FireLayerId, L.Layer>
+) {
+  try {
+    const enabled = MAP_OVERLAY_IDS.filter(layerId => (
+      map.hasLayer(layers[layerId])
+    ))
+
+    window.localStorage.setItem(MAP_OVERLAYS_KEY, JSON.stringify(enabled))
   } catch {
     return
   }

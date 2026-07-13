@@ -12,7 +12,7 @@
 
 - [ ] Add stronger regional incident feeds: NIFC for the USA and CWFIS for Canada.
 - [ ] Deduplicate reported fires using source incident IDs instead of rounded coordinates.
-- [ ] Save enabled map overlays between sessions.
+- [x] Save enabled map overlays between sessions.
 - [ ] Separate reported incidents from satellite detections in the layer control.
 - [ ] Replace native `title` tooltips with keyboard- and touch-friendly information popovers.
 - [ ] Add shared stale caching, cache metrics, provider failure counts, and quota alerts for fire routes.

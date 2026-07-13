@@ -108,7 +108,7 @@ To invalidate cached data:
 2. Deploy the application.
 3. Verify the new application version in the Aether header.
 
-The new deployment writes to fresh cache namespaces, so incompatible old data is ignored. Old browser and server cache entries expire naturally. Favorites, recent locations, the selected location, and map-style preferences are user data and are intentionally not cleared by a cache-version change.
+The new deployment writes to fresh cache namespaces, so incompatible old data is ignored. Old browser and server cache entries expire naturally. Favorites, recent locations, the selected location, map-style preferences, and enabled fire overlays are user data and are intentionally not cleared by a cache-version change.
 
 Increment the cache version when a cached payload or storage schema becomes incompatible, or when a forced cache reset is required. Normal data refreshes do not need a version change.
 
