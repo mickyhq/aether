@@ -31,12 +31,21 @@ const CWFIS_ENDPOINT = 'https://geoserver.cwfif.nrcan.gc.ca/geoserver/ows'
 const CWFIS_SOURCE_URL = 'https://cwfis.cfs.nrcan.gc.ca/en/'
 const PROVIDER_TIMEOUT_MS = 10000
 
-export async function getReportedFires() {
-  const results = await Promise.allSettled([
-    getNifcFires(),
-    getCwfisFires(),
-    getEonetFires()
-  ])
+export async function getReportedFires(hooks = {}) {
+  const providers = [
+    { name: 'NIFC WFIGS', load: getNifcFires },
+    { name: 'NRCan CWFIS', load: getCwfisFires },
+    { name: 'NASA EONET', load: getEonetFires }
+  ]
+  const results = await Promise.allSettled(
+    providers.map(provider => provider.load(hooks, provider.name))
+  )
+
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      hooks.onProviderFailure?.(providers[index].name, result.reason)
+    }
+  })
   const available = results.filter(result => result.status === 'fulfilled')
 
   if (available.length === 0) {
@@ -46,15 +55,15 @@ export async function getReportedFires() {
   return deduplicateFires(available.flatMap(result => result.value))
 }
 
-async function getNifcFires() {
-  const payload = await fetchGeoJson(NIFC_INCIDENTS_URL, 'NIFC WFIGS')
+async function getNifcFires(hooks, provider) {
+  const payload = await fetchGeoJson(NIFC_INCIDENTS_URL, provider, hooks)
 
   return readFeatures(payload)
     .map(normalizeNifcFire)
     .filter(Boolean)
 }
 
-async function getCwfisFires() {
+async function getCwfisFires(hooks, provider) {
   const now = new Date()
   const url = buildUrl(CWFIS_ENDPOINT, {
     service: 'WFS',
@@ -70,22 +79,24 @@ async function getCwfisFires() {
       "stage_of_control_status <> 'EX'"
     ].join(' AND ')
   })
-  const payload = await fetchGeoJson(url, 'NRCan CWFIS')
+  const payload = await fetchGeoJson(url, provider, hooks)
 
   return readFeatures(payload)
     .map(normalizeCwfisFire)
     .filter(Boolean)
 }
 
-async function getEonetFires() {
-  const payload = await fetchGeoJson(EONET_WILDFIRES_URL, 'NASA EONET')
+async function getEonetFires(hooks, provider) {
+  const payload = await fetchGeoJson(EONET_WILDFIRES_URL, provider, hooks)
 
   return readFeatures(payload)
     .map(normalizeEonetFire)
     .filter(Boolean)
 }
 
-async function fetchGeoJson(url, provider) {
+async function fetchGeoJson(url, provider, hooks) {
+  hooks.onProviderRequest?.(provider)
+
   const response = await fetchWithTimeout(
     url,
     {
@@ -97,8 +108,18 @@ async function fetchGeoJson(url, provider) {
     PROVIDER_TIMEOUT_MS
   )
 
+  hooks.onProviderResponse?.(provider, {
+    status: response.status,
+    rateLimitLimit: readRateLimitHeader(response.headers, 'limit'),
+    rateLimitRemaining: readRateLimitHeader(response.headers, 'remaining'),
+    retryAfter: response.headers.get('retry-after')
+  })
+
   if (!response.ok) {
-    throw new Error(`${provider} returned ${response.status}`)
+    throw Object.assign(
+      new Error(`${provider} returned ${response.status}`),
+      { status: response.status }
+    )
   }
 
   const contentType = response.headers.get('content-type') ?? ''
@@ -108,6 +129,11 @@ async function fetchGeoJson(url, provider) {
   }
 
   return response.json()
+}
+
+function readRateLimitHeader(headers, name) {
+  return headers.get(`ratelimit-${name}`) ??
+    headers.get(`x-ratelimit-${name}`)
 }
 
 function normalizeNifcFire(feature) {

@@ -104,7 +104,7 @@ Open the local URL printed by Vite. Nodemon restarts Vite when API, server, or V
 
 ## Cache version and invalidation
 
-Disposable caches share `CACHE_VERSION` from `shared/cacheVersion.js`. The version is included in browser forecast keys, IndexedDB names, PWA API caches, and Vercel Runtime Cache namespaces. The latest successful location forecast remains available offline for 24 hours. NASA FIRMS and Copernicus EFFIS tiles use a separate PWA cache with a 15-minute lifetime and a 192-tile limit, so map tiles cannot evict weather API responses.
+Disposable caches share `CACHE_VERSION` from `shared/cacheVersion.js`. The version is included in browser forecast keys, IndexedDB names, PWA API caches, and Vercel Runtime Cache namespaces. The latest successful location forecast remains available offline for 24 hours. NASA FIRMS and Copernicus EFFIS tiles use a separate PWA cache with a 15-minute lifetime and a 192-tile limit, so map tiles cannot evict weather API responses. Fire API routes also use shared Vercel Runtime Cache records: tiles stay fresh for 15 minutes with a seven-day stale fallback, while reported incidents use a 15-minute fresh record and a 24-hour stale fallback.
 
 To invalidate cached data:
 
@@ -118,7 +118,9 @@ Increment the cache version when a cached payload or storage schema becomes inco
 
 ## Cache monitoring
 
-Vercel function logs emit structured `aether.cache` events for weather, air quality, and heat alerts. Sum `cacheHitCount`, `cacheMissCount`, `staleCount`, and `upstreamRequestCount` to monitor cache behavior. Coalesced requests count only the real upstream fetch.
+Vercel function logs emit structured `aether.cache` events for weather, air quality, heat alerts, and all fire routes. Sum `cacheHitCount`, `cacheMissCount`, `staleCount`, and `upstreamRequestCount` to monitor cache behavior. Coalesced tile requests count only the real upstream fetch.
+
+Fire providers also emit `aether.provider` events. Sum `providerFailureCount` by provider to track feed failures and `quotaAlertCount` to alert when a provider returns HTTP 429 or reports 10% or less quota remaining. Fire responses expose `X-Aether-Cache`, `X-Aether-Provider-Failures`, and, when needed, `X-Aether-Quota-Alert` headers for request-level diagnosis.
 
 ## Production build
 

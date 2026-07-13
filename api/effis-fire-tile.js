@@ -2,9 +2,25 @@ import {
   buildEffisTileUrl,
   parseEffisTileCoordinates
 } from '../server/effisTile.js'
-import { fetchWithTimeout } from '../shared/fetchTimeout.js'
+import { fetchTileCoalesced } from '../server/coalescedTileFetch.js'
+import { loadCachedResource } from '../server/cachedResource.js'
+import {
+  logCacheMetric,
+  logProviderFailure,
+  logQuotaAlert
+} from '../server/cacheMetrics.js'
+import { getSharedCache } from '../server/sharedCache.js'
+import {
+  readProviderQuota,
+  setProviderHeaders
+} from '../server/providerQuota.js'
+import { getCacheNamespace } from '../shared/cacheVersion.js'
 
 const EFFIS_TILE_TIMEOUT_MS = 12000
+const FRESH_CACHE_TTL = 15 * 60
+const STALE_CACHE_TTL = 7 * 24 * 60 * 60
+const METRICS_ROUTE = 'effis-fire-tile'
+const PROVIDER = 'Copernicus EFFIS'
 
 export default async function handler(request, response) {
   if (request.method !== 'GET') {
@@ -24,29 +40,79 @@ export default async function handler(request, response) {
     return
   }
 
-  try {
-    const upstream = await fetchWithTimeout(
-      buildEffisTileUrl(tile),
-      { headers: { Accept: 'image/png' } },
-      EFFIS_TILE_TIMEOUT_MS
-    )
-    const contentType = upstream.headers.get('content-type') ?? ''
+  const cache = getSharedCache(getCacheNamespace('effis-fire-tiles'))
+  const cacheKey = `${tile.z}:${tile.x}:${tile.y}`
+  let providerFailures = 0
+  let quota = null
 
-    if (!upstream.ok || !contentType.includes('image/png')) {
-      response.status(502).json({ error: 'Copernicus EFFIS tile unavailable' })
-      return
+  try {
+    const result = await loadCachedResource({
+      cache,
+      cacheKey,
+      freshTtl: FRESH_CACHE_TTL,
+      staleTtl: STALE_CACHE_TTL,
+      onFreshMiss: () => logCacheMetric(METRICS_ROUTE, 'miss'),
+      load: async () => {
+        try {
+          const upstream = await fetchTileCoalesced(
+            `effis:${cacheKey}`,
+            buildEffisTileUrl(tile),
+            EFFIS_TILE_TIMEOUT_MS,
+            METRICS_ROUTE
+          )
+
+          quota = readProviderQuota(upstream)
+
+          if (quota) {
+            logQuotaAlert(METRICS_ROUTE, PROVIDER, quota)
+          }
+
+          if (!upstream.ok || !upstream.contentType.includes('image/png')) {
+            throw Object.assign(
+              new Error('Copernicus EFFIS tile unavailable'),
+              { status: upstream.status }
+            )
+          }
+
+          return {
+            image: Buffer.from(upstream.body).toString('base64')
+          }
+        } catch (error) {
+          providerFailures += 1
+          logProviderFailure(METRICS_ROUTE, PROVIDER, error)
+          throw error
+        }
+      }
+    })
+
+    if (result.source === 'runtime') {
+      logCacheMetric(METRICS_ROUTE, 'hit')
+    } else if (result.source === 'stale') {
+      logCacheMetric(METRICS_ROUTE, 'stale')
     }
 
     response.status(200)
     response.setHeader('Content-Type', 'image/png')
+    response.setHeader('X-Aether-Cache', result.source)
+    setProviderHeaders(response, providerFailures, quota)
     response.setHeader('Cache-Control', 'public, max-age=300')
     response.setHeader(
       'Vercel-CDN-Cache-Control',
       'public, s-maxage=900, stale-while-revalidate=3600'
     )
-    response.send(Buffer.from(await upstream.arrayBuffer()))
-  } catch {
-    response.status(504).json({ error: 'Copernicus EFFIS tile timed out' })
+    response.send(Buffer.from(result.record.image, 'base64'))
+  } catch (error) {
+    if (providerFailures === 0) {
+      providerFailures = 1
+      logProviderFailure(METRICS_ROUTE, PROVIDER, error)
+    }
+
+    setProviderHeaders(response, providerFailures, quota)
+    response.status(error?.status ? 502 : 504).json({
+      error: error?.status
+        ? 'Copernicus EFFIS tile unavailable'
+        : 'Copernicus EFFIS tile timed out'
+    })
   }
 }
 

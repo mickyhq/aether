@@ -15,7 +15,7 @@
 - [x] Save enabled map overlays between sessions.
 - [x] Separate reported incidents from satellite detections in the layer control.
 - [ ] Replace native `title` tooltips with keyboard- and touch-friendly information popovers.
-- [ ] Add shared stale caching, cache metrics, provider failure counts, and quota alerts for fire routes.
+- [x] Add shared stale caching, cache metrics, provider failure counts, and quota alerts for fire routes.
 
 ## Priority 3 — Architecture and performance
 

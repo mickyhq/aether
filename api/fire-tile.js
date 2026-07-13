@@ -3,6 +3,18 @@ import {
   parseFireTileCoordinates
 } from '../server/fireTile.js'
 import { fetchTileCoalesced } from '../server/coalescedTileFetch.js'
+import { loadCachedResource } from '../server/cachedResource.js'
+import {
+  logCacheMetric,
+  logProviderFailure,
+  logQuotaAlert
+} from '../server/cacheMetrics.js'
+import { getSharedCache } from '../server/sharedCache.js'
+import {
+  readProviderQuota,
+  setProviderHeaders
+} from '../server/providerQuota.js'
+import { getCacheNamespace } from '../shared/cacheVersion.js'
 import {
   consumeRequestLimit,
   getRequestClientId,
@@ -12,6 +24,10 @@ import {
 const FIRE_TILE_TIMEOUT_MS = 8000
 const FIRE_TILE_RATE_LIMIT = 240
 const FIRE_TILE_RATE_WINDOW_MS = 60 * 1000
+const FRESH_CACHE_TTL = 15 * 60
+const STALE_CACHE_TTL = 7 * 24 * 60 * 60
+const METRICS_ROUTE = 'fire-tile'
+const PROVIDER = 'NASA FIRMS'
 
 export default async function handler(request, response) {
   if (request.method !== 'GET') {
@@ -53,29 +69,61 @@ export default async function handler(request, response) {
     return
   }
 
+  const cache = getSharedCache(getCacheNamespace('fire-tiles'))
+  const cacheKey = `${tile.z}:${tile.x}:${tile.y}`
+  let providerFailures = 0
+  let quota = null
+
   try {
-    const upstream = await fetchTileCoalesced(
-      `firms:${tile.z}:${tile.x}:${tile.y}`,
-      buildFireTileUrl(mapKey, tile),
-      FIRE_TILE_TIMEOUT_MS
-    )
+    const result = await loadCachedResource({
+      cache,
+      cacheKey,
+      freshTtl: FRESH_CACHE_TTL,
+      staleTtl: STALE_CACHE_TTL,
+      onFreshMiss: () => logCacheMetric(METRICS_ROUTE, 'miss'),
+      load: async () => {
+        try {
+          const upstream = await fetchTileCoalesced(
+            `firms:${cacheKey}`,
+            buildFireTileUrl(mapKey, tile),
+            FIRE_TILE_TIMEOUT_MS,
+            METRICS_ROUTE
+          )
 
-    if (!upstream.ok) {
-      response.status(502).json({ error: 'NASA FIRMS tile unavailable' })
-      return
+          quota = readProviderQuota(upstream)
+
+          if (quota) {
+            logQuotaAlert(METRICS_ROUTE, PROVIDER, quota)
+          }
+
+          if (!upstream.ok || !upstream.contentType.includes('image/png')) {
+            throw Object.assign(
+              new Error('NASA FIRMS tile unavailable'),
+              { status: upstream.status }
+            )
+          }
+
+          return {
+            image: Buffer.from(upstream.body).toString('base64')
+          }
+        } catch (error) {
+          providerFailures += 1
+          logProviderFailure(METRICS_ROUTE, PROVIDER, error)
+          throw error
+        }
+      }
+    })
+
+    if (result.source === 'runtime') {
+      logCacheMetric(METRICS_ROUTE, 'hit')
+    } else if (result.source === 'stale') {
+      logCacheMetric(METRICS_ROUTE, 'stale')
     }
-
-    const contentType = upstream.contentType
-
-    if (!contentType.includes('image/png')) {
-      response.status(502).json({ error: 'NASA FIRMS returned an invalid tile' })
-      return
-    }
-
-    const image = Buffer.from(upstream.body)
 
     response.status(200)
     response.setHeader('Content-Type', 'image/png')
+    response.setHeader('X-Aether-Cache', result.source)
+    setProviderHeaders(response, providerFailures, quota)
     response.setHeader(
       'Cache-Control',
       'public, max-age=900, stale-while-revalidate=3600'
@@ -84,9 +132,19 @@ export default async function handler(request, response) {
       'Vercel-CDN-Cache-Control',
       'public, s-maxage=900, stale-while-revalidate=86400, stale-if-error=604800'
     )
-    response.send(image)
-  } catch {
-    response.status(504).json({ error: 'NASA FIRMS tile timed out' })
+    response.send(Buffer.from(result.record.image, 'base64'))
+  } catch (error) {
+    if (providerFailures === 0) {
+      providerFailures = 1
+      logProviderFailure(METRICS_ROUTE, PROVIDER, error)
+    }
+
+    setProviderHeaders(response, providerFailures, quota)
+    response.status(error?.status ? 502 : 504).json({
+      error: error?.status
+        ? 'NASA FIRMS tile unavailable'
+        : 'NASA FIRMS tile timed out'
+    })
   }
 }
 
