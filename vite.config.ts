@@ -21,6 +21,11 @@ import {
   parseGeocodeRequest
 } from './server/geocodingProvider.js'
 import { fetchEcmwfForecast } from './server/ecmwfProvider.js'
+import { getReportedFires } from './server/reportedFires.js'
+import {
+  buildEffisTileUrl,
+  parseEffisTileCoordinates
+} from './server/effisTile.js'
 import {
   buildFireTileUrl,
   parseFireTileCoordinates
@@ -266,6 +271,8 @@ function localWeatherApi(): Plugin {
     const isGeocodeRequest = requestUrl.pathname === '/api/geocode'
     const isEcmwfRequest = requestUrl.pathname === '/api/ecmwf'
     const isFireTileRequest = requestUrl.pathname === '/api/fire-tile'
+    const isReportedFiresRequest = requestUrl.pathname === '/api/reported-fires'
+    const isEffisFireTileRequest = requestUrl.pathname === '/api/effis-fire-tile'
 
     const upstreamEndpoint = requestUrl.pathname === '/api/weather'
       ? 'https://api.open-meteo.com/v1/forecast'
@@ -278,7 +285,9 @@ function localWeatherApi(): Plugin {
       !isHeatAlertsRequest &&
       !isGeocodeRequest &&
       !isEcmwfRequest &&
-      !isFireTileRequest
+      !isFireTileRequest &&
+      !isReportedFiresRequest &&
+      !isEffisFireTileRequest
     ) {
       next()
       return
@@ -377,6 +386,56 @@ function localWeatherApi(): Plugin {
         response.end(Buffer.from(await upstream.arrayBuffer()))
       } catch (error) {
         sendUpstreamFailure(response, error, 'NASA FIRMS tile')
+      }
+
+      return
+    }
+
+    if (isReportedFiresRequest) {
+      try {
+        response.statusCode = 200
+        response.setHeader('Content-Type', 'application/json')
+        response.setHeader('Cache-Control', 'public, max-age=900')
+        response.end(JSON.stringify({ fires: await getReportedFires() }))
+      } catch (error) {
+        sendUpstreamFailure(response, error, 'Reported wildfire feed')
+      }
+
+      return
+    }
+
+    if (isEffisFireTileRequest) {
+      const tile = parseEffisTileCoordinates(
+        requestUrl.searchParams.get('z'),
+        requestUrl.searchParams.get('x'),
+        requestUrl.searchParams.get('y')
+      )
+
+      if (!tile) {
+        response.statusCode = 400
+        response.setHeader('Content-Type', 'application/json')
+        response.end(JSON.stringify({ error: 'Invalid tile coordinates' }))
+        return
+      }
+
+      try {
+        const upstream = await fetchWithTimeout(
+          buildEffisTileUrl(tile),
+          { headers: { Accept: 'image/png' } },
+          12000
+        )
+        const contentType = upstream.headers.get('content-type') ?? ''
+
+        if (!upstream.ok || !contentType.includes('image/png')) {
+          throw new Error('Invalid Copernicus EFFIS tile')
+        }
+
+        response.statusCode = 200
+        response.setHeader('Content-Type', 'image/png')
+        response.setHeader('Cache-Control', 'public, max-age=900')
+        response.end(Buffer.from(await upstream.arrayBuffer()))
+      } catch (error) {
+        sendUpstreamFailure(response, error, 'Copernicus EFFIS tile')
       }
 
       return

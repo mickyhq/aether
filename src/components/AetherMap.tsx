@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import type { KeyboardEvent } from 'react'
 import { WeatherMapAnimation } from '../map/WeatherMapAnimation'
 import { WeatherRadarLayer } from '../map/WeatherRadarLayer'
+import { ReportedFireLayer } from '../map/ReportedFireLayer'
 import { interpolateWeatherAt } from '../services/weatherGrid'
 import { interpolateAirQualityAt } from '../services/airQuality'
 import { interpolateJetStreamAt } from '../services/jetStream'
@@ -147,6 +148,7 @@ export function AetherMap({
     )
     const tileStyle = loadMapTileStyle()
     const initialTiles = tileStyle === 'dark' ? darkTiles : standardTiles
+    const reportedFires = new ReportedFireLayer(map)
     const fireTiles = L.tileLayer(
       '/api/fire-tile?z={z}&x={x}&y={y}',
       {
@@ -155,6 +157,17 @@ export function AetherMap({
         noWrap: true,
         opacity: 0.9,
         attribution: 'Heat detections NASA FIRMS'
+      }
+    )
+    const effisFireTiles = L.tileLayer(
+      '/api/effis-fire-tile?z={z}&x={x}&y={y}',
+      {
+        bounds: L.latLngBounds([25, -20], [72, 45]),
+        maxNativeZoom: 12,
+        maxZoom: 19,
+        noWrap: true,
+        opacity: 0.92,
+        attribution: 'European fire detections Copernicus EFFIS'
       }
     )
 
@@ -166,22 +179,47 @@ export function AetherMap({
         Dark: darkTiles
       },
       {
-        'Heat detections · 24h': fireTiles
+        'Heat detections · 24h': fireTiles,
+        'Reported open wildfires': reportedFires.getLeafletLayer(),
+        'Europe fire detections · 48h': effisFireTiles
       },
       {
         collapsed: true,
         position: 'topright'
       }
     ).addTo(map)
-    const fireLayerInput = tileControl.getContainer()?.querySelector(
-      'input.leaflet-control-layers-selector[type="checkbox"]'
+    const overlayInputs = Array.from(
+      tileControl.getContainer()?.querySelectorAll(
+        'input.leaflet-control-layers-selector[type="checkbox"]'
+      ) ?? []
     )
-    const fireLayerLabel = fireLayerInput?.closest('label')
+    const heatLayerInput = overlayInputs[0]
+    const reportedFireInput = overlayInputs[1]
+    const effisFireInput = overlayInputs[2]
 
-    fireLayerLabel?.setAttribute('title', FIRE_LAYER_DESCRIPTION)
-    fireLayerInput?.setAttribute(
+    heatLayerInput?.closest('label')?.setAttribute(
+      'title',
+      FIRE_LAYER_DESCRIPTION
+    )
+    heatLayerInput?.setAttribute(
       'aria-label',
       `Heat detections from the last 24 hours. ${FIRE_LAYER_DESCRIPTION}`
+    )
+    reportedFireInput?.closest('label')?.setAttribute(
+      'title',
+      'Wildfires reported by official or curated sources and still marked open. Coverage is incomplete and status can lag.'
+    )
+    reportedFireInput?.setAttribute(
+      'aria-label',
+      'Reported open wildfires. Coverage is incomplete and status can lag.'
+    )
+    effisFireInput?.closest('label')?.setAttribute(
+      'title',
+      'Copernicus EFFIS filtered VIIRS detections from the last 48 hours across Europe and the Mediterranean. These are not confirmed incident reports.'
+    )
+    effisFireInput?.setAttribute(
+      'aria-label',
+      'Copernicus Europe fire detections from the last 48 hours. These are not confirmed incident reports.'
     )
     const handleTileStyleChange = (event: L.LayersControlEvent) => {
       saveMapTileStyle(event.name === 'Dark' ? 'dark' : 'standard')
@@ -189,7 +227,7 @@ export function AetherMap({
 
     map.on('baselayerchange', handleTileStyleChange)
     map.attributionControl.addAttribution(
-      'Weather <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> · Air quality <a href="https://atmosphere.copernicus.eu/" target="_blank">CAMS</a> · Heat detections <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank">NASA FIRMS</a>'
+      'Weather <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> · Air quality <a href="https://atmosphere.copernicus.eu/" target="_blank">CAMS</a> · Heat detections <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank">NASA FIRMS</a> · Europe fires <a href="https://forest-fire.emergency.copernicus.eu/" target="_blank">Copernicus EFFIS</a>'
     )
     badgeLayerRef.current = L.layerGroup().addTo(map)
     const animation = new WeatherMapAnimation(map, elementRef.current)
@@ -198,6 +236,7 @@ export function AetherMap({
     const radar = new WeatherRadarLayer(map)
     radar.start()
     radarRef.current = radar
+    reportedFires.start()
 
     const emitViewport = () => {
       const bounds = map.getBounds()
@@ -344,6 +383,7 @@ export function AetherMap({
       pointerCallbackRef.current(null)
       animation.destroy()
       radar.destroy()
+      reportedFires.destroy()
       tileControl.remove()
       map.remove()
       mapRef.current = null
