@@ -11,6 +11,8 @@ import type {
   Particle,
   ProjectedSample
 } from './weatherAnimationTypes'
+
+const LEGEND_BOTTOM_INSET = 80
 import {
   jetStreamBandAt,
   jetStreamFieldAt,
@@ -303,7 +305,7 @@ export class WeatherParticleRenderer {
   private drawWindLegend() {
     const legendWidth = Math.min(360, this.width - 48)
     const x = (this.width - legendWidth) / 2
-    const y = this.height - 34
+    const y = this.height - LEGEND_BOTTOM_INSET
     const gradient = this.context.createLinearGradient(x, 0, x + legendWidth, 0)
 
     for (let index = 0; index < WIND_COLORS.length; index += 1) {
@@ -330,7 +332,7 @@ export class WeatherParticleRenderer {
   private drawJetStreamLegend() {
     const legendWidth = Math.min(380, this.width - 48)
     const x = (this.width - legendWidth) / 2
-    const y = this.height - 34
+    const y = this.height - LEGEND_BOTTOM_INSET
     const gradient = this.context.createLinearGradient(x, 0, x + legendWidth, 0)
 
     for (let index = 0; index < JET_STREAM_COLORS.length; index += 1) {

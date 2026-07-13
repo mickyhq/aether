@@ -7,6 +7,8 @@ import type {
   ProjectedSample
 } from './weatherAnimationTypes'
 
+const LEGEND_BOTTOM_INSET = 80
+
 export class WeatherFieldRenderer {
   private readonly targetCanvas: HTMLCanvasElement
   private readonly context: CanvasRenderingContext2D
@@ -186,7 +188,7 @@ export class WeatherFieldRenderer {
     const maximum = Math.max(...temperatures)
     const legendWidth = Math.min(440, this.width - 48)
     const x = (this.width - legendWidth) / 2
-    const y = this.height - 34
+    const y = this.height - LEGEND_BOTTOM_INSET
     const gradient = this.context.createLinearGradient(x, 0, x + legendWidth, 0)
 
     for (let step = 0; step <= 12; step += 1) {
@@ -211,7 +213,7 @@ export class WeatherFieldRenderer {
     const maximum = Math.max(...values)
     const legendWidth = Math.min(440, this.width - 48)
     const x = (this.width - legendWidth) / 2
-    const y = this.height - 34
+    const y = this.height - LEGEND_BOTTOM_INSET
     const gradient = this.context.createLinearGradient(x, 0, x + legendWidth, 0)
 
     for (let step = 0; step <= 10; step += 1) {

@@ -155,6 +155,7 @@ export function AetherMap({
       zoomAnimation: !reducedMotion,
       markerZoomAnimation: !reducedMotion,
       zoomControl: true,
+      attributionControl: false,
       keyboard: true,
       keyboardPanDelta: 80,
       maxBounds: WORLD_BOUNDS,
@@ -373,9 +374,6 @@ export function AetherMap({
         updateFireLayerStatus('heat-detections', { state: 'unavailable' })
       }
     })
-    map.attributionControl.addAttribution(
-      'Weather <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> · Air quality <a href="https://atmosphere.copernicus.eu/" target="_blank">CAMS</a> · Heat detections <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank">NASA FIRMS</a> · Europe fires <a href="https://forest-fire.emergency.copernicus.eu/" target="_blank">Copernicus EFFIS</a>'
-    )
     badgeLayerRef.current = L.layerGroup().addTo(map)
     const animation = new WeatherMapAnimation(map, elementRef.current)
     animation.start()
