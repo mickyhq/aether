@@ -162,7 +162,9 @@ export function AetherMap({
   }, [onPointerWeatherChange, onMapClick])
 
   useEffect(() => {
-    if (!elementRef.current || mapRef.current) {
+    const mapElement = elementRef.current
+
+    if (!mapElement || mapRef.current) {
       return
     }
 
@@ -177,7 +179,7 @@ export function AetherMap({
     }
     const reducedMotion = prefersReducedMotion()
     const motionQuery = window.matchMedia(REDUCED_MOTION_QUERY)
-    const map = L.map(elementRef.current, {
+    const map = L.map(mapElement, {
       center: [initialLocation.latitude, initialLocation.longitude],
       fadeAnimation: !reducedMotion,
       inertia: !reducedMotion,
@@ -480,7 +482,7 @@ export function AetherMap({
       }
     })
     badgeLayerRef.current = L.layerGroup().addTo(map)
-    const animation = new WeatherMapAnimation(map, elementRef.current)
+    const animation = new WeatherMapAnimation(map, mapElement)
     animation.start()
     animationRef.current = animation
     const radar = new WeatherRadarLayer(map)
@@ -567,12 +569,21 @@ export function AetherMap({
         screenY: Math.max(12, Math.min(pointer.y + 16, size.y - 206))
       })
     }
-    const handleMouseMove = (event: L.LeafletMouseEvent) => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const target = event.target
+
+      if (target instanceof Element && target.closest('.leaflet-control')) {
+        return
+      }
+
+      const containerPoint = map.mouseEventToContainerPoint(event)
+      const latlng = map.containerPointToLatLng(containerPoint)
+
       lastPointerRef.current = {
-        latitude: event.latlng.lat,
-        longitude: event.latlng.lng,
-        x: event.containerPoint.x,
-        y: event.containerPoint.y
+        latitude: latlng.lat,
+        longitude: latlng.lng,
+        x: containerPoint.x,
+        y: containerPoint.y
       }
       window.cancelAnimationFrame(pointerFrameRef.current)
       pointerFrameRef.current = window.requestAnimationFrame(emitPointerWeather)
@@ -627,10 +638,13 @@ export function AetherMap({
     }
     map.on('moveend zoomend resize', scheduleViewport)
     map.on('moveend zoomend resize', animation.invalidate, animation)
-    map.on('mousemove', handleMouseMove)
     map.on('click', handleMapClick)
     map.on('movestart zoomstart', clearPointerWeather)
-    elementRef.current.addEventListener('mouseleave', clearPointerWeather)
+    mapElement.addEventListener('mousemove', handleMouseMove, {
+      capture: true,
+      passive: true
+    })
+    mapElement.addEventListener('mouseleave', clearPointerWeather)
     window.addEventListener('resize', handleWindowResize)
     motionQuery.addEventListener('change', handleMotionPreferenceChange)
     emitViewport()
@@ -648,7 +662,6 @@ export function AetherMap({
       }
       map.off('moveend zoomend resize', scheduleViewport)
       map.off('moveend zoomend resize', animation.invalidate, animation)
-      map.off('mousemove', handleMouseMove)
       map.off('click', handleMapClick)
       map.off('overlayadd', handleFireOverlayAdd)
       map.off('overlayremove', handleFireOverlayRemove)
@@ -662,7 +675,8 @@ export function AetherMap({
       europeFireTiles.off('tileload', handleEuropeTileLoad)
       europeFireTiles.off('load', handleEuropeLoad)
       map.off('movestart zoomstart', clearPointerWeather)
-      elementRef.current?.removeEventListener('mouseleave', clearPointerWeather)
+      mapElement.removeEventListener('mousemove', handleMouseMove, true)
+      mapElement.removeEventListener('mouseleave', clearPointerWeather)
       pointerRefreshRef.current = () => {}
       pointerCallbackRef.current(null)
       animation.destroy()

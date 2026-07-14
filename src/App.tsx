@@ -325,7 +325,9 @@ export default function App() {
     let loading = false
     const cachedSamples = getCachedWeatherMapSamples(viewport)
 
-    setMapSamples(cachedSamples)
+    if (cachedSamples.length > 0) {
+      setMapSamples(cachedSamples)
+    }
 
     const applyPersistentCache = async () => {
       const samples = await hydrateWeatherMapCache(viewport)
