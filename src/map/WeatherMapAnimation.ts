@@ -35,6 +35,7 @@ export class WeatherMapAnimation {
     this.animationFrame = 0
     this.lastTime = 0
     this.particleRenderer.reset()
+    this.context.clearRect(0, 0, this.width, this.height)
     this.resize()
     this.syncRenderers()
     this.render(0, 0)
@@ -103,6 +104,7 @@ export class WeatherMapAnimation {
 
     if (mode !== this.mode || activeDataChanged) {
       this.particleRenderer.reset()
+      this.context.clearRect(0, 0, this.width, this.height)
     }
 
     this.samples = samples
@@ -120,6 +122,7 @@ export class WeatherMapAnimation {
   invalidate() {
     this.particleRenderer.reset()
     this.fieldRenderer.invalidate()
+    this.context.clearRect(0, 0, this.width, this.height)
 
     if (this.reducedMotion) {
       this.resize()
@@ -182,7 +185,9 @@ export class WeatherMapAnimation {
   }
 
   private render(deltaTime: number, time: number) {
-    this.context.clearRect(0, 0, this.width, this.height)
+    if (this.mode !== 'ocean-current') {
+      this.context.clearRect(0, 0, this.width, this.height)
+    }
 
     if (this.mode === 'air-quality') {
       this.renderAirQuality(time)

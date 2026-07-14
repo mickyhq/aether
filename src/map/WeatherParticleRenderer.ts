@@ -222,13 +222,14 @@ export class WeatherParticleRenderer {
       return
     }
 
-    this.context.fillStyle = 'rgba(2, 21, 36, 0.12)'
-    this.context.fillRect(0, 0, this.width, this.height)
-
     if (this.reducedMotion) {
+      this.context.fillStyle = 'rgba(2, 21, 36, 0.12)'
+      this.context.fillRect(0, 0, this.width, this.height)
       this.drawOceanCurrentLegend()
       return
     }
+
+    this.fadeOceanCurrentFrame(deltaTime)
 
     const activeCount = Math.min(PARTICLE_COUNT, 720)
     const paths = OCEAN_TEMPERATURE_COLORS.map(() => (
@@ -570,6 +571,20 @@ export class WeatherParticleRenderer {
     particle.y = source.y + (Math.random() - 0.5) * spread
     particle.maxLife = 2.8 + Math.random() * 4.2
     particle.life = particle.maxLife
+  }
+
+  private fadeOceanCurrentFrame(deltaTime: number) {
+    const fade = 1 - Math.exp(-deltaTime * 3.5)
+    const tint = 1 - Math.exp(-deltaTime * 0.5)
+
+    this.context.save()
+    this.context.globalCompositeOperation = 'destination-out'
+    this.context.fillStyle = `rgba(0, 0, 0, ${fade})`
+    this.context.fillRect(0, 0, this.width, this.height)
+    this.context.restore()
+
+    this.context.fillStyle = `rgba(2, 21, 36, ${tint})`
+    this.context.fillRect(0, 0, this.width, this.height)
   }
 
   private resetPrecipitationParticle(
