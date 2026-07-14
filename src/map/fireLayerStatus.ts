@@ -27,7 +27,7 @@ export type FireLayerStatusPatch = Partial<
 export const INITIAL_FIRE_LAYER_STATUSES: FireLayerStatus[] = [
   {
     id: 'heat-detections',
-    label: 'Americas heat detections · 24h',
+    label: 'Worldwide heat detections · 24h',
     enabled: false,
     state: 'idle',
     lastUpdated: null

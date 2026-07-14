@@ -97,11 +97,11 @@ function formatLegendTitle(hasEffis: boolean, hasFirms: boolean) {
 
 function formatSourceWindow(hasEffis: boolean, hasFirms: boolean) {
   if (hasEffis && hasFirms) {
-    return `Source windows UTC: Americas last 24h · EFFIS ${formatEffisWindow()}`
+    return `Source windows UTC: Worldwide last 24h · EFFIS ${formatEffisWindow()}`
   }
 
   return hasFirms
-    ? 'Source window UTC: Americas last 24 hours'
+    ? 'Source window UTC: Worldwide last 24 hours'
     : `Source window UTC: ${formatEffisWindow()}`
 }
 

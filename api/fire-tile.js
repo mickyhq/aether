@@ -70,7 +70,7 @@ export default async function handler(request, response) {
   }
 
   const cache = getSharedCache(getCacheNamespace('fire-tiles'))
-  const cacheKey = `tsd-4:${tile.z}:${tile.x}:${tile.y}`
+  const cacheKey = `${getUtcSixHourBucket()}:tsd-5:${tile.z}:${tile.x}:${tile.y}`
   let providerFailures = 0
   let quota = null
 
@@ -146,6 +146,13 @@ export default async function handler(request, response) {
         : 'NASA FIRMS tile timed out'
     })
   }
+}
+
+function getUtcSixHourBucket() {
+  const date = new Date()
+  const hour = String(Math.floor(date.getUTCHours() / 6) * 6).padStart(2, '0')
+
+  return `${date.toISOString().slice(0, 10)}T${hour}`
 }
 
 function getQueryValue(value) {

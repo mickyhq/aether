@@ -21,11 +21,11 @@ const REQUEST_TIMEOUT_MS = 8000
 
 export class ReportedFireLayer {
   private readonly layer = L.layerGroup()
+  private readonly compactRenderer = L.canvas({ padding: 0.5 })
   private readonly map: L.Map
   private readonly onStatusChange: (status: FireLayerStatusPatch) => void
   private readonly onFireHover: (fire: MapFirePointer | null) => void
   private abortController: AbortController | null = null
-  private excludedBounds: L.LatLngBounds | null = null
   private fires: ReportedFire[] = []
   private refreshTimeout = 0
 
@@ -41,17 +41,6 @@ export class ReportedFireLayer {
 
   getLeafletLayer() {
     return this.layer
-  }
-
-  setExcludedBounds(bounds: L.LatLngBounds | null) {
-    this.excludedBounds = bounds
-    this.onFireHover(null)
-
-    if (this.map.hasLayer(this.layer)) {
-      const itemCount = this.render()
-
-      this.onStatusChange({ itemCount })
-    }
   }
 
   start() {
@@ -150,18 +139,9 @@ export class ReportedFireLayer {
   private render() {
     this.layer.clearLayers()
     const visibleFires = this.fires
-      .filter(fire => (
-        !this.excludedBounds ||
-        !this.excludedBounds.contains([fire.latitude, fire.longitude])
-      ))
-      .slice(0, getMaxVisibleReportedFires(this.map.getZoom()))
 
     visibleFires.forEach((fire, index) => {
-      const marker = L.marker([fire.latitude, fire.longitude], {
-        icon: createReportedFireIcon(index),
-        riseOnHover: true,
-        riseOffset: 500
-      })
+      const marker = this.createMarker(fire, index)
 
       marker.bindPopup(buildPopup(fire), { maxWidth: 280 })
       marker.on('mouseover', () => this.onFireHover(buildHoverInfo(fire)))
@@ -172,23 +152,32 @@ export class ReportedFireLayer {
     return visibleFires.length
   }
 
+  private createMarker(fire: ReportedFire, index: number) {
+    const position = L.latLng(fire.latitude, fire.longitude)
+
+    if (this.map.getZoom() <= 10) {
+      return L.circleMarker(position, {
+        renderer: this.compactRenderer,
+        radius: this.map.getZoom() <= 8 ? 3 : 5,
+        color: '#fff0b8',
+        weight: 1.5,
+        fillColor: '#ff572f',
+        fillOpacity: 0.88
+      })
+    }
+
+    return L.marker(position, {
+      icon: createReportedFireIcon(index),
+      riseOnHover: true,
+      riseOffset: 500
+    })
+  }
+
   private stopRefresh() {
     window.clearTimeout(this.refreshTimeout)
     this.abortController?.abort()
     this.abortController = null
   }
-}
-
-function getMaxVisibleReportedFires(zoom: number) {
-  if (zoom <= 8) {
-    return 3
-  }
-
-  if (zoom <= 10) {
-    return 20
-  }
-
-  return Number.POSITIVE_INFINITY
 }
 
 function buildHoverInfo(fire: ReportedFire): MapFirePointer {

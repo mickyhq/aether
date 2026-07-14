@@ -39,7 +39,6 @@ const WORLD_BOUNDS = L.latLngBounds(
   [-85.05112878, -180],
   [85.05112878, 180]
 )
-const AMERICAS_FIRE_BOUNDS = L.latLngBounds([-60, -170], [85, -30])
 const AFRICA_FIRE_BOUNDS = L.latLngBounds([-35, -20], [40, 55])
 const EUROPE_FIRE_BOUNDS = L.latLngBounds([40, -25], [72, 45])
 const MAP_TILE_STYLE_KEY = 'aether:map-tile-style'
@@ -56,7 +55,7 @@ const FIRE_LAYER_DESCRIPTION = [
   'and clouds can hide active fires.'
 ].join(' ')
 const FIRMS_HOVER_INFO: MapFirePointer = {
-  title: 'Americas heat detection',
+  title: 'Worldwide heat detection',
   source: 'NASA FIRMS · VIIRS',
   detail: 'Detected within the last 24 hours. Not a confirmed active fire.'
 }
@@ -221,26 +220,31 @@ export function AetherMap({
         pointerRefreshRef.current()
       }
     )
-    reportedFires.setExcludedBounds(AMERICAS_FIRE_BOUNDS)
     const fireTiles = L.tileLayer(
       '/api/fire-tile?z={z}&x={x}&y={y}',
       {
-        bounds: AMERICAS_FIRE_BOUNDS,
+        keepBuffer: 6,
         maxNativeZoom: 12,
         maxZoom: 19,
         noWrap: true,
         opacity: 0.9,
-        attribution: 'Americas heat detections NASA FIRMS'
+        updateWhenIdle: true,
+        updateWhenZooming: false,
+        attribution: 'Worldwide heat detections NASA FIRMS'
       }
     )
     const africaFireTiles = L.tileLayer(
       '/api/effis-fire-tile?z={z}&x={x}&y={y}',
       {
         bounds: AFRICA_FIRE_BOUNDS,
+        keepBuffer: 6,
+        minNativeZoom: 2,
         maxNativeZoom: 12,
         maxZoom: 19,
         noWrap: true,
         opacity: 0.92,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
         attribution: 'African fire detections Copernicus EFFIS'
       }
     )
@@ -248,10 +252,14 @@ export function AetherMap({
       '/api/effis-fire-tile?z={z}&x={x}&y={y}',
       {
         bounds: EUROPE_FIRE_BOUNDS,
+        keepBuffer: 6,
+        minNativeZoom: 2,
         maxNativeZoom: 12,
         maxZoom: 19,
         noWrap: true,
         opacity: 0.92,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
         attribution: 'European fire detections Copernicus EFFIS'
       }
     )
@@ -267,7 +275,7 @@ export function AetherMap({
     const tileControl = L.control.layers(
       {},
       {
-        'Americas heat detections · 24h': fireTiles,
+        'Worldwide heat detections · 24h': fireTiles,
         'Africa fire detections · Today + yesterday': africaFireTiles,
         'Europe fire detections · Today + yesterday': europeFireTiles,
         'Reported open wildfires': reportedFires.getLeafletLayer()
@@ -296,7 +304,7 @@ export function AetherMap({
     )
     heatLayerInput?.setAttribute(
       'aria-label',
-      `Americas heat detections from the last 24 hours. ${FIRE_LAYER_DESCRIPTION}`
+      `Worldwide heat detections from the last 24 hours. ${FIRE_LAYER_DESCRIPTION}`
     )
     reportedFireInput?.closest('label')?.setAttribute(
       'title',
@@ -304,7 +312,7 @@ export function AetherMap({
     )
     reportedFireInput?.setAttribute(
       'aria-label',
-      'Reported open wildfires from NIFC, CWFIS, and NASA EONET. Americas incidents follow the Americas heat-detection toggle. Coverage is incomplete and status can lag.'
+      'Reported open wildfires from NIFC, CWFIS, and NASA EONET. Coverage is incomplete and status can lag.'
     )
     africaFireInput?.closest('label')?.setAttribute(
       'title',
@@ -329,7 +337,6 @@ export function AetherMap({
     const fireStatusController = new AbortController()
     const handleFireOverlayAdd = (event: L.LayersControlEvent) => {
       if (event.layer === fireTiles) {
-        reportedFires.setExcludedBounds(null)
         updateFireLayerStatus('heat-detections', {
           enabled: true,
           state: firmsConfigured === false ? 'missing-key' : 'loading'
@@ -362,10 +369,6 @@ export function AetherMap({
       }
     }
     const handleFireOverlayRemove = (event: L.LayersControlEvent) => {
-      if (event.layer === fireTiles) {
-        reportedFires.setExcludedBounds(AMERICAS_FIRE_BOUNDS)
-      }
-
       const layerId = getFireLayerId(
         event.layer,
         fireTiles,
