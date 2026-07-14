@@ -3,6 +3,7 @@ import BlurOnIcon from '@mui/icons-material/BlurOn'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
 import FlightIcon from '@mui/icons-material/Flight'
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import type { MapWeatherPointer } from '../types/weather'
 
@@ -24,6 +25,13 @@ export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
       }}
       aria-live="polite"
     >
+      {reading.placeLabel && (
+        <div className="map-weather-tooltip-place">
+          <LocationOnIcon />
+          <strong>{reading.placeLabel}</strong>
+        </div>
+      )}
+
       <span className="map-weather-tooltip-coordinates">
         {reading.latitude.toFixed(3)}, {reading.longitude.toFixed(3)}
       </span>

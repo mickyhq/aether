@@ -132,6 +132,7 @@ async function reverseLocation(latitude, longitude) {
     address.village ||
     address.hamlet ||
     address.suburb ||
+    address.municipality ||
     address.county
   )
   const region = address.state || address.country

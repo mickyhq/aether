@@ -20,6 +20,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 - Saved radar opacity control
 - Storm and lightning effects
 - Weather values at the mouse position
+- Nearest town or locality after briefly pausing the mouse over the map
 - City search and animated map navigation
 - Debounced, cancellable reverse geocoding that respects Nominatim request limits
 - Persistent browser cache using IndexedDB

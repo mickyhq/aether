@@ -183,6 +183,7 @@ export type MapWeatherPointer = {
   screenY: number
   latitude: number
   longitude: number
+  placeLabel?: string
   temperature: number
   precipitation: number
   rawWindSpeed: number

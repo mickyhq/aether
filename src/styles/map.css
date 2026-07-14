@@ -184,6 +184,22 @@
   backdrop-filter: blur(14px) saturate(135%);
 }
 
+.map-weather-tooltip-place {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #fff4df;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.map-weather-tooltip-place svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: #ff9b6b;
+}
+
 .radar-opacity-control {
   position: fixed;
   top: calc(var(--header-height) + 142px);

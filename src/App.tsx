@@ -56,6 +56,7 @@ import type {
 } from './types/weather'
 
 const REVERSE_GEOCODE_DEBOUNCE_MS = 350
+const HOVER_GEOCODE_DEBOUNCE_MS = 650
 const AetherMap = lazy(async () => ({
   default: (await import('./components/AetherMap')).AetherMap
 }))
@@ -115,6 +116,10 @@ export default function App() {
   const reverseGeocodeAbortRef = useRef<AbortController | null>(null)
   const reverseGeocodeTimeoutRef = useRef(0)
   const reverseGeocodeRequestRef = useRef(0)
+  const hoverGeocodeAbortRef = useRef<AbortController | null>(null)
+  const hoverGeocodeTimeoutRef = useRef(0)
+  const hoverGeocodeKeyRef = useRef('')
+  const hoverPlaceCacheRef = useRef(new Map<string, string | null>())
   const selectedAirQuality = useMemo(
     () => interpolateAirQualityAt(
       selectedLocation.latitude,
@@ -143,6 +148,8 @@ export default function App() {
   useEffect(() => () => {
     window.clearTimeout(reverseGeocodeTimeoutRef.current)
     reverseGeocodeAbortRef.current?.abort()
+    window.clearTimeout(hoverGeocodeTimeoutRef.current)
+    hoverGeocodeAbortRef.current?.abort()
   }, [])
 
   useEffect(() => {
@@ -253,7 +260,56 @@ export default function App() {
     setViewport(nextViewport)
   }, [])
   const handlePointerWeatherChange = useCallback((reading: MapWeatherPointer | null) => {
-    setPointerWeather(reading)
+    window.clearTimeout(hoverGeocodeTimeoutRef.current)
+    hoverGeocodeAbortRef.current?.abort()
+    hoverGeocodeAbortRef.current = null
+
+    if (!reading) {
+      hoverGeocodeKeyRef.current = ''
+      setPointerWeather(null)
+      return
+    }
+
+    const key = getHoverPlaceKey(reading.latitude, reading.longitude)
+    const cachedPlace = hoverPlaceCacheRef.current.get(key)
+
+    hoverGeocodeKeyRef.current = key
+    setPointerWeather(cachedPlace
+      ? { ...reading, placeLabel: cachedPlace }
+      : reading)
+
+    if (hoverPlaceCacheRef.current.has(key)) {
+      return
+    }
+
+    hoverGeocodeTimeoutRef.current = window.setTimeout(async () => {
+      const controller = new AbortController()
+
+      hoverGeocodeAbortRef.current = controller
+
+      try {
+        const label = await reverseGeocode(
+          reading.latitude,
+          reading.longitude,
+          controller.signal
+        )
+        const place = isCoordinateLabel(label) ? null : label
+
+        hoverPlaceCacheRef.current.set(key, place)
+
+        if (hoverGeocodeKeyRef.current === key && place) {
+          setPointerWeather(current => current
+            ? { ...current, placeLabel: place }
+            : current)
+        }
+      } catch {
+        return
+      } finally {
+        if (hoverGeocodeAbortRef.current === controller) {
+          hoverGeocodeAbortRef.current = null
+        }
+      }
+    }, HOVER_GEOCODE_DEBOUNCE_MS)
   }, [])
 
   useEffect(() => {
@@ -574,6 +630,14 @@ export default function App() {
 
 function formatDataState(state: Exclude<WeatherDataState, 'loading' | 'unavailable'>) {
   return state.charAt(0).toUpperCase() + state.slice(1)
+}
+
+function getHoverPlaceKey(latitude: number, longitude: number) {
+  return `${latitude.toFixed(2)}:${longitude.toFixed(2)}`
+}
+
+function isCoordinateLabel(label: string) {
+  return /^-?\d+\.\d{3}, -?\d+\.\d{3}$/.test(label)
 }
 
 function weatherFromEvolutionFrame(
