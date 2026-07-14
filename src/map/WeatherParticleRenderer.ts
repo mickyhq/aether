@@ -244,7 +244,7 @@ export class WeatherParticleRenderer {
       const particle = this.particles[index]
 
       if (particle.life <= 0 || this.isOutside(particle.x, particle.y, 40)) {
-        this.resetOceanCurrentParticle(particle, samples)
+        this.resetOceanCurrentParticle(particle, samples, index, activeCount)
       }
 
       const field = oceanCurrentFieldAt(particle.x, particle.y, samples)
@@ -533,44 +533,35 @@ export class WeatherParticleRenderer {
 
   private resetOceanCurrentParticle(
     particle: Particle,
-    samples: ProjectedOceanCurrentSample[]
+    samples: ProjectedOceanCurrentSample[],
+    particleIndex: number,
+    particleCount: number
   ) {
-    let source: ProjectedOceanCurrentSample | null = null
-    const favorFastCurrent = Math.random() < 0.78
-    const attempts = favorFastCurrent ? 8 : 3
+    const columns = Math.max(1, Math.ceil(Math.sqrt(
+      particleCount * this.width / Math.max(this.height, 1)
+    )))
+    const rows = Math.max(1, Math.ceil(particleCount / columns))
 
-    for (let attempt = 0; attempt < attempts; attempt += 1) {
-      const candidate = samples[Math.floor(Math.random() * samples.length)]
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const x = attempt === 0
+        ? ((particleIndex % columns) + Math.random()) / columns * this.width
+        : Math.random() * this.width
+      const y = attempt === 0
+        ? (Math.floor(particleIndex / columns) + Math.random()) / rows * this.height
+        : Math.random() * this.height
 
-      if (
-        !candidate?.sample.ocean ||
-        candidate.x < -30 ||
-        candidate.x > this.width + 30 ||
-        candidate.y < -30 ||
-        candidate.y > this.height + 30
-      ) {
+      if (!oceanCurrentFieldAt(x, y, samples)) {
         continue
       }
 
-      if (
-        !source ||
-        (favorFastCurrent && candidate.sample.speed > source.sample.speed)
-      ) {
-        source = candidate
-      }
-    }
-
-    if (!source) {
-      this.resetWindParticle(particle)
+      particle.x = x
+      particle.y = y
+      particle.maxLife = 2.8 + Math.random() * 4.2
+      particle.life = particle.maxLife
       return
     }
 
-    const spread = favorFastCurrent ? 12 : 24
-
-    particle.x = source.x + (Math.random() - 0.5) * spread
-    particle.y = source.y + (Math.random() - 0.5) * spread
-    particle.maxLife = 2.8 + Math.random() * 4.2
-    particle.life = particle.maxLife
+    particle.life = 0
   }
 
   private fadeOceanCurrentFrame(deltaTime: number) {
