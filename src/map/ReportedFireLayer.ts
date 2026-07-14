@@ -57,11 +57,13 @@ export class ReportedFireLayer {
   start() {
     this.map.on('overlayadd', this.handleOverlayAdd)
     this.map.on('overlayremove', this.handleOverlayRemove)
+    this.map.on('zoomend', this.handleZoomEnd)
   }
 
   destroy() {
     this.map.off('overlayadd', this.handleOverlayAdd)
     this.map.off('overlayremove', this.handleOverlayRemove)
+    this.map.off('zoomend', this.handleZoomEnd)
     this.stopRefresh()
     this.onFireHover(null)
     this.layer.clearLayers()
@@ -77,6 +79,14 @@ export class ReportedFireLayer {
     if (event.layer === this.layer) {
       this.stopRefresh()
       this.onFireHover(null)
+    }
+  }
+
+  private readonly handleZoomEnd = () => {
+    if (this.map.hasLayer(this.layer)) {
+      const itemCount = this.render()
+
+      this.onStatusChange({ itemCount })
     }
   }
 
@@ -139,10 +149,12 @@ export class ReportedFireLayer {
 
   private render() {
     this.layer.clearLayers()
-    const visibleFires = this.fires.filter(fire => (
-      !this.excludedBounds ||
-      !this.excludedBounds.contains([fire.latitude, fire.longitude])
-    ))
+    const visibleFires = this.fires
+      .filter(fire => (
+        !this.excludedBounds ||
+        !this.excludedBounds.contains([fire.latitude, fire.longitude])
+      ))
+      .slice(0, getMaxVisibleReportedFires(this.map.getZoom()))
 
     visibleFires.forEach((fire, index) => {
       const marker = L.marker([fire.latitude, fire.longitude], {
@@ -165,6 +177,18 @@ export class ReportedFireLayer {
     this.abortController?.abort()
     this.abortController = null
   }
+}
+
+function getMaxVisibleReportedFires(zoom: number) {
+  if (zoom <= 8) {
+    return 3
+  }
+
+  if (zoom <= 10) {
+    return 20
+  }
+
+  return Number.POSITIVE_INFINITY
 }
 
 function buildHoverInfo(fire: ReportedFire): MapFirePointer {

@@ -240,6 +240,7 @@ export function AetherMap({
         maxZoom: 19,
         noWrap: true,
         opacity: 0.92,
+        useVisibilityBudget: false,
         attribution: 'European fire detections Copernicus EFFIS'
       }
     )

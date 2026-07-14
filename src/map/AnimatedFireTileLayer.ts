@@ -1,10 +1,9 @@
 import L from 'leaflet'
 import { buildTileFireMarkup } from './reportedFireMarker'
 
-const MAX_FLAMES_PER_TILE = 100
-
 type AnimatedFireTileOptions = L.TileLayerOptions & {
   detectionBounds?: L.LatLngBoundsExpression
+  useVisibilityBudget?: boolean
 }
 
 export class AnimatedFireTileLayer extends L.TileLayer {
@@ -12,15 +11,22 @@ export class AnimatedFireTileLayer extends L.TileLayer {
   private renderToken = 0
   private renderedFlames = 0
   private mapRef: L.Map | null = null
+  private readonly useVisibilityBudget: boolean
   private readonly handleMapViewChange = () => {
     this.renderToken += 1
     this.renderedFlames = 0
+    this.redraw()
   }
 
   constructor(url: string, options: AnimatedFireTileOptions = {}) {
-    const { detectionBounds, ...tileOptions } = options
+    const {
+      detectionBounds,
+      useVisibilityBudget = true,
+      ...tileOptions
+    } = options
 
     super(url, tileOptions)
+    this.useVisibilityBudget = useVisibilityBudget
     this.detectionBounds = detectionBounds
       ? detectionBounds instanceof L.LatLngBounds
         ? detectionBounds
@@ -31,14 +37,13 @@ export class AnimatedFireTileLayer extends L.TileLayer {
   onAdd(map: L.Map): this {
     super.onAdd(map)
     this.mapRef = map
-    this.handleMapViewChange()
-    map.on('moveend zoomend', this.handleMapViewChange)
+    map.on('moveend', this.handleMapViewChange)
 
     return this
   }
 
   onRemove(map: L.Map): this {
-    map.off('moveend zoomend', this.handleMapViewChange)
+    map.off('moveend', this.handleMapViewChange)
     this.mapRef = null
     super.onRemove(map)
 
@@ -49,7 +54,9 @@ export class AnimatedFireTileLayer extends L.TileLayer {
     const tile = document.createElement('div')
     const source = document.createElement('img')
     const token = this.renderToken
-    const maxFlames = getMaxVisibleFlames(this.mapRef?.getZoom() ?? coords.z)
+    const maxFlames = this.useVisibilityBudget
+      ? getMaxVisibleFlames(this.mapRef?.getZoom() ?? coords.z)
+      : Number.POSITIVE_INFINITY
 
     tile.className = 'animated-fire-tile'
     source.className = 'animated-fire-tile-source'
@@ -65,7 +72,11 @@ export class AnimatedFireTileLayer extends L.TileLayer {
           return
         }
 
-        const points = findDetectionPoints(source, coords.z)
+        const points = findDetectionPoints(
+          source,
+          coords.z,
+          this.useVisibilityBudget
+        )
           .filter(point => (
             !this.detectionBounds ||
             this.detectionBounds.contains(tilePointToLatLng(coords, point))
@@ -115,12 +126,18 @@ function tilePointToLatLng(
   return L.latLng(latitude, longitude)
 }
 
-function findDetectionPoints(image: HTMLImageElement, zoom: number) {
+function findDetectionPoints(
+  image: HTMLImageElement,
+  zoom: number,
+  useVisibilityBudget: boolean
+) {
   const canvas = document.createElement('canvas')
   const width = image.naturalWidth
   const height = image.naturalHeight
   const detectionCellSize = getDetectionCellSize(zoom)
-  const maxPoints = getMaxPointsPerTile(zoom)
+  const maxPoints = useVisibilityBudget
+    ? getMaxPointsPerTile(zoom)
+    : Number.POSITIVE_INFINITY
 
   canvas.width = width
   canvas.height = height
@@ -226,21 +243,17 @@ function getMaxPointsPerTile(zoom: number) {
     return 4
   }
 
-  return MAX_FLAMES_PER_TILE
+  if (zoom <= 10) {
+    return 6
+  }
+
+  return 12
 }
 
 function getMaxVisibleFlames(zoom: number) {
-  if (zoom <= 6) {
-    return 10
-  }
-
   if (zoom <= 8) {
-    return 24
+    return 7
   }
 
-  if (zoom <= 10) {
-    return 50
-  }
-
-  return MAX_FLAMES_PER_TILE
+  return Number.POSITIVE_INFINITY
 }
