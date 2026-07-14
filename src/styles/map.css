@@ -364,11 +364,11 @@
   display: block;
   width: 100%;
   height: 100%;
-  opacity: 0.28;
+  opacity: 0;
 }
 
 .animated-fire-tile.is-fallback .animated-fire-tile-source {
-  opacity: 1;
+  opacity: 0;
 }
 
 .animated-fire-tile-marker {
