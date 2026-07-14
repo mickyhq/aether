@@ -15,9 +15,10 @@ import {
   setProviderHeaders
 } from '../server/providerQuota.js'
 import { getCacheNamespace } from '../shared/cacheVersion.js'
+import { SOURCE_REFRESH_SECONDS } from '../shared/cachePolicy.js'
 
 const EFFIS_TILE_TIMEOUT_MS = 12000
-const FRESH_CACHE_TTL = 15 * 60
+const FRESH_CACHE_TTL = SOURCE_REFRESH_SECONDS
 const STALE_CACHE_TTL = 7 * 24 * 60 * 60
 const METRICS_ROUTE = 'effis-fire-tile'
 const PROVIDER = 'Copernicus EFFIS'
@@ -41,8 +42,7 @@ export default async function handler(request, response) {
   }
 
   const cache = getSharedCache(getCacheNamespace('effis-fire-tiles'))
-    const utcDate = new Date().toISOString().slice(0, 10)
-    const cacheKey = `${utcDate}:${tile.z}:${tile.x}:${tile.y}`
+  const cacheKey = `viirs:${tile.z}:${tile.x}:${tile.y}`
   let providerFailures = 0
   let quota = null
 
@@ -96,10 +96,13 @@ export default async function handler(request, response) {
     response.setHeader('Content-Type', 'image/png')
     response.setHeader('X-Aether-Cache', result.source)
     setProviderHeaders(response, providerFailures, quota)
-    response.setHeader('Cache-Control', 'public, max-age=300')
+  response.setHeader(
+    'Cache-Control',
+    `public, max-age=${SOURCE_REFRESH_SECONDS}`
+  )
     response.setHeader(
       'Vercel-CDN-Cache-Control',
-      'public, s-maxage=900, stale-while-revalidate=3600'
+    `public, s-maxage=${SOURCE_REFRESH_SECONDS}, stale-while-revalidate=86400`
     )
     response.send(Buffer.from(result.record.image, 'base64'))
   } catch (error) {

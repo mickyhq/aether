@@ -1,17 +1,72 @@
+import { Redis } from '@upstash/redis'
 import { getCache } from '@vercel/functions'
 
 const localCaches = new Map()
+const sharedCaches = new Map()
 
 export function getSharedCache(namespace) {
-  if (!process.env.VERCEL) {
-    if (!localCaches.has(namespace)) {
-      localCaches.set(namespace, createLocalCache())
-    }
+  if (!sharedCaches.has(namespace)) {
+    const fallback = createFallbackCache(namespace)
+    const cache = hasUpstashCredentials()
+      ? createUpstashCache(namespace, fallback)
+      : fallback
 
-    return localCaches.get(namespace)
+    sharedCaches.set(namespace, cache)
   }
 
-  return getCache({ namespace })
+  return sharedCaches.get(namespace)
+}
+
+function createFallbackCache(namespace) {
+  if (process.env.VERCEL) {
+    return getCache({ namespace })
+  }
+
+  if (!localCaches.has(namespace)) {
+    localCaches.set(namespace, createLocalCache())
+  }
+
+  return localCaches.get(namespace)
+}
+
+function hasUpstashCredentials() {
+  return Boolean(
+    process.env.UPSTASH_REDIS_REST_URL &&
+    process.env.UPSTASH_REDIS_REST_TOKEN
+  )
+}
+
+function createUpstashCache(namespace, fallback) {
+  const redis = Redis.fromEnv()
+  const prefix = `aether:${namespace}:`
+
+  return {
+    async get(key) {
+      try {
+        const value = await redis.get(`${prefix}${key}`)
+
+        if (value !== null) {
+          return value
+        }
+      } catch {
+        // Fall through to Vercel Runtime Cache or local memory.
+      }
+
+      return fallback.get(key)
+    },
+    async set(key, value, options) {
+      const writes = await Promise.allSettled([
+        redis.set(`${prefix}${key}`, value, { ex: options.ttl }),
+        fallback.set(key, value, options)
+      ])
+
+      const failure = writes.find(write => write.status === 'rejected')
+
+      if (writes.every(write => write.status === 'rejected') && failure) {
+        throw failure.reason
+      }
+    }
+  }
 }
 
 function createLocalCache() {

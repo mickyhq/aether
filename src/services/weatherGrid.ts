@@ -14,6 +14,7 @@ import { isWeatherResponse } from '../../shared/providerValidation.js'
 import { mapCurrentWeather } from '../weather/mapCurrentWeather'
 import { buildWeatherEvolution } from '../weather/translateWeather'
 import { describeWeatherCode } from '../weather/weatherCode'
+import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 
 type GridPoint = WeatherLocation & {
   showBadge: false
@@ -40,7 +41,7 @@ const HOURLY_FIELDS = [
   'wind_speed_10m',
   'wind_direction_10m'
 ]
-const FRESHNESS = 5 * 60 * 1000
+const FRESHNESS = SOURCE_REFRESH_MS
 const BATCH_SIZE = 32
 const BATCH_DELAY_MS = 250
 const BASE_SPACING = 260

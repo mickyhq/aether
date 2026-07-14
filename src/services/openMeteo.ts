@@ -3,10 +3,11 @@ import type { WeatherDataState } from '../types/weather'
 import { getClientCacheKey } from '../../shared/cacheVersion.js'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { isWeatherResponse } from '../../shared/providerValidation.js'
+import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 
 const OPEN_METEO_ENDPOINT = '/api/weather'
 const FORECAST_CACHE_KEY = getClientCacheKey('forecast')
-const FORECAST_FRESHNESS = 5 * 60 * 1000
+const FORECAST_FRESHNESS = SOURCE_REFRESH_MS
 const FORECAST_STALE_AGE = 24 * 60 * 60 * 1000
 const CURRENT_FIELDS = [
   'temperature_2m',

@@ -7,6 +7,7 @@ import fireTileHandler from '../api/fire-tile.js'
 import geocodeHandler from '../api/geocode.js'
 import heatAlertsHandler from '../api/heat-alerts.js'
 import oceanCurrentsHandler from '../api/ocean-currents.js'
+import radarHandler from '../api/radar.js'
 import reportedFiresHandler from '../api/reported-fires.js'
 import weatherHandler from '../api/weather.js'
 
@@ -21,6 +22,7 @@ const handlers = new Map([
   ['/api/geocode', geocodeHandler],
   ['/api/heat-alerts', heatAlertsHandler],
   ['/api/ocean-currents', oceanCurrentsHandler],
+  ['/api/radar', radarHandler],
   ['/api/reported-fires', reportedFiresHandler],
   ['/api/weather', weatherHandler]
 ])

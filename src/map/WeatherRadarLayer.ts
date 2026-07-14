@@ -2,6 +2,7 @@ import L from 'leaflet'
 import type { WeatherMode } from '../types/weather'
 import { REDUCED_MOTION_QUERY } from '../utils/motion'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
+import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 
 type RadarFrame = {
   time: number
@@ -9,21 +10,17 @@ type RadarFrame = {
 }
 
 type RadarMetadata = {
-  host: string
-  radar: {
-    past: RadarFrame[]
-  }
+  frames: RadarFrame[]
 }
 
-const METADATA_URL = 'https://api.rainviewer.com/public/weather-maps.json'
-const METADATA_REFRESH = 5 * 60 * 1000
+const METADATA_URL = '/api/radar'
+const METADATA_REFRESH = SOURCE_REFRESH_MS
 const FRAME_DURATION = 1100
 const FRAME_COUNT = 6
 const PANE_NAME = 'weather-radar-pane'
 
 export class WeatherRadarLayer {
   private map: L.Map
-  private host = ''
   private frames: RadarFrame[] = []
   private frameIndex = 0
   private currentLayer: L.TileLayer | null = null
@@ -106,12 +103,11 @@ export class WeatherRadarLayer {
 
       const metadata = (await response.json()) as RadarMetadata
 
-      if (this.destroyed || !metadata.host || !metadata.radar?.past.length) {
+      if (this.destroyed || !metadata.frames?.length) {
         return
       }
 
-      this.host = metadata.host
-      this.frames = metadata.radar.past.slice(-FRAME_COUNT)
+      this.frames = metadata.frames.slice(-FRAME_COUNT)
       this.frameIndex = this.frames.length - 1
 
       if (this.visible) {
@@ -124,7 +120,7 @@ export class WeatherRadarLayer {
   }
 
   private showLatestFrame() {
-    if (!this.host || this.frames.length === 0) {
+    if (this.frames.length === 0) {
       return
     }
 
@@ -153,11 +149,11 @@ export class WeatherRadarLayer {
   }
 
   private showFrame(frame: RadarFrame) {
-    if (!this.visible || !this.host || this.loadingLayer) {
+    if (!this.visible || this.loadingLayer) {
       return
     }
 
-    const url = `${this.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`
+    const url = `/api/radar?path=${encodeURIComponent(frame.path)}&z={z}&x={x}&y={y}`
     const nextLayer = L.tileLayer(url, {
       pane: PANE_NAME,
       opacity: 0,

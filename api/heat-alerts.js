@@ -8,8 +8,9 @@ import {
 import { logCacheMetric } from '../server/cacheMetrics.js'
 import { loadCachedResource } from '../server/cachedResource.js'
 import { getCacheNamespace } from '../shared/cacheVersion.js'
+import { SOURCE_REFRESH_SECONDS } from '../shared/cachePolicy.js'
 
-const FRESH_CACHE_TTL = 10 * 60
+const FRESH_CACHE_TTL = SOURCE_REFRESH_SECONDS
 const STALE_CACHE_TTL = 24 * 60 * 60
 
 export default async function handler(request, response) {
@@ -61,10 +62,13 @@ function sendAlerts(response, record, cacheStatus) {
   }
 
   response.status(200)
-  response.setHeader('Cache-Control', 'public, max-age=60')
+  response.setHeader(
+    'Cache-Control',
+    `public, max-age=${SOURCE_REFRESH_SECONDS}`
+  )
   response.setHeader(
     'Vercel-CDN-Cache-Control',
-    'public, s-maxage=600, stale-while-revalidate=86400'
+    `public, s-maxage=${SOURCE_REFRESH_SECONDS}, stale-while-revalidate=86400`
   )
   response.setHeader('X-Aether-Cache', cacheStatus)
   response.json(record)

@@ -12,6 +12,7 @@ import { openStorage } from './storage'
 import { distanceInKilometers, inverseDistanceWeight } from '../utils/geo'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { isAirQualityResponse } from '../../shared/providerValidation.js'
+import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 
 const AIR_QUALITY_ENDPOINT = '/api/air-quality'
 const CURRENT_FIELDS = [
@@ -21,7 +22,7 @@ const CURRENT_FIELDS = [
   'nitrogen_dioxide',
   'ozone'
 ]
-const FRESHNESS = 60 * 60 * 1000
+const FRESHNESS = SOURCE_REFRESH_MS
 const MAX_CACHE_AGE = 24 * 60 * 60 * 1000
 const BATCH_SIZE = 32
 const BATCH_DELAY_MS = 250

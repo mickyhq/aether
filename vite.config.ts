@@ -6,6 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import {
   getCacheNamespace
 } from './shared/cacheVersion.js'
+import { SOURCE_REFRESH_SECONDS } from './shared/cachePolicy.js'
 import { createLocalApiMiddleware } from './server/localApiMiddleware.js'
 
 const packageVersion = (
@@ -28,6 +29,14 @@ export default defineConfig(({ mode }) => {
 
   if (!process.env.FIRMS_MAP_KEY && env.FIRMS_MAP_KEY) {
     process.env.FIRMS_MAP_KEY = env.FIRMS_MAP_KEY
+  }
+
+  if (!process.env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_URL) {
+    process.env.UPSTASH_REDIS_REST_URL = env.UPSTASH_REDIS_REST_URL
+  }
+
+  if (!process.env.UPSTASH_REDIS_REST_TOKEN && env.UPSTASH_REDIS_REST_TOKEN) {
+    process.env.UPSTASH_REDIS_REST_TOKEN = env.UPSTASH_REDIS_REST_TOKEN
   }
 
   return {
@@ -80,17 +89,21 @@ export default defineConfig(({ mode }) => {
                 [
                   '/api/fire-tile',
                   '/api/effis-fire-tile'
-                ].includes(url.pathname)
+                ].includes(url.pathname) ||
+                (
+                  url.pathname === '/api/radar' &&
+                  url.searchParams.has('path')
+                )
               ),
-              handler: 'StaleWhileRevalidate',
+              handler: 'CacheFirst',
               options: {
-                cacheName: getCacheNamespace('fire-tiles'),
+                cacheName: getCacheNamespace('source-tiles'),
                 cacheableResponse: {
                   statuses: [0, 200]
                 },
                 expiration: {
-                  maxEntries: 192,
-                  maxAgeSeconds: 15 * 60
+                  maxEntries: 384,
+                  maxAgeSeconds: SOURCE_REFRESH_SECONDS
                 }
               }
             },
@@ -101,7 +114,11 @@ export default defineConfig(({ mode }) => {
                 ![
                   '/api/fire-tile',
                   '/api/effis-fire-tile'
-                ].includes(url.pathname)
+                ].includes(url.pathname) &&
+                !(
+                  url.pathname === '/api/radar' &&
+                  url.searchParams.has('path')
+                )
               ),
               handler: 'NetworkFirst',
               options: {

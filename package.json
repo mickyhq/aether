@@ -1,7 +1,7 @@
 {
   "name": "aether",
   "private": true,
-  "version": "0.2.6",
+  "version": "0.2.7",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -21,6 +21,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
+    "@upstash/redis": "^1.38.0",
     "@vercel/functions": "^3.7.4",
     "@vitejs/plugin-react": "^5.0.0",
     "leaflet": "^1.9.4",

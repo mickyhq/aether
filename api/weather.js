@@ -25,6 +25,7 @@ import {
   WEATHER_FRESH_CACHE_TTL
 } from '../server/cachePolicy.js'
 import { getCacheNamespace } from '../shared/cacheVersion.js'
+import { SOURCE_REFRESH_SECONDS } from '../shared/cachePolicy.js'
 import {
   isJetStreamResponse,
   isWeatherResponse,
@@ -166,8 +167,8 @@ function isJetStreamRequest(params) {
 function sendWeather(response, record, cacheStatus) {
   sendProviderRecord(response, record, cacheStatus, {
     route: 'weather',
-    maxAge: 60,
-    sharedMaxAge: 600
+    maxAge: SOURCE_REFRESH_SECONDS,
+    sharedMaxAge: SOURCE_REFRESH_SECONDS
   })
 }
 

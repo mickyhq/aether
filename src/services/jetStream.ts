@@ -13,6 +13,7 @@ import {
   observeUpstreamBudget
 } from './upstreamBudget'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
+import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 
 type JetStreamResponse = {
   current: {
@@ -24,7 +25,7 @@ type JetStreamResponse = {
 const OPEN_METEO_ENDPOINT = '/api/weather'
 const CURRENT_FIELDS = 'wind_speed_250hPa,wind_direction_250hPa'
 const BATCH_SIZE = 32
-const FRESHNESS = 5 * 60 * 1000
+const FRESHNESS = SOURCE_REFRESH_MS
 const MINIMUM_LATITUDE_SPAN = 20
 const MINIMUM_LONGITUDE_SPAN = 30
 const sampleCache = new Map<string, JetStreamSample>()

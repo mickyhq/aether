@@ -11,8 +11,9 @@ import {
   setProviderHeaders
 } from '../server/providerQuota.js'
 import { getCacheNamespace } from '../shared/cacheVersion.js'
+import { SOURCE_REFRESH_SECONDS } from '../shared/cachePolicy.js'
 
-const FRESH_CACHE_TTL = 15 * 60
+const FRESH_CACHE_TTL = SOURCE_REFRESH_SECONDS
 const STALE_CACHE_TTL = 24 * 60 * 60
 const METRICS_ROUTE = 'reported-fires'
 
@@ -64,10 +65,13 @@ export default async function handler(request, response) {
     response.status(200)
     response.setHeader('X-Aether-Cache', result.source)
     setProviderHeaders(response, providerFailures, quota)
-    response.setHeader('Cache-Control', 'public, max-age=300')
+    response.setHeader(
+      'Cache-Control',
+      `public, max-age=${SOURCE_REFRESH_SECONDS}`
+    )
     response.setHeader(
       'Vercel-CDN-Cache-Control',
-      'public, s-maxage=900, stale-while-revalidate=3600'
+      `public, s-maxage=${SOURCE_REFRESH_SECONDS}, stale-while-revalidate=86400`
     )
     response.json(result.record)
   } catch (error) {

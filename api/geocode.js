@@ -6,6 +6,7 @@ import {
   parseGeocodeRequest
 } from '../server/geocodingProvider.js'
 import { getSharedCache } from '../server/sharedCache.js'
+import { SOURCE_REFRESH_SECONDS } from '../shared/cachePolicy.js'
 
 const FRESH_TTL = 24 * 60 * 60
 const STALE_TTL = 7 * 24 * 60 * 60
@@ -41,6 +42,10 @@ export default async function handler(request, response) {
     }
 
     response.setHeader('Cache-Control', 'public, max-age=3600')
+    response.setHeader(
+      'Vercel-CDN-Cache-Control',
+      `public, s-maxage=${Math.max(FRESH_TTL, SOURCE_REFRESH_SECONDS)}, stale-while-revalidate=604800`
+    )
     response.setHeader('X-Aether-Cache', result.source)
     response.status(200).json(result.record)
   } catch (error) {

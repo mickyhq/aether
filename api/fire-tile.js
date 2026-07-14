@@ -15,6 +15,7 @@ import {
   setProviderHeaders
 } from '../server/providerQuota.js'
 import { getCacheNamespace } from '../shared/cacheVersion.js'
+import { SOURCE_REFRESH_SECONDS } from '../shared/cachePolicy.js'
 import {
   consumeRequestLimit,
   getRequestClientId,
@@ -24,7 +25,7 @@ import {
 const FIRE_TILE_TIMEOUT_MS = 8000
 const FIRE_TILE_RATE_LIMIT = 240
 const FIRE_TILE_RATE_WINDOW_MS = 60 * 1000
-const FRESH_CACHE_TTL = 15 * 60
+const FRESH_CACHE_TTL = SOURCE_REFRESH_SECONDS
 const STALE_CACHE_TTL = 7 * 24 * 60 * 60
 const METRICS_ROUTE = 'fire-tile'
 const PROVIDER = 'NASA FIRMS'
@@ -70,7 +71,7 @@ export default async function handler(request, response) {
   }
 
   const cache = getSharedCache(getCacheNamespace('fire-tiles'))
-  const cacheKey = `${getUtcSixHourBucket()}:tsd-5:${tile.z}:${tile.x}:${tile.y}`
+  const cacheKey = `tsd-6:${tile.z}:${tile.x}:${tile.y}`
   let providerFailures = 0
   let quota = null
 
@@ -126,11 +127,11 @@ export default async function handler(request, response) {
     setProviderHeaders(response, providerFailures, quota)
     response.setHeader(
       'Cache-Control',
-      'public, max-age=900, stale-while-revalidate=3600'
+      `public, max-age=${SOURCE_REFRESH_SECONDS}, stale-while-revalidate=3600`
     )
     response.setHeader(
       'Vercel-CDN-Cache-Control',
-      'public, s-maxage=900, stale-while-revalidate=86400, stale-if-error=604800'
+      `public, s-maxage=${SOURCE_REFRESH_SECONDS}, stale-while-revalidate=86400, stale-if-error=604800`
     )
     response.send(Buffer.from(result.record.image, 'base64'))
   } catch (error) {
@@ -146,13 +147,6 @@ export default async function handler(request, response) {
         : 'NASA FIRMS tile timed out'
     })
   }
-}
-
-function getUtcSixHourBucket() {
-  const date = new Date()
-  const hour = String(Math.floor(date.getUTCHours() / 6) * 6).padStart(2, '0')
-
-  return `${date.toISOString().slice(0, 10)}T${hour}`
 }
 
 function getQueryValue(value) {

@@ -3,6 +3,7 @@ import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import type { FireLayerStatusPatch } from './fireLayerStatus'
 import type { MapFirePointer } from '../types/weather'
 import { createReportedFireIcon } from './reportedFireMarker'
+import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 
 type ReportedFire = {
   id: string
@@ -16,7 +17,7 @@ type ReportedFire = {
   sourceUrl: string | null
 }
 
-const REFRESH_INTERVAL_MS = 15 * 60 * 1000
+const REFRESH_INTERVAL_MS = SOURCE_REFRESH_MS
 const REQUEST_TIMEOUT_MS = 8000
 
 export class ReportedFireLayer {

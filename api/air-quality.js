@@ -25,6 +25,7 @@ import {
   STALE_CACHE_TTL
 } from '../server/cachePolicy.js'
 import { getCacheNamespace } from '../shared/cacheVersion.js'
+import { SOURCE_REFRESH_SECONDS } from '../shared/cachePolicy.js'
 import {
   isAirQualityResponse,
   parseProviderBody
@@ -153,8 +154,8 @@ export default async function handler(request, response) {
 function sendAirQuality(response, record, cacheStatus) {
   sendProviderRecord(response, record, cacheStatus, {
     route: 'air-quality',
-    maxAge: 300,
-    sharedMaxAge: 3600
+    maxAge: SOURCE_REFRESH_SECONDS,
+    sharedMaxAge: SOURCE_REFRESH_SECONDS
   })
 }
 
