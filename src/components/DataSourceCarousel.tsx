@@ -36,7 +36,7 @@ const DATA_SOURCES = [
   },
   {
     name: 'NASA FIRMS',
-    kind: 'Heat detections',
+    kind: 'Americas heat detections',
     url: 'https://firms.modaps.eosdis.nasa.gov/'
   },
   {

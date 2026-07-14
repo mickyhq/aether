@@ -6,6 +6,7 @@ import { WeatherMapAnimation } from '../map/WeatherMapAnimation'
 import { WeatherRadarLayer } from '../map/WeatherRadarLayer'
 import { ReportedFireLayer } from '../map/ReportedFireLayer'
 import { findFireTileAtPoint } from '../map/fireTileHitTest'
+import { AnimatedFireTileLayer } from '../map/AnimatedFireTileLayer'
 import {
   INITIAL_FIRE_LAYER_STATUSES
 } from '../map/fireLayerStatus'
@@ -37,6 +38,8 @@ const WORLD_BOUNDS = L.latLngBounds(
   [-85.05112878, -180],
   [85.05112878, 180]
 )
+const AMERICAS_FIRE_BOUNDS = L.latLngBounds([-60, -170], [85, -30])
+const EUROPE_FIRE_BOUNDS = L.latLngBounds([25, -20], [72, 45])
 const MAP_TILE_STYLE_KEY = 'aether:map-tile-style'
 const MAP_OVERLAYS_KEY = 'aether:map-overlays'
 const MAP_OVERLAY_IDS: FireLayerId[] = [
@@ -50,7 +53,7 @@ const FIRE_LAYER_DESCRIPTION = [
   'and clouds can hide active fires.'
 ].join(' ')
 const FIRMS_HOVER_INFO: MapFirePointer = {
-  title: 'Heat detection',
+  title: 'Americas heat detection',
   source: 'NASA FIRMS · VIIRS',
   detail: 'Detected within the last 24 hours. Not a confirmed active fire.'
 }
@@ -196,20 +199,23 @@ export function AetherMap({
         pointerRefreshRef.current()
       }
     )
-    const fireTiles = L.tileLayer(
+    const fireTiles = new AnimatedFireTileLayer(
       '/api/fire-tile?z={z}&x={x}&y={y}',
       {
+        bounds: AMERICAS_FIRE_BOUNDS,
+        detectionBounds: AMERICAS_FIRE_BOUNDS,
         maxNativeZoom: 12,
         maxZoom: 19,
         noWrap: true,
         opacity: 0.9,
-        attribution: 'Heat detections NASA FIRMS'
+        attribution: 'Americas heat detections NASA FIRMS'
       }
     )
-    const effisFireTiles = L.tileLayer(
+    const effisFireTiles = new AnimatedFireTileLayer(
       '/api/effis-fire-tile?z={z}&x={x}&y={y}',
       {
-        bounds: L.latLngBounds([25, -20], [72, 45]),
+        bounds: EUROPE_FIRE_BOUNDS,
+        detectionBounds: EUROPE_FIRE_BOUNDS,
         maxNativeZoom: 12,
         maxZoom: 19,
         noWrap: true,
@@ -231,7 +237,7 @@ export function AetherMap({
         Dark: darkTiles
       },
       {
-        'Heat detections · 24h': fireTiles,
+        'Americas heat detections · 24h': fireTiles,
         'Europe fire detections · Today + yesterday': effisFireTiles,
         'Reported open wildfires': reportedFires.getLeafletLayer()
       },
@@ -258,7 +264,7 @@ export function AetherMap({
     )
     heatLayerInput?.setAttribute(
       'aria-label',
-      `Heat detections from the last 24 hours. ${FIRE_LAYER_DESCRIPTION}`
+      `Americas heat detections from the last 24 hours. ${FIRE_LAYER_DESCRIPTION}`
     )
     reportedFireInput?.closest('label')?.setAttribute(
       'title',
@@ -266,7 +272,7 @@ export function AetherMap({
     )
     reportedFireInput?.setAttribute(
       'aria-label',
-      'Reported open wildfires from NIFC, CWFIS, and NASA EONET. Coverage is incomplete and status can lag.'
+      'Reported open wildfires from NIFC, CWFIS, and NASA EONET. This is a separate worldwide incident layer. Coverage is incomplete and status can lag.'
     )
     effisFireInput?.closest('label')?.setAttribute(
       'title',

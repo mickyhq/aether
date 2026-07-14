@@ -2,6 +2,7 @@ import L from 'leaflet'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import type { FireLayerStatusPatch } from './fireLayerStatus'
 import type { MapFirePointer } from '../types/weather'
+import { createReportedFireIcon } from './reportedFireMarker'
 
 type ReportedFire = {
   id: string
@@ -124,20 +125,18 @@ export class ReportedFireLayer {
   private render(fires: ReportedFire[]) {
     this.layer.clearLayers()
 
-    for (const fire of fires) {
-      const marker = L.circleMarker([fire.latitude, fire.longitude], {
-        radius: 7,
-        color: '#fff4d6',
-        weight: 2,
-        fillColor: '#ef3f2f',
-        fillOpacity: 0.92
+    fires.forEach((fire, index) => {
+      const marker = L.marker([fire.latitude, fire.longitude], {
+        icon: createReportedFireIcon(index),
+        riseOnHover: true,
+        riseOffset: 500
       })
 
       marker.bindPopup(buildPopup(fire), { maxWidth: 280 })
       marker.on('mouseover', () => this.onFireHover(buildHoverInfo(fire)))
       marker.on('mouseout', () => this.onFireHover(null))
       marker.addTo(this.layer)
-    }
+    })
   }
 
   private stopRefresh() {

@@ -14,7 +14,7 @@ Aether is an interactive full-screen weather map built with React, TypeScript, M
 - Interpolated temperature layer and legend
 - European AQI layer with PM2.5 readings
 - Animated precipitation radar
-- Optional NASA FIRMS heat-detection layer for the last 24 hours
+- Optional NASA FIRMS Americas heat-detection layer for the last 24 hours
 - Optional reported open-wildfire layer from NIFC WFIGS, NRCan CWFIS, and NASA EONET
 - Copernicus EFFIS fire-detection coverage for Europe and the Mediterranean
 - Saved radar opacity control
@@ -69,7 +69,7 @@ These four outline categories make the major jet regions easier to distinguish. 
 
 ## Heat-detection layer
 
-The optional heat-detection overlay shows NASA FIRMS combined VIIRS heat detections from the last 24 hours. FIRMS updates its WMS data about every 15 minutes.
+The optional Americas heat-detection overlay shows NASA FIRMS combined VIIRS heat detections from the last 24 hours between 170°W and 30°W. FIRMS updates its WMS data about every 15 minutes. This overlay and the Copernicus Europe overlay have separate layer-control checkboxes, so either region can be hidden independently.
 
 The FIRMS tile proxy limits each client to 240 requests per minute and coalesces simultaneous requests for the same tile into one upstream fetch. Successful tiles stay fresh in the browser and CDN for 15 minutes. The CDN may serve stale tiles while revalidating for one day, or during upstream failure for up to seven days.
 

@@ -329,6 +329,173 @@
   line-height: 1.35;
 }
 
+.reported-fire-marker {
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+.animated-fire-tile {
+  position: relative;
+  overflow: visible;
+  background: transparent;
+  pointer-events: none;
+}
+
+.animated-fire-tile-source {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.28;
+}
+
+.animated-fire-tile.is-fallback .animated-fire-tile-source {
+  opacity: 1;
+}
+
+.animated-fire-tile-marker {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  width: 18px;
+  height: 22px;
+  transform: translate(-50%, -72%);
+}
+
+.reported-fire-flame.is-tile-detection {
+  width: 18px;
+  height: 22px;
+  filter:
+    drop-shadow(0 1px 1px rgba(44, 4, 0, 0.62))
+    drop-shadow(0 0 3px rgba(255, 93, 20, 0.68));
+}
+
+.animated-fire-emoji {
+  position: relative;
+  z-index: 1;
+  display: block;
+  font-size: 18px;
+  line-height: 22px;
+  text-align: center;
+}
+
+.reported-fire-flame.is-tile-detection .reported-fire-glow {
+  width: 13px;
+  height: 5px;
+  box-shadow: 0 0 6px rgba(255, 86, 20, 0.72);
+}
+
+.reported-fire-flame {
+  --fire-delay: 0s;
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 34px;
+  transform-origin: 50% 100%;
+  animation: reported-fire-sway 0.72s ease-in-out var(--fire-delay) infinite alternate;
+  filter:
+    drop-shadow(0 2px 2px rgba(44, 4, 0, 0.65))
+    drop-shadow(0 0 5px rgba(255, 93, 20, 0.72));
+}
+
+.reported-fire-flame svg {
+  position: relative;
+  z-index: 1;
+  display: block;
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+}
+
+.reported-fire-glow {
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  width: 20px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 75, 16, 0.42);
+  transform: translateX(-50%);
+  animation: reported-fire-glow 0.56s ease-in-out var(--fire-delay) infinite alternate;
+  box-shadow: 0 0 10px rgba(255, 86, 20, 0.8);
+}
+
+.reported-fire-flame-outer,
+.reported-fire-flame-middle,
+.reported-fire-flame-inner {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.reported-fire-flame-outer {
+  fill: #e33116;
+  animation: reported-fire-outer 0.62s ease-in-out var(--fire-delay) infinite alternate;
+}
+
+.reported-fire-flame-middle {
+  fill: #ff8619;
+  animation: reported-fire-middle 0.48s ease-in-out var(--fire-delay) infinite alternate-reverse;
+}
+
+.reported-fire-flame-inner {
+  fill: #ffe36c;
+  animation: reported-fire-inner 0.4s ease-in-out var(--fire-delay) infinite alternate;
+}
+
+.reported-fire-ember {
+  fill: #ffd45a;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.reported-fire-ember.is-one {
+  animation: reported-fire-ember-one 1.3s ease-out var(--fire-delay) infinite;
+}
+
+.reported-fire-ember.is-two {
+  animation: reported-fire-ember-two 1.6s ease-out calc(var(--fire-delay) - 0.5s) infinite;
+}
+
+@keyframes reported-fire-sway {
+  from { transform: rotate(-2deg) scaleY(0.97); }
+  to { transform: rotate(2.5deg) scaleY(1.04); }
+}
+
+@keyframes reported-fire-glow {
+  from { opacity: 0.52; transform: translateX(-50%) scale(0.82); }
+  to { opacity: 0.95; transform: translateX(-50%) scale(1.08); }
+}
+
+@keyframes reported-fire-outer {
+  from { transform: scaleX(0.92) scaleY(1.03); }
+  to { transform: scaleX(1.05) scaleY(0.96); }
+}
+
+@keyframes reported-fire-middle {
+  from { transform: translateX(-0.5px) scaleX(1.05); }
+  to { transform: translateX(0.7px) scaleX(0.9) scaleY(1.04); }
+}
+
+@keyframes reported-fire-inner {
+  from { transform: translateX(0.5px) scale(0.9, 1.04); }
+  to { transform: translateX(-0.5px) scale(1.04, 0.92); }
+}
+
+@keyframes reported-fire-ember-one {
+  0%, 35% { opacity: 0; transform: translate(0, 3px) scale(0.5); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translate(3px, -10px) scale(0.15); }
+}
+
+@keyframes reported-fire-ember-two {
+  0%, 45% { opacity: 0; transform: translate(0, 4px) scale(0.4); }
+  58% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(-3px, -9px) scale(0.1); }
+}
+
 .map-weather-tooltip-coordinates {
   color: rgba(224, 245, 255, 0.62);
   font-size: 11px;

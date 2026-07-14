@@ -25,8 +25,9 @@ export function findFireTileAtPoint(
       continue
     }
 
-    const tiles = target.layer.getContainer()
-      ?.querySelectorAll<HTMLImageElement>('img.leaflet-tile') ?? []
+    const tiles = target.layer.getContainer()?.querySelectorAll<HTMLImageElement>(
+      'img.leaflet-tile, img.animated-fire-tile-source'
+    ) ?? []
 
     for (const tile of tiles) {
       if (isDetectionPixel(tile, clientX, clientY)) {
