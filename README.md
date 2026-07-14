@@ -78,7 +78,7 @@ The Ocean current switch loads the visible part of NOAA CoastWatch's daily globa
 
 The control also shows NOAA CPC's latest provisional Relative Oceanic Niño Index. A warm or cold label requires the RONI threshold to persist across five overlapping three-month seasons. RONI is one ocean index for ENSO monitoring, not a local current forecast or a complete atmospheric diagnosis.
 
-The server requests only a padded, resolution-aware viewport and caches it for six hours. Sampling stays at 2° or finer worldwide and becomes denser as the map zooms in. Fast-current-biased particles and stronger trails keep narrow major currents visible without changing their temperature colors. A stale result remains usable for three days if NOAA is temporarily unavailable. The current product is a 0.25° altimetry-derived geostrophic field, so it does not resolve tides, waves, rip currents, or fine coastal flow. It is not for navigation or safety decisions.
+The server requests only a padded, resolution-aware viewport and caches it for six hours. Sampling stays at 4° or finer worldwide and becomes denser down to the source's 0.25° grid as the map zooms in. Fast-current-biased particles and stronger trails keep narrow major currents visible without changing their temperature colors. A stale result remains usable for three days if NOAA is temporarily unavailable. The current product is a 0.25° altimetry-derived geostrophic field, so it does not resolve tides, waves, rip currents, or fine coastal flow. It is not for navigation or safety decisions.
 
 ## Heat-detection layer
 

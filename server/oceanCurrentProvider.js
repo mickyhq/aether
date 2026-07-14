@@ -217,12 +217,12 @@ function getSampling(bounds) {
   const east = clamp(bounds.east, -179.875, 179.875)
   const latitudeSpan = Math.max(0.25, north - south)
   const longitudeSpan = Math.max(0.25, east - west)
-  const targetColumns = clamp(Math.round(bounds.width / 9), 48, 160)
-  const targetRows = clamp(Math.round(bounds.height / 9), 32, 100)
+  const targetColumns = clamp(Math.round(bounds.width / 14), 48, 112)
+  const targetRows = clamp(Math.round(bounds.height / 14), 32, 72)
   const stride = clamp(Math.ceil(Math.max(
     latitudeSpan * 4 / targetRows,
     longitudeSpan * 4 / targetColumns
-  )), 1, 8)
+  )), 1, 16)
 
   return {
     south,
