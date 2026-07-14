@@ -25,6 +25,8 @@ export class ReportedFireLayer {
   private readonly onStatusChange: (status: FireLayerStatusPatch) => void
   private readonly onFireHover: (fire: MapFirePointer | null) => void
   private abortController: AbortController | null = null
+  private excludedBounds: L.LatLngBounds | null = null
+  private fires: ReportedFire[] = []
   private refreshTimeout = 0
 
   constructor(
@@ -39,6 +41,17 @@ export class ReportedFireLayer {
 
   getLeafletLayer() {
     return this.layer
+  }
+
+  setExcludedBounds(bounds: L.LatLngBounds | null) {
+    this.excludedBounds = bounds
+    this.onFireHover(null)
+
+    if (this.map.hasLayer(this.layer)) {
+      const itemCount = this.render()
+
+      this.onStatusChange({ itemCount })
+    }
   }
 
   start() {
@@ -97,11 +110,13 @@ export class ReportedFireLayer {
         return
       }
 
-      this.render(payload.fires)
+      this.fires = payload.fires
+      const itemCount = this.render()
+
       this.onStatusChange({
         state: 'available',
         lastUpdated: Date.now(),
-        itemCount: payload.fires.length
+        itemCount
       })
     } catch {
       if (!controller.signal.aborted) {
@@ -122,10 +137,14 @@ export class ReportedFireLayer {
     }
   }
 
-  private render(fires: ReportedFire[]) {
+  private render() {
     this.layer.clearLayers()
+    const visibleFires = this.fires.filter(fire => (
+      !this.excludedBounds ||
+      !this.excludedBounds.contains([fire.latitude, fire.longitude])
+    ))
 
-    fires.forEach((fire, index) => {
+    visibleFires.forEach((fire, index) => {
       const marker = L.marker([fire.latitude, fire.longitude], {
         icon: createReportedFireIcon(index),
         riseOnHover: true,
@@ -137,6 +156,8 @@ export class ReportedFireLayer {
       marker.on('mouseout', () => this.onFireHover(null))
       marker.addTo(this.layer)
     })
+
+    return visibleFires.length
   }
 
   private stopRefresh() {

@@ -199,6 +199,7 @@ export function AetherMap({
         pointerRefreshRef.current()
       }
     )
+    reportedFires.setExcludedBounds(AMERICAS_FIRE_BOUNDS)
     const fireTiles = new AnimatedFireTileLayer(
       '/api/fire-tile?z={z}&x={x}&y={y}',
       {
@@ -272,7 +273,7 @@ export function AetherMap({
     )
     reportedFireInput?.setAttribute(
       'aria-label',
-      'Reported open wildfires from NIFC, CWFIS, and NASA EONET. This is a separate worldwide incident layer. Coverage is incomplete and status can lag.'
+      'Reported open wildfires from NIFC, CWFIS, and NASA EONET. Americas incidents follow the Americas heat-detection toggle. Coverage is incomplete and status can lag.'
     )
     effisFireInput?.closest('label')?.setAttribute(
       'title',
@@ -291,6 +292,7 @@ export function AetherMap({
     const fireStatusController = new AbortController()
     const handleFireOverlayAdd = (event: L.LayersControlEvent) => {
       if (event.layer === fireTiles) {
+        reportedFires.setExcludedBounds(null)
         updateFireLayerStatus('heat-detections', {
           enabled: true,
           state: firmsConfigured === false ? 'missing-key' : 'loading'
@@ -317,6 +319,10 @@ export function AetherMap({
       }
     }
     const handleFireOverlayRemove = (event: L.LayersControlEvent) => {
+      if (event.layer === fireTiles) {
+        reportedFires.setExcludedBounds(AMERICAS_FIRE_BOUNDS)
+      }
+
       const layerId = getFireLayerId(
         event.layer,
         fireTiles,
