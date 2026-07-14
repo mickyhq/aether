@@ -7,18 +7,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-
-  .data-source-carousel-window {
-    overflow-x: auto;
-  }
-
-  .data-source-carousel-track {
-    animation: none !important;
-  }
-
-  .data-source-carousel-copy {
-    display: none;
-  }
 }
 
 @media (max-width: 560px) {
@@ -80,13 +68,22 @@
     width: min(250px, calc(100vw - 12px));
   }
 
-  .data-source-carousel {
-    grid-template-columns: minmax(0, 1fr);
-    padding-right: 4px;
-    padding-left: 4px;
+  .about-button {
+    width: 34px;
+    height: 34px;
   }
 
-  .data-source-carousel-label {
+  .about-source-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 400px) {
+  .brand-copy {
     display: none;
+  }
+
+  .about-source-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

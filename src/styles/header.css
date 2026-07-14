@@ -104,6 +104,116 @@
   flex: 1 1 0;
 }
 
+.about-button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(143, 229, 255, 0.32) !important;
+  border-radius: 9px !important;
+  background: rgba(143, 229, 255, 0.1) !important;
+  color: #bdefff !important;
+}
+
+.about-button:hover {
+  background: rgba(143, 229, 255, 0.2) !important;
+}
+
+.about-dialog-paper {
+  max-height: min(620px, calc(100dvh - 24px));
+  border: 1px solid rgba(190, 237, 255, 0.24);
+  border-radius: 14px !important;
+  background:
+    linear-gradient(140deg, rgba(255, 255, 255, 0.08), transparent 45%),
+    #08151b !important;
+  box-shadow: var(--glass-shadow) !important;
+  color: var(--app-text) !important;
+}
+
+.about-dialog-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px !important;
+}
+
+.about-dialog-title h2 {
+  font-weight: 800;
+}
+
+.about-dialog-eyebrow {
+  display: block;
+  color: #8fe5ff;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em !important;
+}
+
+.about-dialog-content {
+  display: grid;
+  gap: 14px;
+  padding: 14px 18px !important;
+  border-color: var(--glass-line) !important;
+}
+
+.about-author {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 8px 10px;
+  border: 1px solid rgba(143, 229, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(143, 229, 255, 0.07);
+}
+
+.about-section-title {
+  margin-bottom: 6px !important;
+  color: var(--app-text-muted);
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em !important;
+}
+
+.about-author .about-section-title {
+  margin-bottom: 0 !important;
+}
+
+.about-source-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.about-source-item {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid rgba(190, 237, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.about-source-item a {
+  overflow: hidden;
+  color: var(--app-link);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.about-source-item span {
+  color: var(--app-text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .location-bookmarks-button {
   width: 36px;
   height: 36px;

@@ -1,7 +1,6 @@
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { AetherHeader } from './components/AetherHeader'
-import { DataSourceCarousel } from './components/DataSourceCarousel'
 import { ForecastDateLabel } from './components/ForecastDateLabel'
 import { MapWeatherTooltip } from './components/MapWeatherTooltip'
 import { OfflineStatus } from './components/OfflineStatus'
@@ -675,7 +674,6 @@ export default function App() {
             />
           </Suspense>
         </WeatherErrorBoundary>
-        <DataSourceCarousel />
       </main>
     </ThemeProvider>
   )

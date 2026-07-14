@@ -16,7 +16,7 @@
   --glass-line: var(--app-line);
   --glass-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
   --header-height: 56px;
-  --footer-height: 38px;
+  --footer-height: 0px;
 }
 
 * {

@@ -3,6 +3,7 @@ import { Box, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/mat
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import type { WeatherDataState, WeatherLocation } from '../types/weather'
+import { AboutDialog } from './AboutDialog'
 import { LocationBookmarks } from './LocationBookmarks'
 import { WeatherRetryButton } from './WeatherRetryButton'
 
@@ -106,6 +107,7 @@ const DATA_STATE_TOOLTIP = (
             />
           </Box>
         </Box>
+        <AboutDialog />
       </Box>
     </Box>
   )
