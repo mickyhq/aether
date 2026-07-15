@@ -121,6 +121,20 @@ Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license)
 
 The stargazing rating is guidance, not an observatory forecast. Its Bortle value is estimated from a static artificial-sky-brightness class, and 7Timer permits free non-commercial redistribution under its published terms.
 
+### Fire-data licenses and production limits
+
+These terms were checked on 15 July 2026. Provider terms can change, so review the linked source before a commercial or high-traffic deployment.
+
+| Provider | Reuse and attribution | Production usage limits |
+| --- | --- | --- |
+| [NASA FIRMS](https://www.earthdata.nasa.gov/engage/open-data-services-software/data-use-policy) | NASA Earth Science data are generally CC0 unless a dataset carries another notice. Acknowledge NASA and FIRMS, do not imply NASA endorsement, and preserve any third-party notices. | A free `MAP_KEY` is required. FIRMS allows [5,000 transactions per 10-minute interval](https://firms.modaps.eosdis.nasa.gov/mapserver/wms-info/); larger requests can count more than once. Ask FIRMS for a higher limit or use its bulk downloads/GIBS guidance for very high traffic. |
+| [Copernicus EFFIS](https://forest-fire.emergency.copernicus.eu/about-effis/data-license) | EU-owned EFFIS content is CC BY 4.0 unless marked otherwise. Credit the European Union/Copernicus EFFIS, link the license, and identify changes. Third-party material keeps its own rights. | EFFIS says its standard WMS data are freely accessible. It publishes no numeric request quota; use caching and the [data request form](https://forest-fire.emergency.copernicus.eu/applications/data-and-services) for data not exposed by its web services. |
+| [NIFC WFIGS / IRWIN](https://www.arcgis.com/home/item.html?id=44776b299f2842479f0bad4541c81eb9) | The public service identifies NIFC and IRWIN as its sources and carries a no-warranty, appropriate-use disclaimer rather than a separate permissive license. Keep source credit and do not present the feed as a legal or guaranteed record. | No numeric request quota is published. The ArcGIS layer caps a query at 2,000 records and refreshes from IRWIN every five minutes; page queries when needed, cache responses, and do not poll faster than the source changes. |
+| [NRCan CWFIS](https://cwfis.cfs.nrcan.gc.ca/downloads/activefires/activefires_metadata_NAP_ISO_19115_2003_EN.pdf) | Active-fire data are under the [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada). Attribute Natural Resources Canada/Canadian Forest Service and retain source notices. | No numeric request quota is published. CWFIS says agency-reported active fires normally update every two hours in fire season and every six hours in winter; cache data and avoid polling faster than that cadence. |
+| [NASA EONET](https://eonet.gsfc.nasa.gov/docs/v3) | NASA-hosted scientific data follow NASA's open-data guidance unless marked otherwise. Credit NASA EONET and the original event sources linked in each record; third-party source material can have separate rights. | EONET requires no API key and publishes no numeric request quota. Use API filters and `limit`, cache results, and contact EONET before sustained high-volume production use. |
+
+Aether proxies these feeds, coalesces duplicate requests, caches reported incidents for two hours, keeps a 24-hour stale fallback, and records provider failures and quota headers. That protects both availability and upstream services; it does not override provider terms.
+
 ## Layer notes
 
 ### Jet Stream

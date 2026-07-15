@@ -13,5 +13,4 @@
 
 ## Priority 3 — Documentation and focused verification
 
-- [ ] Document licenses and production usage limits for every fire-data provider.
 - [ ] Add focused checks for tile-coordinate conversion, EFFIS date windows, EONET filtering, deduplication, and overlay lifecycle.
