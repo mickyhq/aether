@@ -7,7 +7,7 @@ import type {
   ProjectedSample
 } from './weatherAnimationTypes'
 
-const LEGEND_BOTTOM_INSET = 80
+const LEGEND_BOTTOM_INSET = 42
 
 export class WeatherFieldRenderer {
   private readonly targetCanvas: HTMLCanvasElement
