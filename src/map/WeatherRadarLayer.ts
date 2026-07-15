@@ -7,6 +7,10 @@ import {
   radarMetadataResponseSchema
 } from '../schemas/serverResponses'
 import type { RadarFrame } from '../schemas/serverResponses'
+import {
+  isPageVisible,
+  subscribeToPageVisibility
+} from '../utils/pageVisibility'
 
 const METADATA_URL = '/api/radar'
 const METADATA_REFRESH = 5 * 60 * 1000
@@ -22,8 +26,11 @@ export class WeatherRadarLayer {
   private loadingLayer: L.TileLayer | null = null
   private frameInterval = 0
   private metadataInterval = 0
+  private metadataController: AbortController | null = null
   private visible = false
+  private pageVisible = isPageVisible()
   private destroyed = false
+  private unsubscribeVisibility: (() => void) | null = null
   private opacity = 0.58
   private motionQuery = window.matchMedia(REDUCED_MOTION_QUERY)
   private reducedMotion = this.motionQuery.matches
@@ -33,7 +40,7 @@ export class WeatherRadarLayer {
     if (this.reducedMotion) {
       this.stopFrameLoop()
       this.showLatestFrame()
-    } else if (this.visible) {
+    } else if (this.visible && this.pageVisible) {
       this.startFrameLoop()
     }
   }
@@ -50,10 +57,10 @@ export class WeatherRadarLayer {
 
   start() {
     this.motionQuery.addEventListener('change', this.motionChangeHandler)
-    void this.refreshMetadata()
-    this.metadataInterval = window.setInterval(() => {
-      void this.refreshMetadata()
-    }, METADATA_REFRESH)
+    this.unsubscribeVisibility = subscribeToPageVisibility(
+      this.handlePageVisibility
+    )
+    this.startMetadataRefresh()
   }
 
   setMode(mode: WeatherMode) {
@@ -65,7 +72,7 @@ export class WeatherRadarLayer {
 
     this.visible = visible
 
-    if (visible) {
+    if (visible && this.pageVisible) {
       this.showLatestFrame()
       this.startFrameLoop()
       return
@@ -83,14 +90,26 @@ export class WeatherRadarLayer {
   destroy() {
     this.destroyed = true
     this.stopFrameLoop()
-    window.clearInterval(this.metadataInterval)
+    this.stopMetadataRefresh()
     this.motionQuery.removeEventListener('change', this.motionChangeHandler)
+    this.unsubscribeVisibility?.()
+    this.unsubscribeVisibility = null
     this.removeLayers()
   }
 
   private async refreshMetadata() {
+    if (!this.pageVisible || this.metadataController) {
+      return
+    }
+
+    const controller = new AbortController()
+
+    this.metadataController = controller
+
     try {
-      const response = await fetchWithTimeout(METADATA_URL)
+      const response = await fetchWithTimeout(METADATA_URL, {
+        signal: controller.signal
+      })
 
       if (!response.ok) {
         return
@@ -102,20 +121,65 @@ export class WeatherRadarLayer {
         'Radar metadata response'
       )
 
-      if (this.destroyed || !metadata.frames?.length) {
+      if (
+        this.destroyed ||
+        controller.signal.aborted ||
+        !metadata.frames?.length
+      ) {
         return
       }
 
       this.frames = metadata.frames.slice(-FRAME_COUNT)
       this.frameIndex = this.frames.length - 1
 
-      if (this.visible) {
+      if (this.visible && this.pageVisible) {
         this.showLatestFrame()
         this.startFrameLoop()
       }
     } catch {
       return
+    } finally {
+      if (this.metadataController === controller) {
+        this.metadataController = null
+      }
     }
+  }
+
+  private readonly handlePageVisibility = (visible: boolean) => {
+    this.pageVisible = visible
+
+    if (!visible) {
+      this.stopFrameLoop()
+      this.stopMetadataRefresh()
+      this.loadingLayer?.remove()
+      this.loadingLayer = null
+      return
+    }
+
+    this.startMetadataRefresh()
+
+    if (this.visible) {
+      this.showLatestFrame()
+      this.startFrameLoop()
+    }
+  }
+
+  private startMetadataRefresh() {
+    if (!this.pageVisible || this.destroyed || this.metadataInterval) {
+      return
+    }
+
+    void this.refreshMetadata()
+    this.metadataInterval = window.setInterval(() => {
+      void this.refreshMetadata()
+    }, METADATA_REFRESH)
+  }
+
+  private stopMetadataRefresh() {
+    window.clearInterval(this.metadataInterval)
+    this.metadataInterval = 0
+    this.metadataController?.abort()
+    this.metadataController = null
   }
 
   private showLatestFrame() {
@@ -128,7 +192,12 @@ export class WeatherRadarLayer {
   }
 
   private startFrameLoop() {
-    if (this.reducedMotion || this.frameInterval || this.frames.length < 2) {
+    if (
+      this.reducedMotion ||
+      !this.pageVisible ||
+      this.frameInterval ||
+      this.frames.length < 2
+    ) {
       return
     }
 
@@ -148,7 +217,7 @@ export class WeatherRadarLayer {
   }
 
   private showFrame(frame: RadarFrame) {
-    if (!this.visible || this.loadingLayer) {
+    if (!this.visible || !this.pageVisible || this.loadingLayer) {
       return
     }
 
@@ -164,7 +233,12 @@ export class WeatherRadarLayer {
 
     this.loadingLayer = nextLayer
     nextLayer.once('load', () => {
-      if (this.destroyed || !this.visible || this.loadingLayer !== nextLayer) {
+      if (
+        this.destroyed ||
+        !this.visible ||
+        !this.pageVisible ||
+        this.loadingLayer !== nextLayer
+      ) {
         nextLayer.remove()
         return
       }

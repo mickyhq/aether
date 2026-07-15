@@ -4,6 +4,7 @@ import { Box, IconButton, Typography } from '@mui/material'
 import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 import type { EcmwfForecast } from '../types/weather'
 import { prefersReducedMotion } from '../utils/motion'
+import { usePageVisibility } from '../hooks/usePageVisibility'
 import { describeWeatherCode } from '../weather/weatherCode'
 
 type EcmwfForecastTimelineProps = {
@@ -19,6 +20,7 @@ export function EcmwfForecastTimeline({
   onFrameChange,
   onPlaybackChange
 }: EcmwfForecastTimelineProps) {
+  const pageVisible = usePageVisibility()
   const [frameIndex, setFrameIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [hasPlayed, setHasPlayed] = useState(false)
@@ -51,7 +53,12 @@ export function EcmwfForecastTimeline({
   ), [onPlaybackChange])
 
   useEffect(() => {
-    if (!playing || frames.length < 2 || prefersReducedMotion()) {
+    if (
+      !pageVisible ||
+      !playing ||
+      frames.length < 2 ||
+      prefersReducedMotion()
+    ) {
       return
     }
 
@@ -60,7 +67,7 @@ export function EcmwfForecastTimeline({
     }, 900)
 
     return () => window.clearInterval(interval)
-  }, [frames.length, playing])
+  }, [frames.length, pageVisible, playing])
 
   if (loading) {
     return <Box className="ecmwf-forecast">Loading ECMWF forecast</Box>

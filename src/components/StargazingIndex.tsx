@@ -10,16 +10,22 @@ import type {
   StargazingNight,
   WeatherLocation
 } from '../types/weather'
+import { usePageVisibility } from '../hooks/usePageVisibility'
 
 export function StargazingIndex({ location }: { location: WeatherLocation | null }) {
   const [forecast, setForecast] = useState<StargazingForecast | null>(null)
   const [nightIndex, setNightIndex] = useState(0)
   const [loading, setLoading] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
+  const pageVisible = usePageVisibility()
 
   useEffect(() => {
     if (!location) {
       setForecast(null)
+      return
+    }
+
+    if (!pageVisible) {
       return
     }
 
@@ -41,7 +47,7 @@ export function StargazingIndex({ location }: { location: WeatherLocation | null
       })
 
     return () => controller.abort()
-  }, [location])
+  }, [location, pageVisible])
 
   if (!location) return null
 

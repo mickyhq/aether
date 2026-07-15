@@ -25,6 +25,9 @@ import {
 
 const PARTICLE_COUNT = 760
 const OCEAN_SPEED_STOPS = [0.3, 0.8]
+const WIND_BASE_SPEED_BOOST = 1.5
+const WIND_MAX_ZOOM_SCALE = 8
+const WIND_REFERENCE_ZOOM = 10
 
 export class WeatherParticleRenderer {
   private readonly context: CanvasRenderingContext2D
@@ -82,6 +85,10 @@ export class WeatherParticleRenderer {
     )
     const paths = WIND_COLORS.map(() => new Path2D())
     const usedBuckets = new Set<number>()
+    const zoomScale = Math.min(
+      WIND_MAX_ZOOM_SCALE,
+      Math.max(0.75, 2 ** ((this.map.getZoom() - WIND_REFERENCE_ZOOM) * 0.5))
+    )
 
     this.context.save()
     this.context.lineCap = 'round'
@@ -94,11 +101,17 @@ export class WeatherParticleRenderer {
       }
 
       const field = windFieldAt(particle.x, particle.y, samples)
-      const speed = 25 + field.speed * 2.5
+      const speed = (
+        (25 + field.speed * 2.5) *
+        WIND_BASE_SPEED_BOOST *
+        zoomScale
+      )
       const tail = 5 + Math.min(field.speed, 80) * 0.28
+      const movement = speed * deltaTime
+      const streak = Math.max(tail, movement * 1.2)
 
-      particle.x += field.x * speed * deltaTime
-      particle.y += field.y * speed * deltaTime
+      particle.x += field.x * movement
+      particle.y += field.y * movement
       particle.life -= deltaTime
 
       const bucket = Math.min(
@@ -108,7 +121,10 @@ export class WeatherParticleRenderer {
       const path = paths[bucket]
 
       usedBuckets.add(bucket)
-      path.moveTo(particle.x - field.x * tail, particle.y - field.y * tail)
+      path.moveTo(
+        particle.x - field.x * streak,
+        particle.y - field.y * streak
+      )
       path.lineTo(particle.x, particle.y)
     }
 

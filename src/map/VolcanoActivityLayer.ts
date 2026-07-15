@@ -9,6 +9,10 @@ import type {
   VolcanoActivityResponse,
   VolcanoReport
 } from '../schemas/serverResponses'
+import {
+  isPageVisible,
+  subscribeToPageVisibility
+} from '../utils/pageVisibility'
 
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000
 const REQUEST_TIMEOUT_MS = 10000
@@ -18,6 +22,8 @@ export class VolcanoActivityLayer {
   private readonly map: L.Map
   private abortController: AbortController | null = null
   private refreshTimeout = 0
+  private pageVisible = isPageVisible()
+  private unsubscribeVisibility: (() => void) | null = null
 
   constructor(map: L.Map) {
     this.map = map
@@ -30,17 +36,22 @@ export class VolcanoActivityLayer {
   start() {
     this.map.on('overlayadd', this.handleOverlayAdd)
     this.map.on('overlayremove', this.handleOverlayRemove)
+    this.unsubscribeVisibility = subscribeToPageVisibility(
+      this.handlePageVisibility
+    )
   }
 
   destroy() {
     this.map.off('overlayadd', this.handleOverlayAdd)
     this.map.off('overlayremove', this.handleOverlayRemove)
+    this.unsubscribeVisibility?.()
+    this.unsubscribeVisibility = null
     this.stopRefresh()
     this.layer.clearLayers()
   }
 
   private readonly handleOverlayAdd = (event: L.LayersControlEvent) => {
-    if (event.layer === this.layer) {
+    if (event.layer === this.layer && this.pageVisible) {
       void this.load()
     }
   }
@@ -52,6 +63,10 @@ export class VolcanoActivityLayer {
   }
 
   private async load() {
+    if (!this.pageVisible) {
+      return
+    }
+
     this.stopRefresh()
     const controller = new AbortController()
 
@@ -86,7 +101,7 @@ export class VolcanoActivityLayer {
         this.abortController = null
       }
 
-      if (this.map.hasLayer(this.layer)) {
+      if (this.map.hasLayer(this.layer) && this.pageVisible) {
         this.refreshTimeout = window.setTimeout(
           () => void this.load(),
           REFRESH_INTERVAL_MS
@@ -125,6 +140,16 @@ export class VolcanoActivityLayer {
     window.clearTimeout(this.refreshTimeout)
     this.abortController?.abort()
     this.abortController = null
+  }
+
+  private readonly handlePageVisibility = (visible: boolean) => {
+    this.pageVisible = visible
+
+    if (!visible) {
+      this.stopRefresh()
+    } else if (this.map.hasLayer(this.layer)) {
+      void this.load()
+    }
   }
 }
 

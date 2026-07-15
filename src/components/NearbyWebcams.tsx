@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from 'react'
 import { fetchNearbyWebcams } from '../services/webcams'
 import type { NearbyWebcam, NearbyWebcams, WeatherLocation } from '../types/weather'
+import { usePageVisibility } from '../hooks/usePageVisibility'
 
 export function NearbyWebcams({ location }: { location: WeatherLocation | null }) {
   const [expanded, setExpanded] = useState(false)
@@ -21,6 +22,7 @@ export function NearbyWebcams({ location }: { location: WeatherLocation | null }
   const [selected, setSelected] = useState<NearbyWebcam | null>(null)
   const [loading, setLoading] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
+  const pageVisible = usePageVisibility()
 
   useEffect(() => {
     setExpanded(false)
@@ -30,7 +32,7 @@ export function NearbyWebcams({ location }: { location: WeatherLocation | null }
   }, [location])
 
   useEffect(() => {
-    if (!expanded || !location || result || unavailable) return
+    if (!pageVisible || !expanded || !location || result || unavailable) return
 
     const controller = new AbortController()
 
@@ -46,7 +48,7 @@ export function NearbyWebcams({ location }: { location: WeatherLocation | null }
       })
 
     return () => controller.abort()
-  }, [expanded, location, result, unavailable])
+  }, [expanded, location, pageVisible, result, unavailable])
 
   if (!location) return null
 

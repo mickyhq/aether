@@ -4,15 +4,21 @@ import { Box, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { fetchSoilMoisture } from '../services/soilMoisture'
 import type { SoilMoistureReading, WeatherLocation } from '../types/weather'
+import { usePageVisibility } from '../hooks/usePageVisibility'
 
 export function SoilMoisture({ location }: { location: WeatherLocation | null }) {
   const [reading, setReading] = useState<SoilMoistureReading | null>(null)
   const [loading, setLoading] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
+  const pageVisible = usePageVisibility()
 
   useEffect(() => {
     if (!location) {
       setReading(null)
+      return
+    }
+
+    if (!pageVisible) {
       return
     }
 
@@ -33,7 +39,7 @@ export function SoilMoisture({ location }: { location: WeatherLocation | null })
       })
 
     return () => controller.abort()
-  }, [location])
+  }, [location, pageVisible])
 
   if (!location) return null
 

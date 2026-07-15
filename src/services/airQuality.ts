@@ -35,8 +35,13 @@ let lastBatchFetchTime = 0
 
 export const AIR_QUALITY_REFRESH_INTERVAL = FRESHNESS
 
-export async function fetchAirQualityMapSamples(viewport: WeatherViewport) {
+export async function fetchAirQualityMapSamples(
+  viewport: WeatherViewport,
+  signal?: AbortSignal
+) {
+  signal?.throwIfAborted()
   await loadCache()
+  signal?.throwIfAborted()
 
   const points = getVisibleWeatherGrid(viewport)
   const refreshPoints = points.filter(point => {
@@ -58,11 +63,17 @@ export async function fetchAirQualityMapSamples(viewport: WeatherViewport) {
       index + Math.min(BATCH_SIZE, remainingBudget)
     )
     index += batch.length
+    signal?.throwIfAborted()
     await throttleBatchDelay()
+    signal?.throwIfAborted()
 
     try {
-      freshSamples.push(...await fetchAirQualityBatch(batch))
-    } catch {
+      freshSamples.push(...await fetchAirQualityBatch(batch, signal))
+    } catch (error) {
+      if (signal?.aborted) {
+        throw error
+      }
+
       continue
     }
   }
@@ -117,7 +128,10 @@ export function interpolateAirQualityAt(
   }
 }
 
-async function fetchAirQualityBatch(points: WeatherLocation[]) {
+async function fetchAirQualityBatch(
+  points: WeatherLocation[],
+  signal?: AbortSignal
+) {
   if (points.length === 0) {
     return []
   }
@@ -128,7 +142,8 @@ async function fetchAirQualityBatch(points: WeatherLocation[]) {
     current: CURRENT_FIELDS.join(',')
   })
   const response = await fetchWithTimeout(
-    `${AIR_QUALITY_ENDPOINT}?${params.toString()}`
+    `${AIR_QUALITY_ENDPOINT}?${params.toString()}`,
+    { signal }
   )
 
   observeUpstreamBudget(response)

@@ -16,6 +16,7 @@ import type {
   WeatherLocation
 } from '../types/weather'
 import { translateWeather } from '../weather/translateWeather'
+import { usePageVisibility } from './usePageVisibility'
 
 export function useLocationWeather(location: WeatherLocation) {
   const [weather, setWeather] = useState<WeatherConfig | null>(null)
@@ -29,9 +30,20 @@ export function useLocationWeather(location: WeatherLocation) {
   const [ecmwfForecast, setEcmwfForecast] = useState<EcmwfForecast | null>(null)
   const [ecmwfLoading, setEcmwfLoading] = useState(true)
   const [ecmwfFrame, setEcmwfFrame] = useState<WeatherEvolutionFrame | null>(null)
+  const pageVisible = usePageVisibility()
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
+
+    persistLocation(location)
+
+    if (!pageVisible) {
+      setForecastReady(false)
+      return () => {
+        cancelled = true
+      }
+    }
 
     async function loadWeather() {
       const forceRefresh = forceRefreshRef.current
@@ -42,7 +54,11 @@ export function useLocationWeather(location: WeatherLocation) {
 
       try {
         setStatus('Reading sky')
-        const forecast = await fetchOpenMeteoForecast(location, forceRefresh)
+        const forecast = await fetchOpenMeteoForecast(
+          location,
+          forceRefresh,
+          controller.signal
+        )
         const nextWeather = translateWeather(forecast.payload, location)
 
         cacheWeatherSample(location, nextWeather)
@@ -76,14 +92,18 @@ export function useLocationWeather(location: WeatherLocation) {
     }
 
     void loadWeather()
-    persistLocation(location)
 
     return () => {
       cancelled = true
+      controller.abort()
     }
-  }, [location, request])
+  }, [location, pageVisible, request])
 
   useEffect(() => {
+    if (!pageVisible) {
+      return
+    }
+
     const controller = new AbortController()
 
     setEcmwfLoading(true)
@@ -107,23 +127,25 @@ export function useLocationWeather(location: WeatherLocation) {
       })
 
     return () => controller.abort()
-  }, [location])
+  }, [location, pageVisible])
 
   useEffect(() => {
-    let cancelled = false
+    if (!pageVisible) {
+      return
+    }
+
+    const controller = new AbortController()
 
     setOfficialHeatAlerts([])
 
-    void fetchOfficialHeatAlerts(location).then(alerts => {
-      if (!cancelled) {
+    void fetchOfficialHeatAlerts(location, controller.signal).then(alerts => {
+      if (!controller.signal.aborted) {
         setOfficialHeatAlerts(alerts)
       }
-    })
+    }).catch(() => {})
 
-    return () => {
-      cancelled = true
-    }
-  }, [location])
+    return () => controller.abort()
+  }, [location, pageVisible])
 
   const retry = useCallback(() => {
     forceRefreshRef.current = true

@@ -6,11 +6,13 @@ import type {
   RadarRainReading,
   WeatherLocation
 } from '../types/weather'
+import { usePageVisibility } from './usePageVisibility'
 
 const HOVER_GEOCODE_DEBOUNCE_MS = 650
 const HOVER_RADAR_DEBOUNCE_MS = 1000
 
 export function useMapPointerWeather() {
+  const pageVisible = usePageVisibility()
   const [pointerWeather, setPointerWeather] = useState<MapWeatherPointer | null>(null)
   const geocodeAbortRef = useRef<AbortController | null>(null)
   const geocodeTimeoutRef = useRef(0)
@@ -32,9 +34,26 @@ export function useMapPointerWeather() {
     radarRequestRef.current += 1
   }, [])
 
+  useEffect(() => {
+    if (pageVisible) {
+      return
+    }
+
+    window.clearTimeout(geocodeTimeoutRef.current)
+    geocodeAbortRef.current?.abort()
+    geocodeAbortRef.current = null
+    window.clearTimeout(radarTimeoutRef.current)
+    radarRequestRef.current += 1
+    setPointerWeather(null)
+  }, [pageVisible])
+
   const handlePointerWeatherChange = useCallback((
     reading: MapWeatherPointer | null
   ) => {
+    if (!pageVisible) {
+      return
+    }
+
     window.clearTimeout(radarTimeoutRef.current)
 
     if (!reading) {
@@ -156,7 +175,7 @@ export function useMapPointerWeather() {
         }
       }
     }, HOVER_GEOCODE_DEBOUNCE_MS)
-  }, [])
+  }, [pageVisible])
 
   const getCachedPlace = useCallback((location: WeatherLocation) => (
     placeCacheRef.current.get(

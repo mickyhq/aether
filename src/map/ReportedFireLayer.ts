@@ -9,6 +9,10 @@ import {
   reportedFiresResponseSchema
 } from '../schemas/serverResponses'
 import type { ReportedFire } from '../schemas/serverResponses'
+import {
+  isPageVisible,
+  subscribeToPageVisibility
+} from '../utils/pageVisibility'
 
 const REFRESH_INTERVAL_MS = SOURCE_REFRESH_MS
 const REQUEST_TIMEOUT_MS = 8000
@@ -22,6 +26,8 @@ export class ReportedFireLayer {
   private abortController: AbortController | null = null
   private fires: ReportedFire[] = []
   private refreshTimeout = 0
+  private pageVisible = isPageVisible()
+  private unsubscribeVisibility: (() => void) | null = null
 
   constructor(
     map: L.Map,
@@ -41,19 +47,24 @@ export class ReportedFireLayer {
     this.map.on('overlayadd', this.handleOverlayAdd)
     this.map.on('overlayremove', this.handleOverlayRemove)
     this.map.on('zoomend', this.handleZoomEnd)
+    this.unsubscribeVisibility = subscribeToPageVisibility(
+      this.handlePageVisibility
+    )
   }
 
   destroy() {
     this.map.off('overlayadd', this.handleOverlayAdd)
     this.map.off('overlayremove', this.handleOverlayRemove)
     this.map.off('zoomend', this.handleZoomEnd)
+    this.unsubscribeVisibility?.()
+    this.unsubscribeVisibility = null
     this.stopRefresh()
     this.onFireHover(null)
     this.layer.clearLayers()
   }
 
   private readonly handleOverlayAdd = (event: L.LayersControlEvent) => {
-    if (event.layer === this.layer) {
+    if (event.layer === this.layer && this.pageVisible) {
       void this.load()
     }
   }
@@ -74,6 +85,10 @@ export class ReportedFireLayer {
   }
 
   private async load() {
+    if (!this.pageVisible) {
+      return
+    }
+
     this.stopRefresh()
     const controller = new AbortController()
 
@@ -120,7 +135,7 @@ export class ReportedFireLayer {
         this.abortController = null
       }
 
-      if (this.map.hasLayer(this.layer)) {
+      if (this.map.hasLayer(this.layer) && this.pageVisible) {
         this.refreshTimeout = window.setTimeout(
           () => void this.load(),
           REFRESH_INTERVAL_MS
@@ -170,6 +185,16 @@ export class ReportedFireLayer {
     window.clearTimeout(this.refreshTimeout)
     this.abortController?.abort()
     this.abortController = null
+  }
+
+  private readonly handlePageVisibility = (visible: boolean) => {
+    this.pageVisible = visible
+
+    if (!visible) {
+      this.stopRefresh()
+    } else if (this.map.hasLayer(this.layer)) {
+      void this.load()
+    }
   }
 }
 

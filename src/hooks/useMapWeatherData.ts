@@ -28,6 +28,7 @@ import type {
   WeatherMode,
   WeatherViewport
 } from '../types/weather'
+import { usePageVisibility } from './usePageVisibility'
 
 type MapWeatherDataOptions = {
   viewport: WeatherViewport | null
@@ -51,6 +52,7 @@ export function useMapWeatherData({
   const [jetStreamSamples, setJetStreamSamples] = useState<JetStreamSample[]>([])
   const [airQualitySamples, setAirQualitySamples] = useState<AirQualityMapSample[]>([])
   const [oceanCurrentData, setOceanCurrentData] = useState<OceanCurrentData | null>(null)
+  const pageVisible = usePageVisibility()
 
   useEffect(() => {
     if (!viewport || mode === 'jet-stream') {
@@ -75,7 +77,7 @@ export function useMapWeatherData({
 
     void applyPersistentCache()
 
-    if (!forecastReady) {
+    if (!forecastReady || !pageVisible) {
       return () => {
         cancelled = true
       }
@@ -103,32 +105,25 @@ export function useMapWeatherData({
         loading = false
       }
     }
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') {
-        void refreshVisibleWeather()
-      }
-    }
     const timeout = window.setTimeout(refreshVisibleWeather, 120)
     const interval = window.setInterval(
       refreshVisibleWeather,
       WEATHER_REFRESH_INTERVAL
     )
 
-    window.addEventListener('online', refreshWhenVisible)
-    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('online', refreshVisibleWeather)
 
     return () => {
       cancelled = true
       controller.abort()
       window.clearTimeout(timeout)
       window.clearInterval(interval)
-      window.removeEventListener('online', refreshWhenVisible)
-      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('online', refreshVisibleWeather)
     }
-  }, [forecastReady, mode, setStatus, viewport])
+  }, [forecastReady, mode, pageVisible, setStatus, viewport])
 
   useEffect(() => {
-    if (!viewport || mode !== 'jet-stream') {
+    if (!viewport || mode !== 'jet-stream' || !pageVisible) {
       previousJetStreamViewportRef.current = null
       jetStreamViewportRef.current = null
       return
@@ -184,7 +179,7 @@ export function useMapWeatherData({
       window.clearTimeout(timeout)
       window.clearInterval(interval)
     }
-  }, [location, mode, viewport])
+  }, [location, mode, pageVisible, viewport])
 
   useEffect(() => {
     if (!viewport) {
@@ -196,6 +191,12 @@ export function useMapWeatherData({
 
     setAirQualitySamples(getCachedAirQualityMapSamples(viewport))
 
+    if (!pageVisible) {
+      return
+    }
+
+    const controller = new AbortController()
+
     const refreshAirQuality = async () => {
       if (loading) {
         return
@@ -204,7 +205,10 @@ export function useMapWeatherData({
       loading = true
 
       try {
-        const samples = await fetchAirQualityMapSamples(viewport)
+        const samples = await fetchAirQualityMapSamples(
+          viewport,
+          controller.signal
+        )
 
         if (!cancelled) {
           setAirQualitySamples(samples)
@@ -213,31 +217,25 @@ export function useMapWeatherData({
         loading = false
       }
     }
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') {
-        void refreshAirQuality()
-      }
-    }
     const timeout = window.setTimeout(refreshAirQuality, 180)
     const interval = window.setInterval(
       refreshAirQuality,
       AIR_QUALITY_REFRESH_INTERVAL
     )
 
-    window.addEventListener('online', refreshWhenVisible)
-    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('online', refreshAirQuality)
 
     return () => {
       cancelled = true
+      controller.abort()
       window.clearTimeout(timeout)
       window.clearInterval(interval)
-      window.removeEventListener('online', refreshWhenVisible)
-      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('online', refreshAirQuality)
     }
-  }, [viewport])
+  }, [pageVisible, viewport])
 
   useEffect(() => {
-    if (!viewport || mode !== 'ocean-current') {
+    if (!viewport || mode !== 'ocean-current' || !pageVisible) {
       return
     }
 
@@ -278,7 +276,7 @@ export function useMapWeatherData({
       window.clearTimeout(timeout)
       window.clearInterval(interval)
     }
-  }, [mode, setStatus, viewport])
+  }, [mode, pageVisible, setStatus, viewport])
 
   return {
     mapSamples,

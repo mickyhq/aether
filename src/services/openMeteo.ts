@@ -39,7 +39,8 @@ const DAILY_FIELDS = [
 
 export async function fetchOpenMeteoForecast(
   location: WeatherLocation,
-  forceRefresh = false
+  forceRefresh = false,
+  signal?: AbortSignal
 ): Promise<ForecastResult> {
   const cacheKey = getLocationCacheKey(location)
   const cachedForecast = readCachedForecast(cacheKey)
@@ -67,7 +68,10 @@ export async function fetchOpenMeteoForecast(
   let response: Response
 
   try {
-    response = await fetchWithTimeout(`${OPEN_METEO_ENDPOINT}?${params.toString()}`)
+    response = await fetchWithTimeout(
+      `${OPEN_METEO_ENDPOINT}?${params.toString()}`,
+      { signal }
+    )
   } catch (error) {
     if (cachedForecast && cachedAge < FORECAST_STALE_AGE) {
       return {

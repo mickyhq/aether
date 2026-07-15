@@ -45,9 +45,14 @@ export class WeatherMapAnimation {
     this.context.clearRect(0, 0, this.width, this.height)
     this.resize()
     this.syncRenderers()
-    this.render(0, 0)
 
-    this.scheduleFrame()
+    if (this.pageVisible) {
+      this.render(0, 0)
+    }
+
+    if (!this.reducedMotion && this.running && this.pageVisible) {
+      this.animationFrame = window.requestAnimationFrame(time => this.tick(time))
+    }
   }
 
   constructor(map: L.Map, container: HTMLElement) {
@@ -83,7 +88,9 @@ export class WeatherMapAnimation {
       return
     }
 
-    this.scheduleFrame()
+    if (this.pageVisible) {
+      this.animationFrame = window.requestAnimationFrame(time => this.tick(time))
+    }
   }
 
   destroy() {
@@ -144,19 +151,19 @@ export class WeatherMapAnimation {
   }
 
   private tick(time: number) {
-    this.animationFrame = 0
-
     if (!this.running || this.reducedMotion || !this.pageVisible) {
       return
     }
 
-    const deltaTime = Math.min((time - this.lastTime) / 1000 || 0.016, 0.04)
+    const deltaTime = Math.min((time - this.lastTime) / 1000 || 0.016, 1 / 30)
 
     this.lastTime = time
     this.resize()
     this.syncRenderers()
     this.render(deltaTime, time / 1000)
-    this.scheduleFrame()
+    this.animationFrame = window.requestAnimationFrame(
+      nextTime => this.tick(nextTime)
+    )
   }
 
   private readonly handlePageVisibility = (visible: boolean) => {
@@ -175,21 +182,8 @@ export class WeatherMapAnimation {
     if (this.reducedMotion) {
       this.render(0, 0)
     } else {
-      this.scheduleFrame()
+      this.animationFrame = window.requestAnimationFrame(time => this.tick(time))
     }
-  }
-
-  private scheduleFrame() {
-    if (
-      this.animationFrame ||
-      !this.running ||
-      this.reducedMotion ||
-      !this.pageVisible
-    ) {
-      return
-    }
-
-    this.animationFrame = window.requestAnimationFrame(time => this.tick(time))
   }
 
   private resize() {

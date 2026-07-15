@@ -4,15 +4,21 @@ import { Box, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { fetchTemperatureRecords } from '../services/temperatureRecords'
 import type { TemperatureRecords as TemperatureRecordsData, WeatherLocation } from '../types/weather'
+import { usePageVisibility } from '../hooks/usePageVisibility'
 
 export function TemperatureRecords({ location }: { location: WeatherLocation | null }) {
   const [records, setRecords] = useState<TemperatureRecordsData | null>(null)
   const [loading, setLoading] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
+  const pageVisible = usePageVisibility()
 
   useEffect(() => {
     if (!location) {
       setRecords(null)
+      return
+    }
+
+    if (!pageVisible) {
       return
     }
 
@@ -33,7 +39,7 @@ export function TemperatureRecords({ location }: { location: WeatherLocation | n
       })
 
     return () => controller.abort()
-  }, [location])
+  }, [location, pageVisible])
 
   if (!location) return null
 
