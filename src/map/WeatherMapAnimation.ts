@@ -9,6 +9,10 @@ import type {
 } from '../types/weather'
 import { WeatherFieldRenderer } from './WeatherFieldRenderer'
 import { WeatherParticleRenderer } from './WeatherParticleRenderer'
+import {
+  isPageVisible,
+  subscribeToPageVisibility
+} from '../utils/pageVisibility'
 
 export class WeatherMapAnimation {
   private readonly map: L.Map
@@ -29,6 +33,8 @@ export class WeatherMapAnimation {
   private motionQuery = window.matchMedia(REDUCED_MOTION_QUERY)
   private reducedMotion = this.motionQuery.matches
   private running = false
+  private pageVisible = isPageVisible()
+  private unsubscribeVisibility: (() => void) | null = null
   private clearBeforeNextRender = false
   private motionChangeHandler = (event: MediaQueryListEvent) => {
     this.reducedMotion = event.matches
@@ -41,9 +47,7 @@ export class WeatherMapAnimation {
     this.syncRenderers()
     this.render(0, 0)
 
-    if (!this.reducedMotion && this.running) {
-      this.animationFrame = window.requestAnimationFrame(time => this.tick(time))
-    }
+    this.scheduleFrame()
   }
 
   constructor(map: L.Map, container: HTMLElement) {
@@ -66,21 +70,28 @@ export class WeatherMapAnimation {
   start() {
     this.running = true
     this.motionQuery.addEventListener('change', this.motionChangeHandler)
+    this.unsubscribeVisibility = subscribeToPageVisibility(
+      this.handlePageVisibility
+    )
     this.resize()
     this.syncRenderers()
 
     if (this.reducedMotion) {
-      this.render(0, 0)
+      if (this.pageVisible) {
+        this.render(0, 0)
+      }
       return
     }
 
-    this.animationFrame = window.requestAnimationFrame(time => this.tick(time))
+    this.scheduleFrame()
   }
 
   destroy() {
     this.running = false
     window.cancelAnimationFrame(this.animationFrame)
     this.motionQuery.removeEventListener('change', this.motionChangeHandler)
+    this.unsubscribeVisibility?.()
+    this.unsubscribeVisibility = null
     this.canvas.remove()
   }
 
@@ -115,7 +126,7 @@ export class WeatherMapAnimation {
     this.mode = mode
     this.fieldRenderer.markDataChanged(samplesChanged, airQualityChanged)
 
-    if (this.reducedMotion) {
+    if (this.reducedMotion && this.pageVisible) {
       this.render(0, 0)
     }
   }
@@ -125,7 +136,7 @@ export class WeatherMapAnimation {
     this.fieldRenderer.invalidate()
     this.clearBeforeNextRender = true
 
-    if (this.reducedMotion) {
+    if (this.reducedMotion && this.pageVisible) {
       this.resize()
       this.syncRenderers()
       this.render(0, 0)
@@ -133,7 +144,9 @@ export class WeatherMapAnimation {
   }
 
   private tick(time: number) {
-    if (!this.running || this.reducedMotion) {
+    this.animationFrame = 0
+
+    if (!this.running || this.reducedMotion || !this.pageVisible) {
       return
     }
 
@@ -143,9 +156,40 @@ export class WeatherMapAnimation {
     this.resize()
     this.syncRenderers()
     this.render(deltaTime, time / 1000)
-    this.animationFrame = window.requestAnimationFrame(
-      nextTime => this.tick(nextTime)
-    )
+    this.scheduleFrame()
+  }
+
+  private readonly handlePageVisibility = (visible: boolean) => {
+    this.pageVisible = visible
+    window.cancelAnimationFrame(this.animationFrame)
+    this.animationFrame = 0
+    this.lastTime = 0
+
+    if (!visible || !this.running) {
+      return
+    }
+
+    this.resize()
+    this.syncRenderers()
+
+    if (this.reducedMotion) {
+      this.render(0, 0)
+    } else {
+      this.scheduleFrame()
+    }
+  }
+
+  private scheduleFrame() {
+    if (
+      this.animationFrame ||
+      !this.running ||
+      this.reducedMotion ||
+      !this.pageVisible
+    ) {
+      return
+    }
+
+    this.animationFrame = window.requestAnimationFrame(time => this.tick(time))
   }
 
   private resize() {
