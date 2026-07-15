@@ -1,6 +1,85 @@
 import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+type AnimationProbeFrame = {
+  time: number
+  points: Array<[number, number]>
+}
+
+type AnimationProbe = {
+  enabled: boolean
+  frames: AnimationProbeFrame[]
+  currentFrame: AnimationProbeFrame | null
+  setPageVisible: (visible: boolean) => void
+}
+
+type AnimationProbeWindow = Window & typeof globalThis & {
+  __aetherAnimationProbe: AnimationProbe
+}
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    let pageVisible = true
+    const probe: AnimationProbe = {
+      enabled: false,
+      frames: [],
+      currentFrame: null,
+      setPageVisible: visible => {
+        pageVisible = visible
+        document.dispatchEvent(new Event('visibilitychange'))
+      }
+    }
+    const browserWindow = window as AnimationProbeWindow
+    const originalClearRect = CanvasRenderingContext2D.prototype.clearRect
+    const originalLineTo = Path2D.prototype.lineTo
+
+    browserWindow.__aetherAnimationProbe = probe
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => pageVisible ? 'visible' : 'hidden'
+    })
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      get: () => !pageVisible
+    })
+
+    CanvasRenderingContext2D.prototype.clearRect = function (
+      x,
+      y,
+      width,
+      height
+    ) {
+      if (
+        probe.enabled &&
+        this.canvas.classList.contains('weather-map-animation-canvas')
+      ) {
+        const frame: AnimationProbeFrame = {
+          time: performance.now(),
+          points: []
+        }
+
+        probe.currentFrame = frame
+        probe.frames.push(frame)
+
+        if (probe.frames.length > 180) {
+          probe.frames.shift()
+        }
+      }
+
+      originalClearRect.call(this, x, y, width, height)
+    }
+
+    Path2D.prototype.lineTo = function (x, y) {
+      const frame = probe.currentFrame
+
+      if (probe.enabled && frame && frame.points.length < 1000) {
+        frame.points.push([x, y])
+      }
+
+      originalLineTo.call(this, x, y)
+    }
+  })
+
   await page.route('**/api/weather?**', async route => {
     const url = new URL(route.request().url())
 
@@ -310,6 +389,116 @@ test('restores saved map overlays after reload', async ({ page }) => {
     page.getByLabel(/Reported open wildfires from NIFC/)
   ).toBeChecked()
 })
+
+test('keeps wind particles moving when the map is zoomed in', async ({
+  page
+}) => {
+  await page.goto('/')
+  await selectWind(page)
+
+  const normalZoomMovement = await measureWindMovement(page)
+
+  for (let zoom = 0; zoom < 4; zoom += 1) {
+    await page.getByRole('button', { name: 'Zoom in' }).click()
+    await page.waitForTimeout(300)
+  }
+
+  const closeZoomMovement = await measureWindMovement(page)
+
+  expect(normalZoomMovement).toBeGreaterThan(0)
+  expect(closeZoomMovement).toBeGreaterThanOrEqual(normalZoomMovement * 0.7)
+  expect(closeZoomMovement).toBeLessThanOrEqual(normalZoomMovement * 6)
+})
+
+test('pauses and resumes wind animation with page visibility', async ({
+  page
+}) => {
+  await page.goto('/')
+  await selectWind(page)
+  await resetAnimationProbe(page)
+  await waitForWindFrames(page, 8)
+
+  await setPageVisible(page, false)
+  const hiddenFrameCount = await getWindFrameCount(page)
+
+  await page.waitForTimeout(300)
+  expect(await getWindFrameCount(page)).toBe(hiddenFrameCount)
+
+  await setPageVisible(page, true)
+  await expect.poll(() => getWindFrameCount(page)).toBeGreaterThan(
+    hiddenFrameCount
+  )
+})
+
+async function selectWind(page: Page) {
+  const windButton = page.getByRole('button', { name: /^Wind:/ })
+
+  await windButton.click()
+  await expect(windButton).toHaveAttribute('aria-pressed', 'true')
+}
+
+async function measureWindMovement(page: Page) {
+  await resetAnimationProbe(page)
+  await waitForWindFrames(page, 12)
+
+  return page.evaluate(() => {
+    const probe = (window as AnimationProbeWindow).__aetherAnimationProbe
+    const frames = probe.frames.filter(frame => frame.points.length >= 20)
+    const distances: number[] = []
+
+    probe.enabled = false
+
+    for (let frameIndex = 1; frameIndex < frames.length; frameIndex += 1) {
+      const previous = frames[frameIndex - 1].points
+      const current = frames[frameIndex].points
+      const pointCount = Math.min(previous.length, current.length)
+
+      for (let pointIndex = 0; pointIndex < pointCount; pointIndex += 1) {
+        const distance = Math.hypot(
+          current[pointIndex][0] - previous[pointIndex][0],
+          current[pointIndex][1] - previous[pointIndex][1]
+        )
+
+        if (distance > 0.01 && distance < 40) {
+          distances.push(distance)
+        }
+      }
+    }
+
+    distances.sort((left, right) => left - right)
+
+    return distances[Math.floor(distances.length / 2)] ?? 0
+  })
+}
+
+async function resetAnimationProbe(page: Page) {
+  await page.evaluate(() => {
+    const probe = (window as AnimationProbeWindow).__aetherAnimationProbe
+
+    probe.frames = []
+    probe.currentFrame = null
+    probe.enabled = true
+  })
+}
+
+async function waitForWindFrames(page: Page, count: number) {
+  await expect.poll(() => getWindFrameCount(page)).toBeGreaterThanOrEqual(count)
+}
+
+async function getWindFrameCount(page: Page) {
+  return page.evaluate(() => (
+    (window as AnimationProbeWindow).__aetherAnimationProbe.frames.filter(
+      frame => frame.points.length >= 20
+    ).length
+  ))
+}
+
+async function setPageVisible(page: Page, visible: boolean) {
+  await page.evaluate(nextVisible => {
+    (window as AnimationProbeWindow).__aetherAnimationProbe
+      .setPageVisible(nextVisible)
+  }, visible)
+}
 
 function buildForecast(latitude: number, longitude: number) {
   return {
