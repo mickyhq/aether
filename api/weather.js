@@ -31,6 +31,7 @@ import {
   isWeatherResponse,
   parseProviderBody
 } from '../shared/providerValidation.js'
+import { handleTemperatureRecords } from '../server/temperatureRecords.js'
 
 const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
 
@@ -38,6 +39,11 @@ export default async function handler(request, response) {
   if (request.method !== 'GET') {
     response.setHeader('Allow', 'GET')
     response.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+
+  if (request.query.history === 'temperature') {
+    await handleTemperatureRecords(request, response)
     return
   }
 

@@ -8,9 +8,11 @@ import WavesIcon from '@mui/icons-material/Waves'
 import { Box, Stack, Typography } from '@mui/material'
 import { useMemo, type ReactNode } from 'react'
 import type { AirQualityReading, EcmwfForecast, HeatAlert, WeatherConfig, WeatherEvolutionFrame, WeatherMode } from '../types/weather'
+import type { WeatherLocation } from '../types/weather'
 import { EcmwfForecastTimeline } from './EcmwfForecastTimeline'
 import { SevereWeatherAlerts } from './SevereWeatherAlerts'
 import { SunTimes } from './SunTimes'
+import { TemperatureRecords } from './TemperatureRecords'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
@@ -23,6 +25,7 @@ type WeatherDashboardProps = {
   officialHeatAlerts: HeatAlert[]
   mode: WeatherMode
   onModeChange: (mode: WeatherMode) => void
+  location: WeatherLocation | null
 }
 
 export function WeatherDashboard({
@@ -34,6 +37,7 @@ export function WeatherDashboard({
   onEcmwfPlaybackChange,
   airQuality,
   officialHeatAlerts,
+  location,
   mode,
   onModeChange
 }: WeatherDashboardProps) {
@@ -114,6 +118,8 @@ export function WeatherDashboard({
             )}
           />
         </Stack>
+
+        <TemperatureRecords location={location} />
 
         <SunTimes
           sunrise={weather?.sunrise ?? null}

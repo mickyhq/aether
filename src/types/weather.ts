@@ -4,6 +4,24 @@ export type WeatherLocation = {
   label: string
 }
 
+export type TemperatureRecord = {
+  temperature: number
+  date: string
+}
+
+export type TemperatureRecords = {
+  highest: TemperatureRecord
+  lowest: TemperatureRecord
+  period: {
+    start: string
+    end: string
+  }
+  model: string
+  resolution: string
+  latitude: number
+  longitude: number
+}
+
 export type WeatherViewport = {
   north: number
   south: number

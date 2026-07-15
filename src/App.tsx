@@ -733,6 +733,7 @@ export default function App() {
               onEcmwfPlaybackChange={setEcmwfPlaybackTime}
               airQuality={selectedAirQuality}
               officialHeatAlerts={officialHeatAlerts}
+              location={selectedForecastReady ? selectedLocation : null}
               mode={weatherMode}
               onModeChange={setWeatherMode}
             />

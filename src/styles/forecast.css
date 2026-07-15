@@ -150,6 +150,75 @@
   gap: 7px;
 }
 
+.temperature-records {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid var(--glass-line);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+
+.temperature-records-heading,
+.temperature-record-values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.temperature-records-heading > :first-child {
+  color: var(--app-text);
+  font-weight: 800;
+}
+
+.temperature-records-heading > :last-child,
+.temperature-records-period,
+.temperature-records-status {
+  color: var(--app-text-muted);
+  font-size: 9px !important;
+}
+
+.temperature-record {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.temperature-record > svg {
+  width: 20px;
+  height: 20px;
+}
+
+.temperature-record.is-low > svg {
+  color: #8fe5ff;
+}
+
+.temperature-record.is-high > svg {
+  color: #ff955f;
+}
+
+.temperature-record .MuiTypography-caption {
+  display: block;
+  color: var(--app-text-muted);
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.temperature-record .MuiTypography-body2 {
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.temperature-records-period {
+  line-height: 1.3 !important;
+}
+
 .sun-time {
   display: flex;
   align-items: center;
