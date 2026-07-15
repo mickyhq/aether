@@ -4,18 +4,11 @@ import type { FireLayerStatusPatch } from './fireLayerStatus'
 import type { MapFirePointer } from '../types/weather'
 import { createReportedFireIcon } from './reportedFireMarker'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
-
-type ReportedFire = {
-  id: string
-  title: string
-  description: string | null
-  latitude: number
-  longitude: number
-  reportedAt: string | null
-  magnitude: string | null
-  source: string
-  sourceUrl: string | null
-}
+import {
+  parseResponseJson,
+  reportedFiresResponseSchema
+} from '../schemas/serverResponses'
+import type { ReportedFire } from '../schemas/serverResponses'
 
 const REFRESH_INTERVAL_MS = SOURCE_REFRESH_MS
 const REQUEST_TIMEOUT_MS = 8000
@@ -99,12 +92,11 @@ export class ReportedFireLayer {
         return
       }
 
-      const payload = await response.json() as { fires?: ReportedFire[] }
-
-      if (!Array.isArray(payload.fires)) {
-        this.onStatusChange({ state: 'unavailable' })
-        return
-      }
+      const payload = await parseResponseJson(
+        response,
+        reportedFiresResponseSchema,
+        'Reported fires response'
+      )
 
       if (!this.map.hasLayer(this.layer)) {
         return

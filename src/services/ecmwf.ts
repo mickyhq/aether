@@ -1,18 +1,10 @@
 import type {
   EcmwfForecast,
-  OpenMeteoHourly,
   WeatherLocation
 } from '../types/weather'
 import { buildWeatherEvolution } from '../weather/translateWeather'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
-
-type EcmwfResponse = {
-  latitude: number
-  longitude: number
-  model?: string
-  utc_offset_seconds?: number
-  hourly: OpenMeteoHourly
-}
+import { parseResponseJson, ecmwfResponseSchema } from '../schemas/serverResponses'
 
 export async function fetchEcmwfLocationForecast(
   location: WeatherLocation,
@@ -29,7 +21,11 @@ export async function fetchEcmwfLocationForecast(
     throw new Error(`ECMWF forecast error ${response.status}`)
   }
 
-  const payload = await response.json() as EcmwfResponse
+  const payload = await parseResponseJson(
+    response,
+    ecmwfResponseSchema,
+    'ECMWF forecast response'
+  )
   const hourly = payload.hourly
 
   if (!hourly?.time?.length) {

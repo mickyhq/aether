@@ -1,6 +1,10 @@
 import type { TemperatureRecords, WeatherLocation } from '../types/weather'
 import { getClientCacheKey } from '../../shared/cacheVersion.js'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
+import {
+  parseResponseJson,
+  temperatureRecordsResponseSchema
+} from '../schemas/serverResponses'
 
 const CACHE_KEY = getClientCacheKey('temperature-records')
 const CACHE_TTL = 32 * 24 * 60 * 60 * 1000
@@ -30,11 +34,11 @@ export async function fetchTemperatureRecords(
     throw new Error(`Temperature history error ${response.status}`)
   }
 
-  const payload = await response.json() as TemperatureRecords
-
-  if (!isTemperatureRecords(payload)) {
-    throw new Error('Invalid temperature history response')
-  }
+  const payload = await parseResponseJson(
+    response,
+    temperatureRecordsResponseSchema,
+    'Temperature history response'
+  )
 
   writeCache(locationKey, payload)
   return payload
@@ -70,19 +74,4 @@ function writeCache(locationKey: string, payload: TemperatureRecords) {
   } catch {
     return
   }
-}
-
-function isTemperatureRecords(value: unknown): value is TemperatureRecords {
-  if (!value || typeof value !== 'object') return false
-
-  const records = value as TemperatureRecords
-
-  return (
-    Number.isFinite(records.highest?.temperature) &&
-    typeof records.highest?.date === 'string' &&
-    Number.isFinite(records.lowest?.temperature) &&
-    typeof records.lowest?.date === 'string' &&
-    typeof records.period?.start === 'string' &&
-    typeof records.period?.end === 'string'
-  )
 }

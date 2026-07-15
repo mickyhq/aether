@@ -1,15 +1,10 @@
 import type { WeatherLocation } from '../types/weather'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
-
-type SearchResponse = {
-  location?: WeatherLocation
-  error?: string
-}
-
-type ReverseResponse = {
-  label?: string
-  error?: string
-}
+import {
+  reverseGeocodeResponseSchema,
+  searchGeocodeResponseSchema
+} from '../schemas/serverResponses'
+import type { SearchGeocodeResponse } from '../schemas/serverResponses'
 
 export async function reverseGeocode(
   latitude: number,
@@ -30,7 +25,10 @@ export async function reverseGeocode(
       return fallback
     }
 
-    const payload = await response.json() as ReverseResponse
+    const payload = reverseGeocodeResponseSchema.parse(
+      await response.json(),
+      'Reverse geocoding response'
+    )
 
     return typeof payload.label === 'string' ? payload.label : fallback
   } catch (error) {
@@ -63,7 +61,9 @@ export async function searchCity(query: string): Promise<WeatherLocation> {
   return payload.location
 }
 
-async function readSearchResponse(response: Response): Promise<SearchResponse> {
+async function readSearchResponse(
+  response: Response
+): Promise<SearchGeocodeResponse> {
   const contentType = response.headers.get('content-type') ?? ''
 
   if (!contentType.includes('application/json')) {
@@ -75,7 +75,10 @@ async function readSearchResponse(response: Response): Promise<SearchResponse> {
   }
 
   try {
-    return await response.json() as SearchResponse
+    return searchGeocodeResponseSchema.parse(
+      await response.json(),
+      'City search response'
+    )
   } catch {
     return {
       error: 'City search returned invalid JSON'

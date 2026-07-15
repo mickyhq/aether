@@ -14,13 +14,7 @@ import {
 } from './upstreamBudget'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
-
-type JetStreamResponse = {
-  current: {
-    wind_speed_250hPa?: number
-    wind_direction_250hPa?: number
-  }
-}
+import { jetStreamResponseSchema } from '../schemas/serverResponses'
 
 const OPEN_METEO_ENDPOINT = '/api/weather'
 const CURRENT_FIELDS = 'wind_speed_250hPa,wind_direction_250hPa'
@@ -73,7 +67,10 @@ export async function fetchJetStreamSamples(
       continue
     }
 
-    const body = await response.json() as JetStreamResponse | JetStreamResponse[]
+    const body = jetStreamResponseSchema.parse(
+      await response.json(),
+      'Jet stream response'
+    )
     const payloads = Array.isArray(body) ? body : [body]
     const updatedAt = Date.now()
 

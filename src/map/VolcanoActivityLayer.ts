@@ -1,34 +1,14 @@
 import L from 'leaflet'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
-
-type VolcanoActivity =
-  | 'new-eruption'
-  | 'eruption'
-  | 'new-unrest'
-  | 'unrest'
-  | 'other'
-
-type VolcanoReport = {
-  id: string
-  volcanoNumber: string
-  name: string
-  country: string
-  reportPeriod: string
-  activity: VolcanoActivity
-  activityLabel: string
-  latitude: number
-  longitude: number
-  summary: string
-  publishedAt: string | null
-  reportUrl: string
-  profileUrl: string
-}
-
-type VolcanoPayload = {
-  volcanoes?: VolcanoReport[]
-  reportPublishedAt?: string | null
-  notice?: string
-}
+import {
+  parseResponseJson,
+  volcanoActivityResponseSchema
+} from '../schemas/serverResponses'
+import type {
+  VolcanoActivity,
+  VolcanoActivityResponse,
+  VolcanoReport
+} from '../schemas/serverResponses'
 
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000
 const REQUEST_TIMEOUT_MS = 10000
@@ -88,9 +68,13 @@ export class VolcanoActivityLayer {
         return
       }
 
-      const payload = await response.json() as VolcanoPayload
+      const payload = await parseResponseJson(
+        response,
+        volcanoActivityResponseSchema,
+        'Volcano activity response'
+      )
 
-      if (!Array.isArray(payload.volcanoes) || !this.map.hasLayer(this.layer)) {
+      if (!this.map.hasLayer(this.layer)) {
         return
       }
 
@@ -111,7 +95,7 @@ export class VolcanoActivityLayer {
     }
   }
 
-  private render(payload: VolcanoPayload) {
+  private render(payload: VolcanoActivityResponse) {
     this.layer.clearLayers()
 
     for (const volcano of payload.volcanoes ?? []) {
@@ -162,7 +146,10 @@ function createVolcanoIcon(activity: VolcanoActivity) {
   })
 }
 
-function buildPopup(volcano: VolcanoReport, payload: VolcanoPayload) {
+function buildPopup(
+  volcano: VolcanoReport,
+  payload: VolcanoActivityResponse
+) {
   const container = document.createElement('article')
 
   container.className = 'volcano-activity-popup'

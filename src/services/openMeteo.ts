@@ -2,8 +2,8 @@ import type { OpenMeteoResponse, WeatherLocation } from '../types/weather'
 import type { WeatherDataState } from '../types/weather'
 import { getClientCacheKey } from '../../shared/cacheVersion.js'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
-import { isWeatherResponse } from '../../shared/providerValidation.js'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
+import { openMeteoResponseSchema } from '../schemas/serverResponses'
 
 const OPEN_METEO_ENDPOINT = '/api/weather'
 const FORECAST_CACHE_KEY = getClientCacheKey('forecast')
@@ -90,10 +90,13 @@ export async function fetchOpenMeteoForecast(
     throw new Error(`Open-Meteo error ${response.status}`)
   }
 
-  const payload = await response.json() as OpenMeteoResponse
+  const payload = openMeteoResponseSchema.parse(
+    await response.json(),
+    'Open-Meteo response'
+  )
 
-  if (!isWeatherResponse(payload)) {
-    throw new Error('Invalid Open-Meteo response')
+  if (Array.isArray(payload)) {
+    throw new Error('Open-Meteo response has invalid data')
   }
 
   writeCachedForecast(cacheKey, payload)

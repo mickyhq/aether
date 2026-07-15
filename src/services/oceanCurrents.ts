@@ -1,11 +1,14 @@
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import type {
-  OceanCurrentData,
   OceanCurrentReading,
   OceanCurrentSample,
   WeatherViewport
 } from '../types/weather'
 import { degreesToRadians, normalizeAngle, normalizeLongitude } from '../utils/geo'
+import {
+  oceanCurrentResponseSchema,
+  parseResponseJson
+} from '../schemas/serverResponses'
 
 const ENDPOINT = '/api/ocean-currents'
 const VIEWPORT_PADDING = 0.12
@@ -31,11 +34,11 @@ export async function fetchOceanCurrentData(
     throw new Error('Ocean currents unavailable')
   }
 
-  const data = await response.json() as OceanCurrentData
-
-  if (!Array.isArray(data.samples)) {
-    throw new Error('Ocean current grid is invalid')
-  }
+  const data = await parseResponseJson(
+    response,
+    oceanCurrentResponseSchema,
+    'Ocean current response'
+  )
 
   return data
 }

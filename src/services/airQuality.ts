@@ -11,8 +11,8 @@ import { getMapSampleLimit, observeUpstreamBudget } from './upstreamBudget'
 import { openStorage } from './storage'
 import { distanceInKilometers, inverseDistanceWeight } from '../utils/geo'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
-import { isAirQualityResponse } from '../../shared/providerValidation.js'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
+import { airQualityResponseSchema } from '../schemas/serverResponses'
 
 const AIR_QUALITY_ENDPOINT = '/api/air-quality'
 const CURRENT_FIELDS = [
@@ -137,11 +137,10 @@ async function fetchAirQualityBatch(points: WeatherLocation[]) {
     throw new Error(`Air quality error ${response.status}`)
   }
 
-  const body = (await response.json()) as OpenMeteoAirQualityResponse | OpenMeteoAirQualityResponse[]
-
-  if (!isAirQualityResponse(body)) {
-    throw new Error('Invalid air-quality response')
-  }
+  const body = airQualityResponseSchema.parse(
+    await response.json(),
+    'Air quality response'
+  )
   const payloads = Array.isArray(body) ? body : [body]
   const updatedAt = Date.now()
 

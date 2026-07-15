@@ -1,6 +1,10 @@
 import L from 'leaflet'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import type { MapFirePointer, WeatherMode } from '../types/weather'
+import {
+  fireLayerStatusResponseSchema,
+  parseResponseJson
+} from '../schemas/serverResponses'
 import { findFireTileAtPoint } from './fireTileHitTest'
 import type { FireLayerId, FireLayerStatusPatch } from './fireLayerStatus'
 import { addLayerControlInfo } from './layerControlInfo'
@@ -277,7 +281,11 @@ export function createAetherMapLayers({
       throw new Error('Fire layer status unavailable')
     }
 
-    const payload = await response.json() as { firmsConfigured?: boolean }
+    const payload = await parseResponseJson(
+      response,
+      fireLayerStatusResponseSchema,
+      'Fire layer status response'
+    )
 
     firmsConfigured = payload.firmsConfigured === true
 

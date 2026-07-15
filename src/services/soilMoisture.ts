@@ -1,6 +1,10 @@
 import type { SoilMoistureReading, WeatherLocation } from '../types/weather'
 import { getClientCacheKey } from '../../shared/cacheVersion.js'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
+import {
+  parseResponseJson,
+  soilMoistureResponseSchema
+} from '../schemas/serverResponses'
 
 const CACHE_KEY = getClientCacheKey('soil-moisture')
 const CACHE_TTL = 24 * 60 * 60 * 1000
@@ -37,12 +41,11 @@ export async function fetchSoilMoisture(
         continue
       }
 
-      const payload = await response.json() as SoilMoistureReading
-
-      if (!isSoilMoistureReading(payload)) {
-        lastError = new Error('Invalid soil moisture response')
-        continue
-      }
+      const payload = await parseResponseJson(
+        response,
+        soilMoistureResponseSchema,
+        'Soil moisture response'
+      )
 
       writeCache(locationKey, payload)
       return payload
@@ -82,19 +85,4 @@ function writeCache(locationKey: string, payload: SoilMoistureReading) {
   } catch {
     return
   }
-}
-
-function isSoilMoistureReading(value: unknown): value is SoilMoistureReading {
-  if (!value || typeof value !== 'object') return false
-
-  const reading = value as SoilMoistureReading
-
-  return (
-    typeof reading.date === 'string' &&
-    Number.isFinite(reading.rootZonePercent) &&
-    Number.isFinite(reading.surfacePercent) &&
-    Number.isFinite(reading.percentile) &&
-    typeof reading.category === 'string' &&
-    Number.isFinite(reading.trend)
-  )
 }

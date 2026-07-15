@@ -2,15 +2,11 @@ import L from 'leaflet'
 import type { WeatherMode } from '../types/weather'
 import { REDUCED_MOTION_QUERY } from '../utils/motion'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
-
-type RadarFrame = {
-  time: number
-  path: string
-}
-
-type RadarMetadata = {
-  frames: RadarFrame[]
-}
+import {
+  parseResponseJson,
+  radarMetadataResponseSchema
+} from '../schemas/serverResponses'
+import type { RadarFrame } from '../schemas/serverResponses'
 
 const METADATA_URL = '/api/radar'
 const METADATA_REFRESH = 5 * 60 * 1000
@@ -100,7 +96,11 @@ export class WeatherRadarLayer {
         return
       }
 
-      const metadata = (await response.json()) as RadarMetadata
+      const metadata = await parseResponseJson(
+        response,
+        radarMetadataResponseSchema,
+        'Radar metadata response'
+      )
 
       if (this.destroyed || !metadata.frames?.length) {
         return

@@ -1,14 +1,10 @@
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import type { RadarRainReading } from '../types/weather'
-
-type RadarFrame = {
-  time: number
-  path: string
-}
-
-type RadarMetadata = {
-  frames?: RadarFrame[]
-}
+import {
+  parseResponseJson,
+  radarMetadataResponseSchema
+} from '../schemas/serverResponses'
+import type { RadarFrame } from '../schemas/serverResponses'
 
 type TilePoint = {
   z: number
@@ -115,8 +111,12 @@ async function getLatestFrame() {
         throw new Error('Radar metadata unavailable')
       }
 
-      const metadata = await response.json() as RadarMetadata
-      const frames = metadata.frames ?? []
+      const metadata = await parseResponseJson(
+        response,
+        radarMetadataResponseSchema,
+        'Radar metadata response'
+      )
+      const frames = metadata.frames
       const frame = frames[frames.length - 1]
 
       if (!frame || !Number.isFinite(frame.time) || !frame.path) {

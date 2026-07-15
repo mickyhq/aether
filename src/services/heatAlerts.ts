@@ -1,5 +1,9 @@
 import type { HeatAlert, WeatherLocation } from '../types/weather'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
+import {
+  heatAlertsResponseSchema,
+  parseResponseJson
+} from '../schemas/serverResponses'
 
 export async function fetchOfficialHeatAlerts(
   location: WeatherLocation
@@ -14,7 +18,11 @@ export async function fetchOfficialHeatAlerts(
     return []
   }
 
-  const payload = await response.json() as { alerts?: HeatAlert[] }
+  const payload = await parseResponseJson(
+    response,
+    heatAlertsResponseSchema,
+    'Heat alerts response'
+  )
 
-  return Array.isArray(payload.alerts) ? payload.alerts : []
+  return payload.alerts
 }

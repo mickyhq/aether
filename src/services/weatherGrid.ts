@@ -10,11 +10,11 @@ import { getWeatherCacheKey, loadPersistedWeatherSamples, persistWeatherSamples 
 import { getMapSampleLimit, observeUpstreamBudget } from './upstreamBudget'
 import { clamp, degreesToRadians, distanceInKilometers, interpolateWindVectors, inverseDistanceWeight, normalizeLongitude, radiansToDegrees } from '../utils/geo'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
-import { isWeatherResponse } from '../../shared/providerValidation.js'
 import { mapCurrentWeather } from '../weather/mapCurrentWeather'
 import { buildWeatherEvolution } from '../weather/translateWeather'
 import { describeWeatherCode } from '../weather/weatherCode'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
+import { openMeteoResponseSchema } from '../schemas/serverResponses'
 
 type GridPoint = WeatherLocation & {
   showBadge: false
@@ -290,11 +290,10 @@ async function fetchWeatherBatch(
     throw new Error(`Weather grid error ${response.status}`)
   }
 
-  const body = (await response.json()) as OpenMeteoResponse | OpenMeteoResponse[]
-
-  if (!isWeatherResponse(body)) {
-    throw new Error('Invalid weather grid response')
-  }
+  const body = openMeteoResponseSchema.parse(
+    await response.json(),
+    'Weather grid response'
+  )
 
   const payloads = Array.isArray(body) ? body : [body]
   const updatedAt = Date.now()
