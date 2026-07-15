@@ -54,6 +54,27 @@ export type NearbyWebcams = {
   webcams: NearbyWebcam[]
 }
 
+export type StargazingNight = {
+  date: string
+  score: number
+  rating: string
+  bestTime: string
+  cloudCover: number
+  seeingArcseconds: number
+  transparency: number
+  moonIllumination: number
+  moonPhase: string
+}
+
+export type StargazingForecast = {
+  initializedAt: string
+  lightPollution: {
+    estimatedBortle: string
+    classCode: number
+  } | null
+  nights: StargazingNight[]
+}
+
 export type WeatherViewport = {
   north: number
   south: number

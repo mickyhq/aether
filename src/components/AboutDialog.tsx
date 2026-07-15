@@ -93,6 +93,16 @@ const DATA_SOURCES = [
     name: 'Windy Webcams',
     kind: 'Nearby public webcams',
     url: 'https://www.windy.com/webcams'
+  },
+  {
+    name: '7Timer Astro',
+    kind: 'Cloud, seeing and transparency',
+    url: 'https://www.7timer.info/'
+  },
+  {
+    name: 'World Atlas',
+    kind: 'Artificial night-sky brightness',
+    url: 'https://doi.org/10.1126/sciadv.1600377'
   }
 ]
 

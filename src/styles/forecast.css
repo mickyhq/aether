@@ -741,3 +741,161 @@
   font-weight: 600;
   text-align: center;
 }
+
+.stargazing-index {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid rgba(151, 132, 255, 0.28);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(151, 132, 255, 0.14), transparent 32%),
+    var(--app-surface);
+}
+
+.stargazing-heading,
+.stargazing-heading > div,
+.stargazing-reading {
+  display: flex;
+  align-items: center;
+}
+
+.stargazing-heading {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stargazing-heading > div {
+  gap: 5px;
+  color: #c7bfff;
+}
+
+.stargazing-heading svg {
+  width: 16px;
+  height: 16px;
+}
+
+.stargazing-heading > div .MuiTypography-caption {
+  color: var(--app-text);
+  font-weight: 800;
+}
+
+.stargazing-heading > .MuiTypography-caption,
+.stargazing-index > .MuiTypography-caption {
+  color: var(--app-text-muted);
+  font-size: 9px;
+}
+
+.stargazing-nights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.stargazing-nights button {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 5px 3px;
+  border: 1px solid var(--glass-line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--app-text-muted);
+  font: inherit;
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.stargazing-nights button strong {
+  color: var(--app-text);
+  font-size: 12px;
+}
+
+.stargazing-nights button.is-selected {
+  border-color: rgba(151, 132, 255, 0.68);
+  background: rgba(151, 132, 255, 0.14);
+  color: #ddd8ff;
+}
+
+.stargazing-reading {
+  gap: 10px;
+}
+
+.stargazing-score {
+  position: relative;
+  display: grid;
+  place-content: center;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: conic-gradient(#9784ff var(--stargazing-score), rgba(255, 255, 255, 0.08) 0);
+  text-align: center;
+}
+
+.stargazing-score::before {
+  position: absolute;
+  inset: 5px;
+  border-radius: inherit;
+  background: #0b171f;
+  content: '';
+}
+
+.stargazing-score strong,
+.stargazing-score span {
+  position: relative;
+  z-index: 1;
+}
+
+.stargazing-score strong {
+  color: var(--app-text);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.stargazing-score span {
+  margin-top: 2px;
+  color: var(--app-text-muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.stargazing-score.is-excellent,
+.stargazing-score.is-good {
+  background: conic-gradient(#8fe5ff var(--stargazing-score), rgba(255, 255, 255, 0.08) 0);
+}
+
+.stargazing-score.is-poor,
+.stargazing-score.is-bad {
+  background: conic-gradient(#ff955f var(--stargazing-score), rgba(255, 255, 255, 0.08) 0);
+}
+
+.stargazing-factors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 7px;
+  min-width: 0;
+}
+
+.stargazing-factor {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  color: var(--app-text-muted);
+  font-size: 8px;
+  line-height: 1.2;
+}
+
+.stargazing-factor svg {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  color: #c7bfff;
+}
+
+.stargazing-best-time {
+  color: var(--app-text-muted) !important;
+  font-size: 8px !important;
+  line-height: 1.3 !important;
+}

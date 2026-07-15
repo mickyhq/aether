@@ -113,8 +113,13 @@ The weekly report is preliminary and intentionally not comprehensive. Rapidly de
 | [NASA EONET](https://eonet.gsfc.nasa.gov/) | Curated open wildfire events |
 | [Copernicus EFFIS](https://forest-fire.emergency.copernicus.eu/) | Filtered VIIRS detections for Africa and Europe |
 | [Smithsonian GVP / USGS](https://volcano.si.edu/reports_weekly.cfm) | Preliminary worldwide weekly volcanic activity reports |
+| [7Timer Astro](https://www.7timer.info/doc.php?lang=en) | Three-day cloud, astronomical seeing, and atmospheric-transparency forecasts |
+| [World Atlas of Artificial Night Sky Brightness](https://doi.org/10.1126/sciadv.1600377) | Estimated light-pollution class for the stargazing index |
+| [Windy Webcams](https://www.windy.com/webcams) | Nearby public webcam players |
 
 Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). CAMS and Open-Meteo attribution is required for air-quality data. RainViewer requires attribution and limits use of its free API. OpenStreetMap tiles must follow the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). Review every provider's current terms before commercial or high-traffic deployment.
+
+The stargazing rating is guidance, not an observatory forecast. Its Bortle value is estimated from a static artificial-sky-brightness class, and 7Timer permits free non-commercial redistribution under its published terms.
 
 ## Layer notes
 

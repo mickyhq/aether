@@ -15,6 +15,7 @@ import { SunTimes } from './SunTimes'
 import { TemperatureRecords } from './TemperatureRecords'
 import { SoilMoisture } from './SoilMoisture'
 import { NearbyWebcams } from './NearbyWebcams'
+import { StargazingIndex } from './StargazingIndex'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
@@ -129,6 +130,7 @@ export function WeatherDashboard({
           sunrise={weather?.sunrise ?? null}
           sunset={weather?.sunset ?? null}
         />
+        <StargazingIndex location={location} />
         <EcmwfForecastTimeline
           forecast={visualForecast}
           loading={ecmwfLoading && !visualForecast}
