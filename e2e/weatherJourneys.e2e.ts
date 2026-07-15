@@ -3,6 +3,29 @@ import { expect, test } from '@playwright/test'
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/weather?**', async route => {
     const url = new URL(route.request().url())
+
+    if (url.searchParams.get('resource') === 'webcams') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          configured: true,
+          radiusKm: 100,
+          total: 1,
+          webcams: [{
+            id: 101,
+            title: 'Alpine weather camera',
+            city: 'Test Valley',
+            distanceKm: 12,
+            playerUrl: 'https://webcams.windy.com/test/player',
+            detailUrl: 'https://www.windy.com/webcams/test',
+            live: true,
+            updatedAt: '2026-06-29T10:00:00Z'
+          }]
+        })
+      })
+      return
+    }
+
     const latitudes = url.searchParams.get('latitude')?.split(',') ?? ['0']
     const longitudes = url.searchParams.get('longitude')?.split(',') ?? ['0']
     const payloads = latitudes.map((latitude, index) => (
@@ -44,6 +67,30 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({ alerts: [] })
+    })
+  ))
+  await page.route('**/api/fire-layer-status', route => (
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ firmsConfigured: true })
+    })
+  ))
+  await page.route('**/api/reported-fires', route => (
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ fires: [] })
+    })
+  ))
+  await page.route('**/api/volcano-activity', route => (
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ volcanoes: [] })
+    })
+  ))
+  await page.route('**/api/radar', route => (
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ frames: [] })
     })
   ))
   await page.route('**/api/ecmwf?**', route => (
@@ -188,6 +235,80 @@ test('selects a location from the map', async ({ page }) => {
   ).toBeVisible()
   expect(reverseGeocodeRequests).toBe(1)
   await expect(page.getByRole('status')).toHaveText(/^(Live|Cached)$/)
+})
+
+test('opens the map layer menu', async ({ page }) => {
+  await page.goto('/')
+
+  await page.locator('.leaflet-control-layers').hover()
+
+  await expect(page.getByRole('heading', { name: 'Volcanoes' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Satellite detections' })
+  ).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Reported incidents' })
+  ).toBeVisible()
+  await expect(
+    page.getByLabel(/Reported open wildfires from NIFC/)
+  ).toBeVisible()
+})
+
+test('opens and closes layer information popovers', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('.leaflet-control-layers').hover()
+
+  const infoButton = page.getByRole('button', {
+    name: 'About worldwide heat detections'
+  })
+
+  await infoButton.click()
+
+  const popover = page.getByRole('dialog', {
+    name: 'worldwide heat detections'
+  })
+
+  await expect(popover).toBeVisible()
+  await expect(popover).toContainText('Satellite heat detections')
+  await expect(infoButton).toHaveAttribute('aria-expanded', 'true')
+
+  await popover.press('Escape')
+
+  await expect(popover).toBeHidden()
+  await expect(infoButton).toHaveAttribute('aria-expanded', 'false')
+  await expect(infoButton).toBeFocused()
+})
+
+test('shows nearby webcams', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByRole('button', { name: /Live webcams/ }).click()
+
+  await expect(
+    page.getByRole('button', { name: /Alpine weather camera/ })
+  ).toBeVisible()
+  await expect(page.getByText('Test Valley · 12 km')).toBeVisible()
+  await expect(page.getByText('Webcams provided by')).toBeVisible()
+})
+
+test('restores saved map overlays after reload', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('.leaflet-control-layers').hover()
+
+  const reportedFires = page.getByLabel(/Reported open wildfires from NIFC/)
+
+  await reportedFires.check()
+  await expect(reportedFires).toBeChecked()
+  await expect.poll(() => page.evaluate(() => (
+    window.localStorage.getItem('aether:map-overlays')
+  ))).toContain('reported-wildfires')
+
+  await page.reload()
+  await page.locator('.leaflet-control-layers').hover()
+
+  await expect(
+    page.getByLabel(/Reported open wildfires from NIFC/)
+  ).toBeChecked()
 })
 
 function buildForecast(latitude: number, longitude: number) {

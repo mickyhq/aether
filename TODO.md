@@ -2,7 +2,6 @@
 
 ## Priority 2 — Reliability and regression coverage
 
-- [ ] Add browser checks for map click selection, the layer menu, information popovers, webcams, and saved overlay restoration.
 - [ ] Add animation checks for consistent wind motion across zoom levels and pause/resume after page visibility changes.
 - [ ] Add fixture-based contract checks for every runtime response schema and reject invalid cached payloads during hydration.
 - [ ] Consolidate visibility-aware polling, abort, online-resume, and cleanup behavior into one reusable scheduler hook.
