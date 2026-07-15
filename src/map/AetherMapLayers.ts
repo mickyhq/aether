@@ -14,6 +14,10 @@ import {
 } from './mapOverlayState'
 import type { MapOverlayId } from './mapOverlayState'
 import { ReportedFireLayer } from './ReportedFireLayer'
+import {
+  clipTileToBounds,
+  maskTileToBounds
+} from './regionalTileClip'
 import { VolcanoActivityLayer } from './VolcanoActivityLayer'
 import { WeatherRadarLayer } from './WeatherRadarLayer'
 
@@ -230,7 +234,14 @@ export function createAetherMapLayers({
       updateFireLayerStatus('africa-detections', { state: 'loading' })
     }
   }
-  const handleAfricaTileLoad = () => {
+  const handleAfricaTileLoadStart = (event: L.TileEvent) => {
+    clipTileToBounds(event.tile, event.coords, AFRICA_FIRE_BOUNDS)
+  }
+  const handleAfricaTileLoad = (event: L.TileEvent) => {
+    if (maskTileToBounds(event.tile, event.coords, AFRICA_FIRE_BOUNDS)) {
+      return
+    }
+
     africaLoadedTiles += 1
   }
   const handleAfricaLoad = () => {
@@ -248,7 +259,14 @@ export function createAetherMapLayers({
       updateFireLayerStatus('europe-detections', { state: 'loading' })
     }
   }
-  const handleEuropeTileLoad = () => {
+  const handleEuropeTileLoadStart = (event: L.TileEvent) => {
+    clipTileToBounds(event.tile, event.coords, EUROPE_FIRE_BOUNDS)
+  }
+  const handleEuropeTileLoad = (event: L.TileEvent) => {
+    if (maskTileToBounds(event.tile, event.coords, EUROPE_FIRE_BOUNDS)) {
+      return
+    }
+
     europeLoadedTiles += 1
   }
   const handleEuropeLoad = () => {
@@ -266,9 +284,11 @@ export function createAetherMapLayers({
   fireTiles.on('tileload', handleFirmsTileLoad)
   fireTiles.on('load', handleFirmsLoad)
   africaFireTiles.on('loading', handleAfricaLoading)
+  africaFireTiles.on('tileloadstart', handleAfricaTileLoadStart)
   africaFireTiles.on('tileload', handleAfricaTileLoad)
   africaFireTiles.on('load', handleAfricaLoad)
   europeFireTiles.on('loading', handleEuropeLoading)
+  europeFireTiles.on('tileloadstart', handleEuropeTileLoadStart)
   europeFireTiles.on('tileload', handleEuropeTileLoad)
   europeFireTiles.on('load', handleEuropeLoad)
 
@@ -312,8 +332,16 @@ export function createAetherMapLayers({
     badgeLayer,
     controlContainer: layerControl.getContainer() ?? null,
     findFireAtPoint: point => findFireTileAtPoint(map, point, [
-      { layer: africaFireTiles, info: AFRICA_EFFIS_HOVER_INFO },
-      { layer: europeFireTiles, info: EUROPE_EFFIS_HOVER_INFO },
+      {
+        layer: africaFireTiles,
+        info: AFRICA_EFFIS_HOVER_INFO,
+        bounds: AFRICA_FIRE_BOUNDS
+      },
+      {
+        layer: europeFireTiles,
+        info: EUROPE_EFFIS_HOVER_INFO,
+        bounds: EUROPE_FIRE_BOUNDS
+      },
       { layer: fireTiles, info: FIRMS_HOVER_INFO }
     ]),
     setWeatherMode: (mode, radarOpacity) => {
@@ -328,9 +356,11 @@ export function createAetherMapLayers({
       fireTiles.off('tileload', handleFirmsTileLoad)
       fireTiles.off('load', handleFirmsLoad)
       africaFireTiles.off('loading', handleAfricaLoading)
+      africaFireTiles.off('tileloadstart', handleAfricaTileLoadStart)
       africaFireTiles.off('tileload', handleAfricaTileLoad)
       africaFireTiles.off('load', handleAfricaLoad)
       europeFireTiles.off('loading', handleEuropeLoading)
+      europeFireTiles.off('tileloadstart', handleEuropeTileLoadStart)
       europeFireTiles.off('tileload', handleEuropeTileLoad)
       europeFireTiles.off('load', handleEuropeLoad)
 

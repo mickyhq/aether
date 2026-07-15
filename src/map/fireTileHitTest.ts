@@ -4,6 +4,7 @@ import type { MapFirePointer } from '../types/weather'
 type FireTileHitTarget = {
   layer: L.TileLayer
   info: MapFirePointer
+  bounds?: L.LatLngBounds
 }
 
 const tileContexts = new WeakMap<
@@ -19,9 +20,13 @@ export function findFireTileAtPoint(
   const mapBounds = map.getContainer().getBoundingClientRect()
   const clientX = mapBounds.left + point.x
   const clientY = mapBounds.top + point.y
+  const location = map.containerPointToLatLng(point)
 
   for (const target of targets) {
-    if (!map.hasLayer(target.layer)) {
+    if (
+      !map.hasLayer(target.layer) ||
+      (target.bounds && !target.bounds.contains(location))
+    ) {
       continue
     }
 
