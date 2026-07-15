@@ -9,6 +9,11 @@ import type {
 } from '../types/weather'
 import { WeatherFieldRenderer } from './WeatherFieldRenderer'
 import { WeatherParticleRenderer } from './WeatherParticleRenderer'
+import type {
+  ProjectedAirQualitySample,
+  ProjectedOceanCurrentSample,
+  ProjectedSample
+} from './weatherAnimationTypes'
 import {
   isPageVisible,
   subscribeToPageVisibility
@@ -24,6 +29,9 @@ export class WeatherMapAnimation {
   private airQualitySamples: AirQualityMapSample[] = []
   private jetStreamSamples: JetStreamSample[] = []
   private oceanCurrentSamples: OceanCurrentSample[] = []
+  private projectedSamples: ProjectedSample[] | null = null
+  private projectedAirQualitySamples: ProjectedAirQualitySample[] | null = null
+  private projectedOceanCurrentSamples: ProjectedOceanCurrentSample[] | null = null
   private mode: WeatherMode = 'temperature'
   private animationFrame = 0
   private lastTime = 0
@@ -130,6 +138,19 @@ export class WeatherMapAnimation {
     this.airQualitySamples = airQualitySamples
     this.jetStreamSamples = jetStreamSamples
     this.oceanCurrentSamples = oceanCurrentSamples
+
+    if (samplesChanged) {
+      this.projectedSamples = null
+    }
+
+    if (airQualityChanged) {
+      this.projectedAirQualitySamples = null
+    }
+
+    if (oceanCurrentChanged) {
+      this.projectedOceanCurrentSamples = null
+    }
+
     this.mode = mode
     this.fieldRenderer.markDataChanged(samplesChanged, airQualityChanged)
 
@@ -141,6 +162,7 @@ export class WeatherMapAnimation {
   invalidate() {
     this.particleRenderer.reset()
     this.fieldRenderer.invalidate()
+    this.invalidateProjectedSamples()
     this.clearBeforeNextRender = true
 
     if (this.reducedMotion && this.pageVisible) {
@@ -208,6 +230,7 @@ export class WeatherMapAnimation {
     this.context.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0)
     this.fieldRenderer.invalidate()
     this.particleRenderer.reset()
+    this.invalidateProjectedSamples()
   }
 
   private syncRenderers() {
@@ -243,20 +266,10 @@ export class WeatherMapAnimation {
     }
 
     if (this.mode === 'ocean-current') {
-      const projectedSamples = this.oceanCurrentSamples.map(sample => {
-        const point = this.map.latLngToContainerPoint([
-          sample.latitude,
-          sample.longitude
-        ])
-
-        return {
-          sample,
-          x: point.x,
-          y: point.y
-        }
-      })
-
-      this.particleRenderer.drawOceanCurrent(projectedSamples, deltaTime)
+      this.particleRenderer.drawOceanCurrent(
+        this.getProjectedOceanCurrentSamples(),
+        deltaTime
+      )
       return
     }
 
@@ -264,18 +277,7 @@ export class WeatherMapAnimation {
       return
     }
 
-    const projectedSamples = this.samples.map(sample => {
-      const point = this.map.latLngToContainerPoint([
-        sample.latitude,
-        sample.longitude
-      ])
-
-      return {
-        sample,
-        x: point.x,
-        y: point.y
-      }
-    })
+    const projectedSamples = this.getProjectedSamples()
 
     if (this.mode === 'temperature') {
       this.fieldRenderer.drawTemperature(projectedSamples, time)
@@ -300,7 +302,38 @@ export class WeatherMapAnimation {
       return
     }
 
-    const projectedSamples = this.airQualitySamples.map(sample => {
+    this.fieldRenderer.drawAirQuality(
+      this.getProjectedAirQualitySamples(),
+      time
+    )
+  }
+
+  private getProjectedSamples() {
+    this.projectedSamples ??= this.projectSamples(this.samples)
+
+    return this.projectedSamples
+  }
+
+  private getProjectedAirQualitySamples() {
+    this.projectedAirQualitySamples ??= this.projectSamples(
+      this.airQualitySamples
+    )
+
+    return this.projectedAirQualitySamples
+  }
+
+  private getProjectedOceanCurrentSamples() {
+    this.projectedOceanCurrentSamples ??= this.projectSamples(
+      this.oceanCurrentSamples
+    )
+
+    return this.projectedOceanCurrentSamples
+  }
+
+  private projectSamples<T extends { latitude: number, longitude: number }>(
+    samples: T[]
+  ) {
+    return samples.map(sample => {
       const point = this.map.latLngToContainerPoint([
         sample.latitude,
         sample.longitude
@@ -312,7 +345,11 @@ export class WeatherMapAnimation {
         y: point.y
       }
     })
+  }
 
-    this.fieldRenderer.drawAirQuality(projectedSamples, time)
+  private invalidateProjectedSamples() {
+    this.projectedSamples = null
+    this.projectedAirQualitySamples = null
+    this.projectedOceanCurrentSamples = null
   }
 }
