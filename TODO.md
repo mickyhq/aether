@@ -2,7 +2,6 @@
 
 ## Priority 1 — Map smoothness and performance
 
-- [ ] Replace per-particle full sample scans with a small screen-space interpolation grid or nearest-neighbor index.
 - [ ] Add adaptive particle density and canvas resolution based on measured frame time and device pixel ratio.
 - [ ] Add a Low, Balanced, and High animation-quality control with Balanced as the default.
 - [ ] Split wind, Jet Stream, ocean, precipitation, and storm rendering out of `WeatherParticleRenderer.ts`.

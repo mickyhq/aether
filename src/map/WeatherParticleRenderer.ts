@@ -14,6 +14,7 @@ import type {
   ProjectedOceanCurrentSample,
   ProjectedSample
 } from './weatherAnimationTypes'
+import { ScreenVectorGrid } from './ScreenVectorGrid'
 
 const LEGEND_BOTTOM_INSET = 42
 import {
@@ -24,6 +25,7 @@ import {
 } from './weatherVectorFields'
 
 const PARTICLE_COUNT = 760
+const VECTOR_GRID_SPACING = 64
 const OCEAN_SPEED_STOPS = [0.3, 0.8]
 const WIND_BASE_SPEED_BOOST = 1.5
 const WIND_MAX_ZOOM_SCALE = 8
@@ -34,6 +36,9 @@ export class WeatherParticleRenderer {
   private readonly map: L.Map
   private readonly particles: Particle[]
   private lightning: LightningSegment[] = []
+  private windGrid: ScreenVectorGrid | null = null
+  private jetStreamGrid: ScreenVectorGrid | null = null
+  private oceanCurrentGrid: ScreenVectorGrid | null = null
   private width = 1
   private height = 1
   private reducedMotion = false
@@ -63,6 +68,9 @@ export class WeatherParticleRenderer {
     }
 
     this.lightning = []
+    this.windGrid = null
+    this.jetStreamGrid = null
+    this.oceanCurrentGrid = null
   }
 
   drawWind(samples: ProjectedSample[], deltaTime: number) {
@@ -85,6 +93,7 @@ export class WeatherParticleRenderer {
     )
     const paths = WIND_COLORS.map(() => new Path2D())
     const usedBuckets = new Set<number>()
+    const vectorGrid = this.getWindGrid(samples)
     const zoomScale = Math.min(
       WIND_MAX_ZOOM_SCALE,
       Math.max(0.75, 2 ** ((this.map.getZoom() - WIND_REFERENCE_ZOOM) * 0.5))
@@ -100,7 +109,13 @@ export class WeatherParticleRenderer {
         this.resetWindParticle(particle)
       }
 
-      const field = windFieldAt(particle.x, particle.y, samples)
+      const field = vectorGrid.at(particle.x, particle.y)
+
+      if (!field) {
+        particle.life = 0
+        continue
+      }
+
       const speed = (
         (25 + field.speed * 2.5) *
         WIND_BASE_SPEED_BOOST *
@@ -168,6 +183,7 @@ export class WeatherParticleRenderer {
     ))
     const usedPaths: Array<{ stream: number, bucket: number }> = []
     const usedPathKeys = new Set<string>()
+    const vectorGrid = this.getJetStreamGrid(samples)
 
     this.context.save()
     this.context.lineCap = 'round'
@@ -179,15 +195,13 @@ export class WeatherParticleRenderer {
         this.resetWindParticle(particle)
       }
 
-      const location = this.map.containerPointToLatLng([
-        particle.x,
-        particle.y
-      ])
-      const field = jetStreamFieldAt(
-        location.lat,
-        location.lng,
-        samples
-      )
+      const field = vectorGrid.at(particle.x, particle.y)
+
+      if (!field) {
+        particle.life = 0
+        continue
+      }
+
       const speed = 24 + Math.min(field.speed, 320) * 0.72
       const tail = 12 + Math.min(field.speed, 320) * 0.17
 
@@ -202,7 +216,7 @@ export class WeatherParticleRenderer {
           Math.floor((field.speed - 60) / 40)
         )
       )
-      const stream = jetStreamBandAt(location.lat)
+      const stream = jetStreamBandAt(field.latitude ?? 0)
       const path = paths[stream][bucket]
       const pathKey = `${stream}:${bucket}`
 
@@ -252,6 +266,7 @@ export class WeatherParticleRenderer {
       OCEAN_SPEED_STOPS.map(() => new Path2D()).concat(new Path2D())
     ))
     const usedPaths = new Set<string>()
+    const vectorGrid = this.getOceanCurrentGrid(samples)
 
     this.context.save()
     this.context.lineCap = 'round'
@@ -260,12 +275,17 @@ export class WeatherParticleRenderer {
       const particle = this.particles[index]
 
       if (particle.life <= 0 || this.isOutside(particle.x, particle.y, 40)) {
-        this.resetOceanCurrentParticle(particle, samples, index, activeCount)
+        this.resetOceanCurrentParticle(
+          particle,
+          vectorGrid,
+          index,
+          activeCount
+        )
       }
 
-      const field = oceanCurrentFieldAt(particle.x, particle.y, samples)
+      const field = vectorGrid.at(particle.x, particle.y)
 
-      if (!field) {
+      if (!field || field.temperature === undefined) {
         particle.life = 0
         continue
       }
@@ -320,6 +340,7 @@ export class WeatherParticleRenderer {
       PARTICLE_COUNT,
       Math.round(totalStrength * 130)
     )
+    const vectorGrid = this.getWindGrid(samples)
 
     this.context.save()
     this.context.lineCap = 'round'
@@ -334,7 +355,13 @@ export class WeatherParticleRenderer {
         this.resetPrecipitationParticle(particle, wetSamples)
       }
 
-      const field = windFieldAt(particle.x, particle.y, samples)
+      const field = vectorGrid.at(particle.x, particle.y)
+
+      if (!field) {
+        particle.life = 0
+        continue
+      }
+
       const fallSpeed = 130 + particle.strength * 390
       const drift = field.x * (22 + field.speed * 0.45)
 
@@ -549,7 +576,7 @@ export class WeatherParticleRenderer {
 
   private resetOceanCurrentParticle(
     particle: Particle,
-    samples: ProjectedOceanCurrentSample[],
+    vectorGrid: ScreenVectorGrid,
     particleIndex: number,
     particleCount: number
   ) {
@@ -566,7 +593,7 @@ export class WeatherParticleRenderer {
         ? (Math.floor(particleIndex / columns) + Math.random()) / rows * this.height
         : Math.random() * this.height
 
-      if (!oceanCurrentFieldAt(x, y, samples)) {
+      if (!vectorGrid.at(x, y)) {
         continue
       }
 
@@ -617,6 +644,52 @@ export class WeatherParticleRenderer {
       y < -padding ||
       y > this.height + padding
     )
+  }
+
+  private getWindGrid(samples: ProjectedSample[]) {
+    if (!this.windGrid) {
+      this.windGrid = new ScreenVectorGrid(
+        this.width,
+        this.height,
+        VECTOR_GRID_SPACING,
+        (x, y) => windFieldAt(x, y, samples)
+      )
+    }
+
+    return this.windGrid
+  }
+
+  private getJetStreamGrid(samples: JetStreamSample[]) {
+    if (!this.jetStreamGrid) {
+      this.jetStreamGrid = new ScreenVectorGrid(
+        this.width,
+        this.height,
+        VECTOR_GRID_SPACING,
+        (x, y) => {
+          const location = this.map.containerPointToLatLng([x, y])
+
+          return {
+            ...jetStreamFieldAt(location.lat, location.lng, samples),
+            latitude: location.lat
+          }
+        }
+      )
+    }
+
+    return this.jetStreamGrid
+  }
+
+  private getOceanCurrentGrid(samples: ProjectedOceanCurrentSample[]) {
+    if (!this.oceanCurrentGrid) {
+      this.oceanCurrentGrid = new ScreenVectorGrid(
+        this.width,
+        this.height,
+        VECTOR_GRID_SPACING,
+        (x, y) => oceanCurrentFieldAt(x, y, samples)
+      )
+    }
+
+    return this.oceanCurrentGrid
   }
 }
 
