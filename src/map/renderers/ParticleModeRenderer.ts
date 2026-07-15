@@ -9,6 +9,7 @@ export class ParticleModeRenderer {
   protected width = 1
   protected height = 1
   protected reducedMotion = false
+  protected densityScale = 1
 
   constructor(
     protected readonly map: L.Map,
@@ -24,10 +25,16 @@ export class ParticleModeRenderer {
     }))
   }
 
-  setViewport(width: number, height: number, reducedMotion: boolean) {
+  setViewport(
+    width: number,
+    height: number,
+    reducedMotion: boolean,
+    densityScale: number
+  ) {
     this.width = width
     this.height = height
     this.reducedMotion = reducedMotion
+    this.densityScale = densityScale
   }
 
   reset() {
@@ -49,6 +56,13 @@ export class ParticleModeRenderer {
       x > this.width + padding ||
       y < -padding ||
       y > this.height + padding
+    )
+  }
+
+  protected getActiveCount(requestedCount: number) {
+    return Math.max(
+      0,
+      Math.min(PARTICLE_COUNT, Math.round(requestedCount * this.densityScale))
     )
   }
 }

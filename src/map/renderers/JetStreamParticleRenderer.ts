@@ -45,9 +45,8 @@ export class JetStreamParticleRenderer extends ParticleModeRenderer {
       return
     }
 
-    const activeCount = Math.min(
-      PARTICLE_COUNT,
-      Math.round(260 + averageSpeed * 1.4)
+    const activeCount = this.getActiveCount(
+      Math.min(PARTICLE_COUNT, Math.round(260 + averageSpeed * 1.4))
     )
     const paths = JET_STREAM_OUTLINE_COLORS.map(() => (
       JET_STREAM_COLORS.map(() => new Path2D())

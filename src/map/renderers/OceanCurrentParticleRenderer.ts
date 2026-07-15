@@ -9,7 +9,6 @@ import type {
   ProjectedOceanCurrentSample
 } from '../weatherAnimationTypes'
 import {
-  PARTICLE_COUNT,
   ParticleModeRenderer,
   VECTOR_GRID_SPACING
 } from './ParticleModeRenderer'
@@ -43,7 +42,7 @@ export class OceanCurrentParticleRenderer extends ParticleModeRenderer {
 
     this.fadeFrame(deltaTime)
 
-    const activeCount = Math.min(PARTICLE_COUNT, 720)
+    const activeCount = this.getActiveCount(720)
     const paths = OCEAN_TEMPERATURE_COLORS.map(() => (
       OCEAN_SPEED_STOPS.map(() => new Path2D()).concat(new Path2D())
     ))

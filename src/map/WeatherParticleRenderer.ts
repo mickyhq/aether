@@ -25,11 +25,16 @@ export class WeatherParticleRenderer {
     this.storm = new StormRenderer(context)
   }
 
-  setViewport(width: number, height: number, reducedMotion: boolean) {
-    this.wind.setViewport(width, height, reducedMotion)
-    this.jetStream.setViewport(width, height, reducedMotion)
-    this.oceanCurrent.setViewport(width, height, reducedMotion)
-    this.precipitation.setViewport(width, height, reducedMotion)
+  setViewport(
+    width: number,
+    height: number,
+    reducedMotion: boolean,
+    densityScale: number
+  ) {
+    this.wind.setViewport(width, height, reducedMotion, densityScale)
+    this.jetStream.setViewport(width, height, reducedMotion, densityScale)
+    this.oceanCurrent.setViewport(width, height, reducedMotion, densityScale)
+    this.precipitation.setViewport(width, height, reducedMotion, densityScale)
     this.storm.setViewport(width, height, reducedMotion)
   }
 

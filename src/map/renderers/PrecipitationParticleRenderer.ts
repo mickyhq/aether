@@ -33,9 +33,8 @@ export class PrecipitationParticleRenderer extends ParticleModeRenderer {
       (sum, { sample }) => sum + precipitationStrength(sample),
       0
     )
-    const activeCount = Math.min(
-      PARTICLE_COUNT,
-      Math.round(totalStrength * 130)
+    const activeCount = this.getActiveCount(
+      Math.min(PARTICLE_COUNT, Math.round(totalStrength * 130))
     )
     const vectorGrid = this.getVectorGrid(samples)
 

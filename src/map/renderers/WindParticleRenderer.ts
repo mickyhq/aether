@@ -40,9 +40,8 @@ export class WindParticleRenderer extends ParticleModeRenderer {
       return
     }
 
-    const activeCount = Math.min(
-      PARTICLE_COUNT,
-      Math.round(220 + averageWind * 8)
+    const activeCount = this.getActiveCount(
+      Math.min(PARTICLE_COUNT, Math.round(220 + averageWind * 8))
     )
     const paths = WIND_COLORS.map(() => new Path2D())
     const usedBuckets = new Set<number>()

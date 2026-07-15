@@ -2,7 +2,6 @@
 
 ## Priority 1 — Map smoothness and performance
 
-- [ ] Add adaptive particle density and canvas resolution based on measured frame time and device pixel ratio.
 - [ ] Add a Low, Balanced, and High animation-quality control with Balanced as the default.
 
 ## Priority 2 — Reliability and regression coverage

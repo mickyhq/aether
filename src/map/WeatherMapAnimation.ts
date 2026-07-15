@@ -14,6 +14,7 @@ import type {
   ProjectedOceanCurrentSample,
   ProjectedSample
 } from './weatherAnimationTypes'
+import { AnimationPerformanceController } from './AnimationPerformanceController'
 import {
   isPageVisible,
   subscribeToPageVisibility
@@ -25,6 +26,9 @@ export class WeatherMapAnimation {
   private readonly context: CanvasRenderingContext2D
   private readonly fieldRenderer: WeatherFieldRenderer
   private readonly particleRenderer: WeatherParticleRenderer
+  private readonly performanceController = new AnimationPerformanceController(
+    window.devicePixelRatio || 1
+  )
   private samples: WeatherMapSample[] = []
   private airQualitySamples: AirQualityMapSample[] = []
   private jetStreamSamples: JetStreamSample[] = []
@@ -49,6 +53,7 @@ export class WeatherMapAnimation {
     window.cancelAnimationFrame(this.animationFrame)
     this.animationFrame = 0
     this.lastTime = 0
+    this.performanceController.resetMeasurement()
     this.particleRenderer.reset()
     this.context.clearRect(0, 0, this.width, this.height)
     this.resize()
@@ -177,9 +182,16 @@ export class WeatherMapAnimation {
       return
     }
 
-    const deltaTime = Math.min((time - this.lastTime) / 1000 || 0.016, 1 / 30)
+    const frameTime = this.lastTime > 0 ? time - this.lastTime : 16.7
+    const qualityChanged = this.performanceController.recordFrame(frameTime)
+    const deltaTime = Math.min(frameTime / 1000, 1 / 30)
 
     this.lastTime = time
+
+    if (qualityChanged) {
+      this.resize(true)
+    }
+
     this.resize()
     this.syncRenderers()
     this.render(deltaTime, time / 1000)
@@ -193,6 +205,7 @@ export class WeatherMapAnimation {
     window.cancelAnimationFrame(this.animationFrame)
     this.animationFrame = 0
     this.lastTime = 0
+    this.performanceController.resetMeasurement()
 
     if (!visible || !this.running) {
       return
@@ -208,11 +221,12 @@ export class WeatherMapAnimation {
     }
   }
 
-  private resize() {
+  private resize(force = false) {
     const size = this.map.getSize()
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
+    const pixelRatio = this.performanceController.pixelRatio
 
     if (
+      !force &&
       size.x === this.width &&
       size.y === this.height &&
       pixelRatio === this.pixelRatio
@@ -242,7 +256,8 @@ export class WeatherMapAnimation {
     this.particleRenderer.setViewport(
       this.width,
       this.height,
-      this.reducedMotion
+      this.reducedMotion,
+      this.performanceController.densityScale
     )
   }
 
