@@ -129,6 +129,7 @@ export default function App() {
   const hoverGeocodeAbortRef = useRef<AbortController | null>(null)
   const hoverGeocodeTimeoutRef = useRef(0)
   const hoverGeocodeKeyRef = useRef('')
+  const hoverGeocodePendingKeyRef = useRef('')
   const hoverPlaceCacheRef = useRef(new Map<string, string | null>())
   const hoverRadarTimeoutRef = useRef(0)
   const hoverRadarRequestRef = useRef(0)
@@ -278,13 +279,14 @@ export default function App() {
     setViewport(nextViewport)
   }, [])
   const handlePointerWeatherChange = useCallback((reading: MapWeatherPointer | null) => {
-    window.clearTimeout(hoverGeocodeTimeoutRef.current)
     window.clearTimeout(hoverRadarTimeoutRef.current)
-    hoverGeocodeAbortRef.current?.abort()
-    hoverGeocodeAbortRef.current = null
 
     if (!reading) {
+      window.clearTimeout(hoverGeocodeTimeoutRef.current)
+      hoverGeocodeAbortRef.current?.abort()
+      hoverGeocodeAbortRef.current = null
       hoverGeocodeKeyRef.current = ''
+      hoverGeocodePendingKeyRef.current = ''
       hoverRadarKeyRef.current = ''
       hoverRadarResultRef.current = null
       hoverRadarRequestRef.current += 1
@@ -293,6 +295,8 @@ export default function App() {
     }
 
     const key = getHoverPlaceKey(reading.latitude, reading.longitude)
+    const previousPlaceKey = hoverGeocodeKeyRef.current
+    const samePlaceCell = previousPlaceKey === key
     const radarKey = getRadarSampleKey(reading.latitude, reading.longitude)
     const cachedPlace = hoverPlaceCacheRef.current.get(key)
     const cachedRadar = hoverRadarResultRef.current?.key === radarKey
@@ -303,11 +307,23 @@ export default function App() {
       ...(cachedRadar ? { radarRain: cachedRadar } : {})
     }
 
+    if (!samePlaceCell) {
+      window.clearTimeout(hoverGeocodeTimeoutRef.current)
+      hoverGeocodeAbortRef.current?.abort()
+      hoverGeocodeAbortRef.current = null
+      hoverGeocodePendingKeyRef.current = ''
+    }
+
     hoverGeocodeKeyRef.current = key
     hoverRadarKeyRef.current = radarKey
-    setPointerWeather(cachedPlace
-      ? { ...nextReading, placeLabel: cachedPlace }
-      : nextReading)
+    setPointerWeather(current => {
+      const retainedPlace = samePlaceCell ? current?.placeLabel : undefined
+      const placeLabel = cachedPlace ?? retainedPlace
+
+      return placeLabel
+        ? { ...nextReading, placeLabel }
+        : nextReading
+    })
 
     if (!cachedRadar) {
       const radarRequest = hoverRadarRequestRef.current + 1
@@ -344,10 +360,14 @@ export default function App() {
       }, HOVER_RADAR_DEBOUNCE_MS)
     }
 
-    if (hoverPlaceCacheRef.current.has(key)) {
+    if (
+      hoverPlaceCacheRef.current.has(key) ||
+      hoverGeocodePendingKeyRef.current === key
+    ) {
       return
     }
 
+    hoverGeocodePendingKeyRef.current = key
     hoverGeocodeTimeoutRef.current = window.setTimeout(async () => {
       const controller = new AbortController()
 
@@ -371,6 +391,10 @@ export default function App() {
       } catch {
         return
       } finally {
+        if (hoverGeocodePendingKeyRef.current === key) {
+          hoverGeocodePendingKeyRef.current = ''
+        }
+
         if (hoverGeocodeAbortRef.current === controller) {
           hoverGeocodeAbortRef.current = null
         }
