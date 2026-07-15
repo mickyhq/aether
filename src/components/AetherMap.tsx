@@ -5,6 +5,7 @@ import { FireLayerStatus } from './FireLayerStatus'
 import { WeatherMapAnimation } from '../map/WeatherMapAnimation'
 import { WeatherRadarLayer } from '../map/WeatherRadarLayer'
 import { ReportedFireLayer } from '../map/ReportedFireLayer'
+import { VolcanoActivityLayer } from '../map/VolcanoActivityLayer'
 import { findFireTileAtPoint } from '../map/fireTileHitTest'
 import {
   INITIAL_FIRE_LAYER_STATUSES
@@ -42,7 +43,9 @@ const WORLD_BOUNDS = L.latLngBounds(
 const AFRICA_FIRE_BOUNDS = L.latLngBounds([-35, -20], [40, 55])
 const EUROPE_FIRE_BOUNDS = L.latLngBounds([40, -25], [72, 45])
 const MAP_OVERLAYS_KEY = 'aether:map-overlays'
-const MAP_OVERLAY_IDS: FireLayerId[] = [
+type MapOverlayId = FireLayerId | 'volcano-activity'
+const MAP_OVERLAY_IDS: MapOverlayId[] = [
+  'volcano-activity',
   'heat-detections',
   'reported-wildfires',
   'africa-detections',
@@ -208,6 +211,7 @@ export function AetherMap({
         pointerRefreshRef.current()
       }
     )
+    const volcanoActivity = new VolcanoActivityLayer(map)
     const fireTiles = L.tileLayer(
       '/api/fire-tile?z={z}&x={x}&y={y}',
       {
@@ -251,7 +255,8 @@ export function AetherMap({
         attribution: 'European fire detections Copernicus EFFIS'
       }
     )
-    const mapOverlayLayers: Record<FireLayerId, L.Layer> = {
+    const mapOverlayLayers: Record<MapOverlayId, L.Layer> = {
+      'volcano-activity': volcanoActivity.getLeafletLayer(),
       'heat-detections': fireTiles,
       'reported-wildfires': reportedFires.getLeafletLayer(),
       'africa-detections': africaFireTiles,
@@ -263,6 +268,7 @@ export function AetherMap({
     const tileControl = L.control.layers(
       {},
       {
+        'Worldwide weekly volcano activity': volcanoActivity.getLeafletLayer(),
         'Worldwide heat detections · 24h': fireTiles,
         'Africa fire detections · Today + yesterday': africaFireTiles,
         'Europe fire detections · Today + yesterday': europeFireTiles,
@@ -278,17 +284,27 @@ export function AetherMap({
         'input.leaflet-control-layers-selector[type="checkbox"]'
       ) ?? []
     )
-    const heatLayerInput = overlayInputs[0]
-    const africaFireInput = overlayInputs[1]
-    const europeFireInput = overlayInputs[2]
-    const reportedFireInput = overlayInputs[3]
+    const volcanoLayerInput = overlayInputs[0]
+    const heatLayerInput = overlayInputs[1]
+    const africaFireInput = overlayInputs[2]
+    const europeFireInput = overlayInputs[3]
+    const reportedFireInput = overlayInputs[4]
 
+    addLayerControlHeading(volcanoLayerInput, 'Volcanoes')
     addLayerControlHeading(heatLayerInput, 'Satellite detections')
     addLayerControlHeading(reportedFireInput, 'Reported incidents')
 
     heatLayerInput?.closest('label')?.setAttribute(
       'title',
       FIRE_LAYER_DESCRIPTION
+    )
+    volcanoLayerInput?.closest('label')?.setAttribute(
+      'title',
+      'Preliminary worldwide activity reported this week by the Smithsonian Global Volcanism Program and USGS.'
+    )
+    volcanoLayerInput?.setAttribute(
+      'aria-label',
+      'Worldwide weekly volcano activity from Smithsonian GVP and USGS. Reports are preliminary and not comprehensive.'
     )
     heatLayerInput?.setAttribute(
       'aria-label',
@@ -346,8 +362,9 @@ export function AetherMap({
         })
       }
 
-      if (getFireLayerId(
+      if (getMapOverlayId(
         event.layer,
+        volcanoActivity.getLeafletLayer(),
         fireTiles,
         reportedFires.getLeafletLayer(),
         africaFireTiles,
@@ -357,16 +374,20 @@ export function AetherMap({
       }
     }
     const handleFireOverlayRemove = (event: L.LayersControlEvent) => {
-      const layerId = getFireLayerId(
+      const layerId = getMapOverlayId(
         event.layer,
+        volcanoActivity.getLeafletLayer(),
         fireTiles,
         reportedFires.getLeafletLayer(),
         africaFireTiles,
         europeFireTiles
       )
 
-      if (layerId) {
+      if (layerId && layerId !== 'volcano-activity') {
         updateFireLayerStatus(layerId, { enabled: false, state: 'idle' })
+      }
+
+      if (layerId) {
         saveEnabledMapOverlays(map, mapOverlayLayers)
       }
     }
@@ -475,6 +496,7 @@ export function AetherMap({
     radar.start()
     radarRef.current = radar
     reportedFires.start()
+    volcanoActivity.start()
 
     for (const layerId of loadEnabledMapOverlays()) {
       mapOverlayLayers[layerId].addTo(map)
@@ -668,6 +690,7 @@ export function AetherMap({
       animation.destroy()
       radar.destroy()
       reportedFires.destroy()
+      volcanoActivity.destroy()
       tileControl.remove()
       map.remove()
       mapRef.current = null
@@ -830,6 +853,27 @@ function getFireLayerId(
   return layer === europeLayer ? 'europe-detections' : null
 }
 
+function getMapOverlayId(
+  layer: L.Layer,
+  volcanoLayer: L.Layer,
+  firmsLayer: L.Layer,
+  reportedLayer: L.Layer,
+  africaLayer: L.Layer,
+  europeLayer: L.Layer
+): MapOverlayId | null {
+  if (layer === volcanoLayer) {
+    return 'volcano-activity'
+  }
+
+  return getFireLayerId(
+    layer,
+    firmsLayer,
+    reportedLayer,
+    africaLayer,
+    europeLayer
+  )
+}
+
 function addLayerControlHeading(
   input: HTMLInputElement | undefined,
   text: string
@@ -852,23 +896,27 @@ function addLayerControlHeading(
 function loadEnabledMapOverlays() {
   try {
     const value = window.localStorage.getItem(MAP_OVERLAYS_KEY)
-    const parsed: unknown = value ? JSON.parse(value) : []
+    if (value === null) {
+      return new Set<MapOverlayId>(['volcano-activity'])
+    }
+
+    const parsed: unknown = JSON.parse(value)
 
     if (!Array.isArray(parsed)) {
-      return new Set<FireLayerId>()
+      return new Set<MapOverlayId>()
     }
 
     return new Set(
       MAP_OVERLAY_IDS.filter(layerId => parsed.includes(layerId))
     )
   } catch {
-    return new Set<FireLayerId>()
+    return new Set<MapOverlayId>(['volcano-activity'])
   }
 }
 
 function saveEnabledMapOverlays(
   map: L.Map,
-  layers: Record<FireLayerId, L.Layer>
+  layers: Record<MapOverlayId, L.Layer>
 ) {
   try {
     const enabled = MAP_OVERLAY_IDS.filter(layerId => (

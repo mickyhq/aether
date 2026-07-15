@@ -267,6 +267,114 @@
   background: transparent;
 }
 
+.volcano-activity-marker {
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: #ffb04f;
+  filter: drop-shadow(0 2px 3px rgba(23, 7, 0, 0.72));
+}
+
+.volcano-activity-marker.is-new-eruption {
+  color: #ff5b3f;
+}
+
+.volcano-activity-marker.is-new-unrest {
+  color: #ffd45d;
+}
+
+.volcano-activity-marker.is-unrest,
+.volcano-activity-marker.is-other {
+  color: #e9c46a;
+}
+
+.volcano-activity-marker svg {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 34px;
+  height: 34px;
+}
+
+.volcano-activity-mountain {
+  fill: #4c302d;
+  stroke: #fff0d7;
+  stroke-width: 1.35;
+  stroke-linejoin: round;
+}
+
+.volcano-activity-crater,
+.volcano-activity-plume {
+  fill: currentColor;
+}
+
+.volcano-activity-pulse {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 24px;
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.58;
+  transform: translateX(-50%);
+  animation: volcano-activity-pulse 2.4s ease-out infinite;
+}
+
+@keyframes volcano-activity-pulse {
+  from { opacity: 0.65; transform: translateX(-50%) scale(0.5); }
+  to { opacity: 0; transform: translateX(-50%) scale(1.55); }
+}
+
+.volcano-activity-popup {
+  display: grid;
+  gap: 7px;
+  line-height: 1.45;
+}
+
+.volcano-activity-popup > strong {
+  font-size: 16px;
+}
+
+.volcano-activity-popup-location,
+.volcano-activity-popup-period,
+.volcano-activity-popup small {
+  color: #53636a;
+}
+
+.volcano-activity-popup-status {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #fff0df;
+  color: #9a3d19;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.volcano-activity-popup-status.is-new-unrest,
+.volcano-activity-popup-status.is-unrest,
+.volcano-activity-popup-status.is-other {
+  background: #fff7d8;
+  color: #765b00;
+}
+
+.volcano-activity-popup p {
+  margin: 0;
+}
+
+.volcano-activity-popup-links {
+  display: flex;
+  gap: 12px;
+}
+
+.volcano-activity-popup small {
+  padding-top: 6px;
+  border-top: 1px solid #dce4e7;
+}
+
 .reported-fire-flame {
   --fire-delay: 0s;
   position: relative;

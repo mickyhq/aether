@@ -45,6 +45,7 @@ Aether is a full-screen weather and environmental map built with React, TypeScri
 - Selected location and weather mode stored in the URL
 - Persistent radar-opacity control
 - Persistent fire-overlay choices
+- Persistent worldwide volcano-activity overlay
 - Live, cached, stale, and unavailable data status
 - Manual retry for stale or unavailable weather
 - Keyboard map selection and responsive controls
@@ -67,6 +68,15 @@ The map layer control separates satellite detections from reported incidents:
 - Saved overlay selection between visits
 
 Satellite hotspots are not confirmed fire perimeters. They may include industrial heat, volcanoes, agricultural burns, or other hot surfaces. Clouds, smoke, timing, and sensor limits can hide active fires. Reported-incident coverage is also incomplete and can lag. Do not use these layers for emergency decisions.
+
+### Volcano activity
+
+- Worldwide weekly activity reports from the Smithsonian Global Volcanism Program and USGS
+- Separate markers for new eruptions, continuing eruptions, new unrest, and continuing unrest
+- Report period, source summary, full weekly report, and volcano profile in each popup
+- Saved overlay selection and six-hour background refresh
+
+The weekly report is preliminary and intentionally not comprehensive. Rapidly developing activity may be missing or change after publication. Use local volcano observatories and emergency authorities for safety decisions.
 
 ### Reliability and offline use
 
@@ -101,6 +111,7 @@ Satellite hotspots are not confirmed fire perimeters. They may include industria
 | [NRCan CWFIS](https://cwfis.cfs.nrcan.gc.ca/en/) | Reported Canadian active fires |
 | [NASA EONET](https://eonet.gsfc.nasa.gov/) | Curated open wildfire events |
 | [Copernicus EFFIS](https://forest-fire.emergency.copernicus.eu/) | Filtered VIIRS detections for Africa and Europe |
+| [Smithsonian GVP / USGS](https://volcano.si.edu/reports_weekly.cfm) | Preliminary worldwide weekly volcanic activity reports |
 
 Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). CAMS and Open-Meteo attribution is required for air-quality data. RainViewer requires attribution and limits use of its free API. OpenStreetMap tiles must follow the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). Review every provider's current terms before commercial or high-traffic deployment.
 
@@ -123,6 +134,10 @@ Radar appears in Precipitation and Storm modes. Aether animates the six latest R
 ### Fire overlays
 
 NASA FIRMS uses a rolling 24-hour worldwide window and requires a server-side map key. EFFIS uses today and yesterday in UTC, which is a calendar window rather than an exact rolling 48 hours. EFFIS filters detections using confidence and land-cover information. Reported incidents are fetched independently, so remaining providers still work if one feed fails.
+
+### Volcano activity
+
+The volcano overlay uses the Smithsonian / USGS Weekly Volcanic Activity Report RSS feed. GeoRSS coordinates place each report on the map, while stable GVP volcano numbers link to the full report and volcano profile. The source normally updates on Thursday and does not claim to include every eruption or every continuously active volcano.
 
 ## Requirements
 

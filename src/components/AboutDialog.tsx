@@ -82,6 +82,11 @@ const DATA_SOURCES = [
     name: 'Copernicus EFFIS',
     kind: 'Europe and Africa fire detections',
     url: 'https://forest-fire.emergency.copernicus.eu/'
+  },
+  {
+    name: 'Smithsonian GVP / USGS',
+    kind: 'Worldwide weekly volcano activity',
+    url: 'https://volcano.si.edu/reports_weekly.cfm'
   }
 ]
 
