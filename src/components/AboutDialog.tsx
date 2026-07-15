@@ -11,6 +11,7 @@ import {
   Typography
 } from '@mui/material'
 import { useState } from 'react'
+import { SourceLogo } from './SourceLogo'
 
 const DATA_SOURCES = [
   {
@@ -135,7 +136,13 @@ export function AboutDialog() {
             <Typography component="h3" className="about-section-title">
               Author
             </Typography>
-            <Typography>Micky Balladelli</Typography>
+            <Link
+              href="https://github.com/MickyBalladelli/aether"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Micky Balladelli
+            </Link>
           </Box>
           <Box component="section">
             <Typography component="h3" className="about-section-title">
@@ -144,10 +151,13 @@ export function AboutDialog() {
             <Box component="ul" className="about-source-list">
               {DATA_SOURCES.map(source => (
                 <Box component="li" className="about-source-item" key={source.name}>
-                  <Link href={source.url} target="_blank" rel="noreferrer">
-                    {source.name}
-                  </Link>
-                  <Typography component="span">{source.kind}</Typography>
+                  <SourceLogo name={source.name} url={source.url} />
+                  <Box className="about-source-copy">
+                    <Link href={source.url} target="_blank" rel="noreferrer">
+                      {source.name}
+                    </Link>
+                    <Typography component="span">{source.kind}</Typography>
+                  </Box>
                 </Box>
               ))}
             </Box>

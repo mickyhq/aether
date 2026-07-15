@@ -191,12 +191,45 @@
 
 .about-source-item {
   display: grid;
-  gap: 2px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   min-width: 0;
   padding: 6px 8px;
   border: 1px solid rgba(190, 237, 255, 0.12);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
+}
+
+.source-logo {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(190, 237, 255, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.source-logo img {
+  display: block;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.source-logo-fallback {
+  color: #bdefff !important;
+  font-size: 9px !important;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.about-source-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
 }
 
 .about-source-item a {
@@ -208,7 +241,7 @@
   white-space: nowrap;
 }
 
-.about-source-item span {
+.about-source-copy span {
   color: var(--app-text-muted);
   font-size: 10px;
   line-height: 1.35;
