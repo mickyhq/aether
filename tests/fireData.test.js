@@ -53,7 +53,7 @@ describe('EFFIS date window', () => {
 describe('reported fire filtering and deduplication', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  test('filters prescribed EONET events and merges colocated provider records', async () => {
+  test('filters prescribed EONET events and deduplicates by incident ID', async () => {
     const fetchMock = vi.fn(async value => {
       const url = String(value)
 
@@ -62,6 +62,11 @@ describe('reported fire filtering and deduplication', () => {
           pointFeature(10, 20, {
             IrwinID: 'nifc-1',
             IncidentName: 'Pine Fire',
+            IncidentTypeCategory: 'WF'
+          }),
+          pointFeature(11, 21, {
+            IrwinID: 'nifc-1',
+            IncidentName: 'Pine Fire duplicate',
             IncidentTypeCategory: 'WF'
           })
         ]))
@@ -102,6 +107,7 @@ describe('reported fire filtering and deduplication', () => {
     expect(eonetCall[0]).toContain('status=open')
     expect(fires.map(fire => fire.id)).toEqual([
       'nifc:nifc-1',
+      'cwfis:cwfis-1',
       'eonet:EONET_1'
     ])
   })

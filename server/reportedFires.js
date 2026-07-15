@@ -245,13 +245,8 @@ function deduplicateFires(fires) {
   const unique = new Map()
 
   for (const fire of fires) {
-    const locationKey = [
-      fire.latitude.toFixed(3),
-      fire.longitude.toFixed(3)
-    ].join(':')
-
-    if (!unique.has(locationKey)) {
-      unique.set(locationKey, fire)
+    if (!unique.has(fire.id)) {
+      unique.set(fire.id, fire)
     }
   }
 
