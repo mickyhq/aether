@@ -23,7 +23,7 @@ Aether is a full-screen weather and environmental map built with React, TypeScri
 - Weather, air quality, Jet Stream, ocean, and fire details at the pointer
 - Latest radar check for rain at the exact hovered map cell
 - Nearest place name after pausing over the map
-- Always-light OpenStreetMap base map
+- Always-light vector base map with English labels
 
 ### Forecast and alerts
 
@@ -103,7 +103,8 @@ The weekly report is preliminary and intentionally not comprehensive. Rapidly de
 | [NOAA NESDIS CoastWatch](https://coastwatch.noaa.gov/) | Daily global geostrophic surface currents |
 | [NOAA OISST v2.1](https://www.ncei.noaa.gov/products/optimum-interpolation-sst) | Daily sea-surface temperature and anomaly data |
 | [RainViewer](https://www.rainviewer.com/api.html) | Precipitation radar frames |
-| [OpenStreetMap](https://www.openstreetmap.org/) | Base-map tiles |
+| [OpenFreeMap / OpenMapTiles](https://openfreemap.org/) | Vector base-map rendering and localized labels |
+| [OpenStreetMap](https://www.openstreetmap.org/) | Base-map data |
 | [Nominatim](https://nominatim.org/) | Location search and reverse geocoding |
 | [US National Weather Service](https://www.weather.gov/) | Active US heat alerts |
 | [MeteoGate](https://meteogate.eu/) | MeteoAlarm-member heat warnings in Europe |
@@ -117,7 +118,7 @@ The weekly report is preliminary and intentionally not comprehensive. Rapidly de
 | [World Atlas of Artificial Night Sky Brightness](https://doi.org/10.1126/sciadv.1600377) | Estimated light-pollution class for the stargazing index |
 | [Windy Webcams](https://www.windy.com/webcams) | Nearby public webcam players |
 
-Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). CAMS and Open-Meteo attribution is required for air-quality data. RainViewer requires attribution and limits use of its free API. OpenStreetMap tiles must follow the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/). Review every provider's current terms before commercial or high-traffic deployment.
+Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). CAMS and Open-Meteo attribution is required for air-quality data. RainViewer requires attribution and limits use of its free API. OpenFreeMap requires attribution and provides its public instance without an SLA; self-host or choose a supported provider when production requirements demand one. Review every provider's current terms before commercial or high-traffic deployment.
 
 The stargazing rating is guidance, not an observatory forecast. Its Bortle value is estimated from a static artificial-sky-brightness class, and 7Timer permits free non-commercial redistribution under its published terms.
 
@@ -179,7 +180,7 @@ Create a `.env` file or set these server-side environment variables:
 | `UPSTASH_REDIS_REST_URL` | No | Enables shared Upstash caching |
 | `UPSTASH_REDIS_REST_TOKEN` | No | Authenticates the shared Upstash cache |
 
-Without Upstash, production falls back to Vercel Runtime Cache and local development falls back to memory. US National Weather Service alerts, EFFIS, RainViewer, NOAA, OpenStreetMap, Nominatim, and the free Open-Meteo endpoints do not need project keys.
+Without Upstash, production falls back to Vercel Runtime Cache and local development falls back to memory. OpenFreeMap, US National Weather Service alerts, EFFIS, RainViewer, NOAA, Nominatim, and the free Open-Meteo endpoints do not need project keys.
 
 Request a [NASA FIRMS map key](https://firms.modaps.eosdis.nasa.gov/api/map_key/) if you want the worldwide heat-detection overlay.
 

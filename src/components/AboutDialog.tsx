@@ -50,8 +50,13 @@ const DATA_SOURCES = [
     url: 'https://www.rainviewer.com/api.html'
   },
   {
+    name: 'OpenFreeMap / OpenMapTiles',
+    kind: 'Vector map rendering and localized labels',
+    url: 'https://openfreemap.org/'
+  },
+  {
     name: 'OpenStreetMap',
-    kind: 'Map and geocoding',
+    kind: 'Map data and geocoding',
     url: 'https://www.openstreetmap.org/copyright'
   },
   {

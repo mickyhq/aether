@@ -8,6 +8,7 @@ import {
 import { findFireTileAtPoint } from './fireTileHitTest'
 import type { FireLayerId, FireLayerStatusPatch } from './fireLayerStatus'
 import { addLayerControlInfo } from './layerControlInfo'
+import { addBaseMap } from './baseMap'
 import {
   loadEnabledMapOverlays,
   saveEnabledMapOverlays
@@ -66,14 +67,6 @@ export function createAetherMapLayers({
   onReportedFirePointerChange,
   updateFireLayerStatus
 }: AetherMapLayersOptions): AetherMapLayers {
-  const standardTiles = L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-      maxZoom: 19,
-      noWrap: true,
-      attribution: '&copy; OpenStreetMap contributors'
-    }
-  )
   const reportedFires = new ReportedFireLayer(
     map,
     status => updateFireLayerStatus('reported-wildfires', status),
@@ -133,7 +126,7 @@ export function createAetherMapLayers({
     'europe-detections': europeFireTiles
   }
 
-  standardTiles.addTo(map)
+  addBaseMap(map)
 
   const layerControl = L.control.layers(
     {},

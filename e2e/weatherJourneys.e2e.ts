@@ -210,6 +210,7 @@ test.beforeEach(async ({ page }) => {
   ))
   await page.route('https://*.tile.openstreetmap.org/**', route => route.abort())
   await page.route('https://*.basemaps.cartocdn.com/**', route => route.abort())
+  await page.route('https://tiles.openfreemap.org/**', route => route.abort())
 })
 
 test('loads the selected location forecast', async ({ page }) => {
