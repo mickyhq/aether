@@ -4,7 +4,8 @@ import {
   isWeatherResponse
 } from '../../shared/providerValidation.js'
 import type {
-  HeatAlert,
+  OfficialWarning,
+  OfficialWarningsData,
   NearbyWebcams,
   OceanCurrentData,
   OpenMeteoAirQualityResponse,
@@ -106,10 +107,6 @@ export type FireLayerStatusResponse = {
   firmsConfigured: boolean
 }
 
-export type HeatAlertsResponse = {
-  alerts: HeatAlert[]
-}
-
 export type WebcamResponse = Partial<NearbyWebcams> & {
   error?: string
 }
@@ -163,10 +160,24 @@ export const temperatureNormalResponseSchema = createSchema<TemperatureNormalRes
     ))
 )
 
-export const heatAlertsResponseSchema = createSchema<HeatAlertsResponse>(
+export const officialWarningsResponseSchema = createSchema<OfficialWarningsData>(
   value => isRecord(value) &&
-    Array.isArray(value.alerts) &&
-    value.alerts.every(isHeatAlert)
+    isString(value.generatedAt) &&
+    (value.cacheState === 'live' || value.cacheState === 'grace') &&
+    isFiniteNumber(value.gracePeriodMinutes) &&
+    Array.isArray(value.warnings) &&
+    value.warnings.every(isOfficialWarning) &&
+    Array.isArray(value.providers) &&
+    value.providers.every(provider => (
+      isRecord(provider) &&
+      (provider.id === 'nws' || provider.id === 'meteoalarm') &&
+      isString(provider.source) &&
+      (
+        provider.status === 'available' ||
+        provider.status === 'unconfigured' ||
+        provider.status === 'not-applicable'
+      )
+    ))
 )
 
 export const stargazingResponseSchema = createSchema<StargazingForecast>(
@@ -344,7 +355,7 @@ export const runtimeResponseSchemas = {
   airQuality: airQualityResponseSchema,
   jetStream: jetStreamResponseSchema,
   temperatureNormal: temperatureNormalResponseSchema,
-  heatAlerts: heatAlertsResponseSchema,
+  officialWarnings: officialWarningsResponseSchema,
   stargazing: stargazingResponseSchema,
   soilMoisture: soilMoistureResponseSchema,
   temperatureRecords: temperatureRecordsResponseSchema,
@@ -436,13 +447,43 @@ function isOpenMeteoHourly(value: unknown): value is OpenMeteoHourly {
   ].every(Array.isArray)
 }
 
-function isHeatAlert(value: unknown): value is HeatAlert {
+function isOfficialWarning(value: unknown): value is OfficialWarning {
   return isRecord(value) &&
     isString(value.id) &&
+    (value.provider === 'nws' || value.provider === 'meteoalarm') &&
+    [
+      'storm',
+      'flood',
+      'wind',
+      'snow',
+      'fire-weather',
+      'extreme-temperature',
+      'air-quality',
+      'other'
+    ].includes(String(value.hazard)) &&
     isString(value.title) &&
-    isString(value.message) &&
-    (value.severity === 'warning' || value.severity === 'error') &&
-    isString(value.source)
+    isString(value.description) &&
+    ['unknown', 'minor', 'moderate', 'severe', 'extreme']
+      .includes(String(value.severity)) &&
+    ['unknown', 'unlikely', 'possible', 'likely', 'observed']
+      .includes(String(value.certainty)) &&
+    nullable(value.effectiveAt, isString) &&
+    nullable(value.expiresAt, isString) &&
+    nullable(value.updatedAt, isString) &&
+    nullable(value.instructions, isString) &&
+    nullable(value.area, isString) &&
+    isString(value.source) &&
+    nullable(value.sourceUrl, isString) &&
+    (value.geometry === null || isWarningGeometry(value.geometry)) &&
+    (value.state === 'active' || value.state === 'grace') &&
+    Array.isArray(value.references) &&
+    value.references.every(isString)
+}
+
+function isWarningGeometry(value: unknown) {
+  return isRecord(value) &&
+    (value.type === 'Polygon' || value.type === 'MultiPolygon') &&
+    Array.isArray(value.coordinates)
 }
 
 function isTemperatureRecord(value: unknown) {

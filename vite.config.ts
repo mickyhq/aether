@@ -19,6 +19,10 @@ const buildVersion = `v${packageVersion}`
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
+  if (!process.env.METEOALARM_TOKEN && env.METEOALARM_TOKEN) {
+    process.env.METEOALARM_TOKEN = env.METEOALARM_TOKEN
+  }
+
   if (!process.env.METEOGATE_KEY && env.METEOGATE_KEY) {
     process.env.METEOGATE_KEY = env.METEOGATE_KEY
   }
@@ -148,10 +152,18 @@ export default defineConfig(({ mode }) => {
             {
               urlPattern: ({ url }) => (
                 url.origin === self.location.origin &&
+                url.pathname === '/api/warnings'
+              ),
+              handler: 'NetworkOnly'
+            },
+            {
+              urlPattern: ({ url }) => (
+                url.origin === self.location.origin &&
                 url.pathname.startsWith('/api/') &&
                 ![
                   '/api/fire-tile',
-                  '/api/effis-fire-tile'
+                  '/api/effis-fire-tile',
+                  '/api/warnings'
                 ].includes(url.pathname) &&
                 !(
                   url.pathname === '/api/radar' &&

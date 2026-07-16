@@ -65,13 +65,33 @@ export const validRuntimeResponseFixtures = {
       yearCount: 30
     }]
   },
-  heatAlerts: {
-    alerts: [{
-      id: 'heat-1',
+  officialWarnings: {
+    generatedAt: '2026-07-16T12:00:00Z',
+    cacheState: 'live',
+    gracePeriodMinutes: 15,
+    warnings: [{
+      id: 'warning-1',
+      provider: 'meteoalarm',
+      hazard: 'extreme-temperature',
       title: 'Heat warning',
-      message: 'High temperatures expected.',
-      severity: 'warning',
-      source: 'MeteoGate'
+      description: 'High temperatures expected.',
+      severity: 'moderate',
+      certainty: 'likely',
+      effectiveAt: '2026-07-16T12:00:00Z',
+      expiresAt: '2026-07-16T18:00:00Z',
+      updatedAt: '2026-07-16T11:45:00Z',
+      instructions: 'Avoid peak heat.',
+      area: 'Paris',
+      source: 'MeteoAlarm member service',
+      sourceUrl: null,
+      geometry: null,
+      state: 'active',
+      references: []
+    }],
+    providers: [{
+      id: 'meteoalarm',
+      source: 'MeteoAlarm member services',
+      status: 'available'
     }]
   },
   stargazing: {
@@ -193,7 +213,7 @@ export const invalidRuntimeResponseFixtures = {
   airQuality: { current: { european_aqi: 'bad' } },
   jetStream: { current: { wind_speed_250hPa: null } },
   temperatureNormal: { baseline: '1991–2020', samples: [{ yearCount: '30' }] },
-  heatAlerts: { alerts: [{ severity: 'notice' }] },
+  officialWarnings: { warnings: [{ severity: 'notice' }] },
   stargazing: { initializedAt: 123, lightPollution: null, nights: [] },
   soilMoisture: { date: '2026-07-15', percentile: Number.NaN },
   temperatureRecords: { highest: null, lowest: null },

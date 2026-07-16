@@ -34,9 +34,9 @@ Aether is a full-screen weather and environmental map built with React, TypeScri
 - Standard Open-Meteo forecast fallback when ECMWF is unavailable
 - Separate 12-hour temperature and precipitation chart
 - Forecast playback updates the temperature, wind, precipitation, and storm map layers
-- Official US heat alerts from the National Weather Service
-- Official European heat warnings from MeteoAlarm members through MeteoGate when configured
-- Local fallback alerts for forecast heat, thunderstorms, heavy rain, and snow
+- Official NWS and MeteoAlarm-member warnings for storms, floods, wind, snow, fire weather, extreme temperatures, air quality, and other issued hazards
+- Warning polygons with severity, certainty, effective/expiry times, instructions, source, update age, and a visible 15-minute stale grace state
+- Deduplicated official updates, shown separately from Aether forecast notices for heat, thunderstorms, heavy rain, and snow
 - Dismissible severe-weather alerts
 
 ### Locations and controls
@@ -109,8 +109,8 @@ The weekly report is preliminary and intentionally not comprehensive. Rapidly de
 | [OpenFreeMap / OpenMapTiles](https://openfreemap.org/) | Vector base-map rendering and localized labels |
 | [OpenStreetMap](https://www.openstreetmap.org/) | Base-map data |
 | [Nominatim](https://nominatim.org/) | Location search and reverse geocoding |
-| [US National Weather Service](https://www.weather.gov/) | Active US heat alerts |
-| [MeteoGate](https://meteogate.eu/) | MeteoAlarm-member heat warnings in Europe |
+| [US National Weather Service](https://www.weather.gov/) | Active US CAP warnings and zone geometries |
+| [MeteoAlarm](https://api.meteoalarm.org/) | CAP and GeoJSON warnings issued by European member services |
 | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) | Global VIIRS heat and thermal-anomaly detections |
 | [NIFC WFIGS](https://www.nifc.gov/) | Reported US wildfire incidents |
 | [NRCan CWFIS](https://cwfis.cfs.nrcan.gc.ca/en/) | Reported Canadian active fires |
@@ -182,7 +182,8 @@ Create a `.env` file or set these environment variables:
 | --- | --- | --- | --- |
 | `FIRMS_MAP_KEY` | Server | No | Enables worldwide NASA FIRMS heat-detection tiles |
 | `WINDY_KEY` | Server | No | Enables nearby public webcams from Windy |
-| `METEOGATE_KEY` | Server | No | Enables official European heat warnings |
+| `METEOALARM_TOKEN` | Server | No | Enables the official MeteoAlarm EDR warning feed for Europe |
+| `METEOGATE_KEY` | Server | No | Legacy MeteoGate access fallback for MeteoAlarm-member warnings |
 | `ECMWF_KEY` | Server | No | Uses the Open-Meteo customer endpoint for ECMWF before trying the free endpoint |
 | `UPSTASH_REDIS_REST_URL` | Server | No | Enables shared Upstash caching |
 | `UPSTASH_REDIS_REST_TOKEN` | Server | No | Authenticates the shared Upstash cache |

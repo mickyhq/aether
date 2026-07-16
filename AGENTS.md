@@ -17,3 +17,5 @@ You inspect: /tmp/bonsai.xml
 Then answer from that context.
 ```
 update the version at each request where code change happened. version segments go up to 99.
+
+Remember Vercel Build: No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan. Create a team (Pro plan) to deploy more.

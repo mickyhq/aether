@@ -142,10 +142,16 @@ test.beforeEach(async ({ page }) => {
     })
   })
 
-  await page.route('**/api/heat-alerts?**', route => (
+  await page.route('**/api/warnings?**', route => (
     route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ alerts: [] })
+      body: JSON.stringify({
+        generatedAt: new Date().toISOString(),
+        cacheState: 'live',
+        gracePeriodMinutes: 15,
+        warnings: [],
+        providers: []
+      })
     })
   ))
   await page.route('**/api/fire-layer-status', route => (

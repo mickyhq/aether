@@ -66,9 +66,14 @@ const DATA_SOURCES: Array<{
     url: 'https://www.openstreetmap.org/copyright'
   },
   {
-    name: 'MeteoGate',
-    kind: 'source.heatWarnings',
-    url: 'https://meteogate.eu/'
+    name: 'US National Weather Service',
+    kind: 'source.officialWarnings',
+    url: 'https://www.weather.gov/'
+  },
+  {
+    name: 'MeteoAlarm',
+    kind: 'source.officialWarnings',
+    url: 'https://www.meteoalarm.org/'
   },
   {
     name: 'NASA FIRMS',

@@ -78,7 +78,7 @@ export default function App() {
     dataState: weatherDataState,
     forecastReady: selectedForecastReady,
     setForecastReady: setSelectedForecastReady,
-    officialHeatAlerts,
+    officialWarnings,
     ecmwfForecast,
     ecmwfLoading,
     ecmwfFrame,
@@ -259,6 +259,7 @@ export default function App() {
               airQualitySamples={airQualitySamples}
               oceanCurrentSamples={oceanCurrentData?.samples ?? []}
               temperatureAnomalySamples={temperatureAnomalySamples}
+              officialWarnings={officialWarnings?.warnings ?? []}
               provenance={mapProvenance}
               radarOpacity={radarOpacity}
               animationQuality={animationQuality}
@@ -315,7 +316,7 @@ export default function App() {
                         : selectedTemperatureAnomaly.temperatureAnomaly
                     }
                   : null}
-                officialHeatAlerts={officialHeatAlerts}
+                officialWarnings={officialWarnings}
                 location={dashboardLocation}
                 mode={weatherMode}
                 provenance={dashboardProvenance}

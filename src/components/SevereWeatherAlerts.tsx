@@ -1,8 +1,14 @@
-import { Alert, AlertTitle, Stack } from '@mui/material'
+import { Alert, AlertTitle, Stack, Typography } from '@mui/material'
 import { useState } from 'react'
-import type { HeatAlert, WeatherConfig } from '../types/weather'
+import type {
+  OfficialWarning,
+  OfficialWarningsData,
+  WarningHazard,
+  WeatherConfig
+} from '../types/weather'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
+import { OfficialWarningAlert } from './OfficialWarningAlert'
 
 const THUNDERSTORM_CODES = new Set([95, 96, 99])
 const HEAVY_RAIN_CODES = new Set([65, 67, 82])
@@ -10,42 +16,53 @@ const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86])
 const HEAVY_RAIN_THRESHOLD = 7.5
 const SNOW_THRESHOLD = 0.5
 
-type SevereAlert = {
+type ForecastNotice = {
   id: string
   severity: 'error' | 'warning'
-  title: TranslationKey | string
-  message: TranslationKey | string
+  title: TranslationKey
+  message: TranslationKey
   values?: Record<string, string | number>
-  translated?: boolean
 }
 
 export function SevereWeatherAlerts({
   weather,
-  officialHeatAlerts
+  officialWarnings,
+  warningProviders
 }: {
   weather: WeatherConfig | null
-  officialHeatAlerts: HeatAlert[]
+  officialWarnings: OfficialWarning[]
+  warningProviders: OfficialWarningsData['providers']
 }) {
   const { t } = useI18n()
-  const alerts = getSevereWeatherAlerts(weather, officialHeatAlerts, t)
+  const forecastNotices = getForecastHazardNotices(weather, officialWarnings)
   const signature = [
     weather?.zone,
     weather?.weatherCode,
     weather?.precipitation.toFixed(1),
     weather?.snowfall.toFixed(1),
-    ...alerts.map(alert => `${alert.id}:${alert.message}`)
+    ...officialWarnings.map(warning => `${warning.id}:${warning.updatedAt}:${warning.state}`),
+    ...forecastNotices.map(notice => notice.id)
   ].join(':')
   const [dismissed, setDismissed] = useState<{
     signature: string
     ids: string[]
-  }>({
-    signature: '',
-    ids: []
-  })
+  }>({ signature: '', ids: [] })
   const dismissedIds = dismissed.signature === signature ? dismissed.ids : []
-  const visibleAlerts = alerts.filter(alert => !dismissedIds.includes(alert.id))
+  const visibleOfficial = officialWarnings.filter(
+    warning => !dismissedIds.includes(`official:${warning.id}`)
+  )
+  const visibleForecast = forecastNotices.filter(
+    notice => !dismissedIds.includes(notice.id)
+  )
+  const unconfiguredProvider = warningProviders.find(
+    provider => provider.status === 'unconfigured'
+  )
 
-  if (visibleAlerts.length === 0) {
+  if (
+    visibleOfficial.length === 0 &&
+    visibleForecast.length === 0 &&
+    !unconfiguredProvider
+  ) {
     return null
   }
 
@@ -60,57 +77,72 @@ export function SevereWeatherAlerts({
 
   return (
     <Stack spacing={0.75} aria-label={t('alert.aria')}>
-      {visibleAlerts.map(alert => (
+      {visibleOfficial.length > 0 && (
+        <Typography className="warning-group-title">
+          {t('warning.officialGroup')}
+        </Typography>
+      )}
+      {visibleOfficial.map(warning => (
+        <OfficialWarningAlert
+          key={warning.id}
+          warning={warning}
+          onClose={() => dismiss(`official:${warning.id}`)}
+        />
+      ))}
+      {unconfiguredProvider && visibleOfficial.length === 0 && (
+        <>
+          <Typography className="warning-group-title">
+            {t('warning.officialGroup')}
+          </Typography>
+          <Alert
+            severity="info"
+            variant="outlined"
+            className="severe-weather-alert official-warning-alert"
+          >
+            {t('warning.unconfigured', { source: unconfiguredProvider.source })}
+          </Alert>
+        </>
+      )}
+      {visibleForecast.length > 0 && (
+        <Typography className="warning-group-title is-forecast">
+          {t('warning.forecastGroup')}
+        </Typography>
+      )}
+      {visibleForecast.map(notice => (
         <Alert
-          key={alert.id}
-          severity={alert.severity}
+          key={notice.id}
+          severity={notice.severity}
           variant="outlined"
-          className="severe-weather-alert"
-          onClose={() => dismiss(alert.id)}
+          className="severe-weather-alert forecast-notice-alert"
+          onClose={() => dismiss(notice.id)}
         >
-          <AlertTitle>
-            {alert.translated ? alert.title : t(alert.title as TranslationKey, alert.values)}
-          </AlertTitle>
-          {alert.translated ? alert.message : t(alert.message as TranslationKey, alert.values)}
+          <AlertTitle>{t(notice.title, notice.values)}</AlertTitle>
+          {t(notice.message, notice.values)}
         </Alert>
       ))}
     </Stack>
   )
 }
 
-export function getSevereWeatherAlerts(
+export function getForecastHazardNotices(
   weather: WeatherConfig | null,
-  officialHeatAlerts: HeatAlert[] = [],
-  translate: (
-    key: TranslationKey,
-    values?: Record<string, string | number>
-  ) => string = defaultTranslate
-): SevereAlert[] {
+  officialWarnings: OfficialWarning[] = []
+): ForecastNotice[] {
   if (!weather) {
     return []
   }
 
-  const alerts: SevereAlert[] = []
+  const officialHazards = new Set<WarningHazard>(
+    officialWarnings.map(warning => warning.hazard)
+  )
+  const notices: ForecastNotice[] = []
 
-  for (const alert of officialHeatAlerts) {
-    alerts.push({
-      id: `official-heat:${alert.id}`,
-      severity: alert.severity,
-      title: alert.title,
-      message: translate('alert.source', {
-        message: alert.message,
-        source: alert.source
-      }),
-      translated: true
-    })
-  }
-
-  if (officialHeatAlerts.length === 0 && weather.heatRisk) {
+  if (!officialHazards.has('extreme-temperature') && weather.heatRisk) {
     const heatRisk = weather.heatRisk
     const isHeatWave = heatRisk.kind === 'heat-wave'
     const isExtremeHeat = heatRisk.kind === 'extreme-heat'
 
-    alerts.push({
+    notices.push({
       id: `forecast-${heatRisk.kind}`,
       severity: heatRisk.maximumTemperature >= 40 ? 'error' : 'warning',
       title: isHeatWave
@@ -131,11 +163,11 @@ export function getSevereWeatherAlerts(
   }
 
   if (
-    weather.isThunderstorm ||
-    THUNDERSTORM_CODES.has(weather.weatherCode)
+    !officialHazards.has('storm') &&
+    (weather.isThunderstorm || THUNDERSTORM_CODES.has(weather.weatherCode))
   ) {
-    alerts.push({
-      id: 'thunderstorm',
+    notices.push({
+      id: 'forecast-thunderstorm',
       severity: 'error',
       title: 'alert.thunderstorm',
       message: 'alert.thunderstormMessage'
@@ -143,11 +175,12 @@ export function getSevereWeatherAlerts(
   }
 
   if (
-    HEAVY_RAIN_CODES.has(weather.weatherCode) ||
-    weather.precipitation >= HEAVY_RAIN_THRESHOLD
+    !officialHazards.has('flood') &&
+    (HEAVY_RAIN_CODES.has(weather.weatherCode) ||
+      weather.precipitation >= HEAVY_RAIN_THRESHOLD)
   ) {
-    alerts.push({
-      id: 'heavy-rain',
+    notices.push({
+      id: 'forecast-heavy-rain',
       severity: 'warning',
       title: 'alert.heavyRain',
       message: 'alert.heavyRainMessage',
@@ -156,27 +189,16 @@ export function getSevereWeatherAlerts(
   }
 
   if (
-    SNOW_CODES.has(weather.weatherCode) ||
-    weather.snowfall >= SNOW_THRESHOLD
+    !officialHazards.has('snow') &&
+    (SNOW_CODES.has(weather.weatherCode) || weather.snowfall >= SNOW_THRESHOLD)
   ) {
-    alerts.push({
-      id: 'snow',
+    notices.push({
+      id: 'forecast-snow',
       severity: 'warning',
       title: 'alert.snow',
       message: 'alert.snowMessage'
     })
   }
 
-  return alerts
-}
-
-function defaultTranslate(
-  key: TranslationKey,
-  values: Record<string, string | number> = {}
-) {
-  if (key === 'alert.source') {
-    return `${values.message} Source: ${values.source}.`
-  }
-
-  return key
+  return notices
 }

@@ -7,6 +7,7 @@ import {
 } from '../map/AetherMapLayers'
 import type { AetherMapLayers } from '../map/AetherMapLayers'
 import { WeatherMapAnimation } from '../map/WeatherMapAnimation'
+import { OfficialWarningLayer } from '../map/OfficialWarningLayer'
 import {
   INITIAL_FIRE_LAYER_STATUSES
 } from '../map/fireLayerStatus'
@@ -31,6 +32,7 @@ import type {
   OceanCurrentSample,
   TemperatureAnomalySample,
   MapWeatherPointer,
+  OfficialWarning,
   WeatherLocation,
   WeatherMapSample,
   WeatherMode,
@@ -71,6 +73,7 @@ type AetherMapProps = {
   airQualitySamples: AirQualityMapSample[]
   oceanCurrentSamples: OceanCurrentSample[]
   temperatureAnomalySamples: TemperatureAnomalySample[]
+  officialWarnings: OfficialWarning[]
   provenance: WeatherModeProvenance
   radarOpacity: number
   animationQuality: AnimationQuality
@@ -88,6 +91,7 @@ export function AetherMap({
   airQualitySamples,
   oceanCurrentSamples,
   temperatureAnomalySamples,
+  officialWarnings,
   provenance,
   radarOpacity,
   animationQuality,
@@ -102,12 +106,14 @@ export function AetherMap({
   const mapRef = useRef<L.Map | null>(null)
   const badgeLayerRef = useRef<L.LayerGroup | null>(null)
   const animationRef = useRef<WeatherMapAnimation | null>(null)
+  const warningLayerRef = useRef<OfficialWarningLayer | null>(null)
   const layersRef = useRef<AetherMapLayers | null>(null)
   const samplesRef = useRef(samples)
   const jetStreamSamplesRef = useRef(jetStreamSamples)
   const airQualitySamplesRef = useRef(airQualitySamples)
   const oceanCurrentSamplesRef = useRef(oceanCurrentSamples)
   const temperatureAnomalySamplesRef = useRef(temperatureAnomalySamples)
+  const officialWarningsRef = useRef(officialWarnings)
   const modeRef = useRef(mode)
   const provenanceRef = useRef(provenance)
   const pointerCallbackRef = useRef(onPointerWeatherChange)
@@ -235,6 +241,10 @@ export function AetherMap({
     )
     animation.start()
     animationRef.current = animation
+    const warningLayer = new OfficialWarningLayer(map, mapLanguage, t)
+
+    warningLayer.setWarnings(officialWarningsRef.current)
+    warningLayerRef.current = warningLayer
 
     const emitViewport = () => {
       const bounds = map.getBounds()
@@ -455,18 +465,26 @@ export function AetherMap({
       pointerRefreshRef.current = () => {}
       pointerCallbackRef.current(null)
       animation.destroy()
+      warningLayer.destroy()
       layers.destroy()
       map.remove()
       mapRef.current = null
       badgeLayerRef.current = null
       animationRef.current = null
+      warningLayerRef.current = null
       layersRef.current = null
     }
   }, [mapLanguage, onViewportChange, t])
 
   useEffect(() => {
     layersRef.current?.setMapLanguage(mapLanguage)
+    warningLayerRef.current?.setLanguage(mapLanguage, t)
   }, [mapLanguage])
+
+  useEffect(() => {
+    officialWarningsRef.current = officialWarnings
+    warningLayerRef.current?.setWarnings(officialWarnings)
+  }, [officialWarnings])
 
   useEffect(() => {
     const map = mapRef.current

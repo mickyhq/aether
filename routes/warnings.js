@@ -1,17 +1,15 @@
 import {
-  getOfficialHeatAlerts,
-  parseHeatAlertCoordinates
-} from '../server/heatAlerts.js'
-import {
-  getSharedCache
-} from '../server/sharedCache.js'
+  getOfficialWarnings,
+  parseWarningCoordinates,
+  prepareWarningsForResponse
+} from '../server/officialWarnings.js'
+import { getSharedCache } from '../server/sharedCache.js'
 import { logCacheMetric } from '../server/cacheMetrics.js'
 import { loadCachedResource } from '../server/cachedResource.js'
 import { getCacheNamespace } from '../shared/cacheVersion.js'
-import { SOURCE_REFRESH_SECONDS } from '../shared/cachePolicy.js'
 
-const FRESH_CACHE_TTL = SOURCE_REFRESH_SECONDS
-const STALE_CACHE_TTL = 24 * 60 * 60
+const FRESH_CACHE_TTL = 5 * 60
+const STALE_CACHE_TTL = 20 * 60
 
 export default async function handler(request, response) {
   if (request.method !== 'GET') {
@@ -20,7 +18,7 @@ export default async function handler(request, response) {
     return
   }
 
-  const coordinates = parseHeatAlertCoordinates(
+  const coordinates = parseWarningCoordinates(
     getQueryValue(request.query.latitude),
     getQueryValue(request.query.longitude)
   )
@@ -31,7 +29,7 @@ export default async function handler(request, response) {
   }
 
   const cacheKey = `${coordinates.latitude.toFixed(3)}:${coordinates.longitude.toFixed(3)}`
-  const cache = getSharedCache(getCacheNamespace('heat-alerts'))
+  const cache = getSharedCache(getCacheNamespace('official-warnings'))
 
   try {
     const result = await loadCachedResource({
@@ -39,39 +37,45 @@ export default async function handler(request, response) {
       cacheKey,
       freshTtl: FRESH_CACHE_TTL,
       staleTtl: STALE_CACHE_TTL,
-      load: async () => ({
-        alerts: await getOfficialHeatAlerts(
-          coordinates.latitude,
-          coordinates.longitude
-        )
-      }),
-      onFreshMiss: () => logCacheMetric('heat-alerts', 'miss')
+      load: () => getOfficialWarnings(
+        coordinates.latitude,
+        coordinates.longitude
+      ),
+      onFreshMiss: () => logCacheMetric('warnings', 'miss')
     })
+    const payload = prepareWarningsForResponse(
+      result.record,
+      result.source === 'stale' ? 'grace' : 'live'
+    )
 
-    sendAlerts(response, result.record, result.source)
+    if (!payload) {
+      response.status(502).json({
+        error: 'Official warning grace period expired'
+      })
+      return
+    }
+
+    sendWarnings(response, payload, result.source)
   } catch {
-    response.status(502).json({ error: 'Official heat alerts unavailable' })
+    response.status(502).json({ error: 'Official warnings unavailable' })
   }
 }
 
-function sendAlerts(response, record, cacheStatus) {
+function sendWarnings(response, payload, cacheStatus) {
   if (cacheStatus === 'runtime') {
-    logCacheMetric('heat-alerts', 'hit')
+    logCacheMetric('warnings', 'hit')
   } else if (cacheStatus === 'stale') {
-    logCacheMetric('heat-alerts', 'stale')
+    logCacheMetric('warnings', 'stale')
   }
 
   response.status(200)
-  response.setHeader(
-    'Cache-Control',
-    `public, max-age=${SOURCE_REFRESH_SECONDS}`
-  )
+  response.setHeader('Cache-Control', 'private, max-age=30')
   response.setHeader(
     'Vercel-CDN-Cache-Control',
-    `public, s-maxage=${SOURCE_REFRESH_SECONDS}, stale-while-revalidate=86400`
+    'no-store'
   )
   response.setHeader('X-Aether-Cache', cacheStatus)
-  response.json(record)
+  response.json(payload)
 }
 
 function getQueryValue(value) {

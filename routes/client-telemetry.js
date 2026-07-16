@@ -2,7 +2,7 @@ const PROVIDERS = new Set([
   'air-quality',
   'ecmwf',
   'geocoding',
-  'heat-alerts',
+  'warnings',
   'jet-stream',
   'map-weather',
   'ocean-currents',

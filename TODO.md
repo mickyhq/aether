@@ -6,7 +6,7 @@ intentionally excluded.
 
 ## P0 — Safety and trust
 
-- [ ] Build a unified official multi-hazard warning layer.
+- [x] Build a unified official multi-hazard warning layer.
   - Replace the current heat-only location lookup with adapters for official
     CAP or GeoJSON feeds, starting with NWS and MeteoAlarm member warnings.
   - Cover storms, floods, wind, snow, fire weather, extreme temperatures, air

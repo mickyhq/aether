@@ -2,7 +2,7 @@ export type TelemetryProvider =
   'air-quality' |
   'ecmwf' |
   'geocoding' |
-  'heat-alerts' |
+  'warnings' |
   'jet-stream' |
   'map-weather' |
   'ocean-currents' |

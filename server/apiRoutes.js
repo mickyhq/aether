@@ -6,7 +6,7 @@ import effisFireTileHandler from '../routes/effis-fire-tile.js'
 import fireLayerStatusHandler from '../routes/fire-layer-status.js'
 import fireTileHandler from '../routes/fire-tile.js'
 import geocodeHandler from '../routes/geocode.js'
-import heatAlertsHandler from '../routes/heat-alerts.js'
+import warningsHandler from '../routes/warnings.js'
 import oceanCurrentsHandler from '../routes/ocean-currents.js'
 import radarHandler from '../routes/radar.js'
 import reportedFiresHandler from '../routes/reported-fires.js'
@@ -24,7 +24,7 @@ const handlers = new Map([
   ['/api/fire-layer-status', fireLayerStatusHandler],
   ['/api/fire-tile', fireTileHandler],
   ['/api/geocode', geocodeHandler],
-  ['/api/heat-alerts', heatAlertsHandler],
+  ['/api/warnings', warningsHandler],
   ['/api/ocean-currents', oceanCurrentsHandler],
   ['/api/radar', radarHandler],
   ['/api/reported-fires', reportedFiresHandler],

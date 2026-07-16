@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchEcmwfLocationForecast } from '../services/ecmwf'
-import { fetchOfficialHeatAlerts } from '../services/heatAlerts'
+import {
+  ageOfficialWarnings,
+  enterOfficialWarningGrace,
+  fetchOfficialWarnings
+} from '../services/officialWarnings'
 import { fetchOpenMeteoForecast } from '../services/openMeteo'
 import { persistLocation } from '../services/appState'
 import {
@@ -9,7 +13,7 @@ import {
 } from '../services/weatherGrid'
 import type {
   EcmwfForecast,
-  HeatAlert,
+  OfficialWarningsData,
   WeatherConfig,
   WeatherDataState,
   WeatherDataStatus,
@@ -35,7 +39,7 @@ export function useLocationWeather(location: WeatherLocation) {
   const [request, setRequest] = useState(0)
   const forceRefreshRef = useRef(false)
   const [forecastReady, setForecastReady] = useState(false)
-  const [officialHeatAlerts, setOfficialHeatAlerts] = useState<HeatAlert[]>([])
+  const [officialWarnings, setOfficialWarnings] = useState<OfficialWarningsData | null>(null)
   const [ecmwfForecast, setEcmwfForecast] = useState<EcmwfForecast | null>(null)
   const [ecmwfLoading, setEcmwfLoading] = useState(true)
   const [ecmwfFrame, setEcmwfFrame] = useState<WeatherEvolutionFrame | null>(null)
@@ -195,17 +199,38 @@ export function useLocationWeather(location: WeatherLocation) {
 
     const controller = new AbortController()
 
-    setOfficialHeatAlerts([])
+    setOfficialWarnings(null)
 
-    void fetchOfficialHeatAlerts(location, controller.signal).then(alerts => {
-      if (!controller.signal.aborted) {
-        setOfficialHeatAlerts(alerts)
-      }
-    }).catch(error => {
-      recordProviderRequestError('heat-alerts', error, controller.signal)
-    })
+    const loadWarnings = () => {
+      void fetchOfficialWarnings(location, controller.signal).then(data => {
+        if (!controller.signal.aborted) {
+          setOfficialWarnings(data)
+        }
+      }).catch(error => {
+        recordProviderRequestError('warnings', error, controller.signal)
 
-    return () => controller.abort()
+        if (!controller.signal.aborted) {
+          setOfficialWarnings(current => (
+            current ? enterOfficialWarningGrace(current) : null
+          ))
+        }
+      })
+    }
+
+    loadWarnings()
+    const interval = window.setInterval(loadWarnings, 5 * 60 * 1000)
+    const ageInterval = window.setInterval(() => {
+      setOfficialWarnings(current => current
+        ? ageOfficialWarnings(current)
+        : null
+      )
+    }, 60_000)
+
+    return () => {
+      window.clearInterval(interval)
+      window.clearInterval(ageInterval)
+      controller.abort()
+    }
   }, [location, pageVisible])
 
   const retry = useCallback(() => {
@@ -226,7 +251,7 @@ export function useLocationWeather(location: WeatherLocation) {
     dataState,
     forecastReady,
     setForecastReady,
-    officialHeatAlerts,
+    officialWarnings,
     ecmwfForecast,
     ecmwfLoading,
     ecmwfFrame,

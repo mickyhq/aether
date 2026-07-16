@@ -8,7 +8,7 @@ import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import WavesIcon from '@mui/icons-material/Waves'
 import { Box, Stack, Typography } from '@mui/material'
 import { useMemo, type ReactNode } from 'react'
-import type { AirQualityReading, DataProvenance as DataProvenanceValue, EcmwfForecast, HeatAlert, WeatherConfig, WeatherEvolutionFrame, WeatherMode, WeatherModeProvenance } from '../types/weather'
+import type { AirQualityReading, DataProvenance as DataProvenanceValue, EcmwfForecast, OfficialWarningsData, WeatherConfig, WeatherEvolutionFrame, WeatherMode, WeatherModeProvenance } from '../types/weather'
 import type { WeatherLocation } from '../types/weather'
 import { EcmwfForecastTimeline } from './EcmwfForecastTimeline'
 import { SevereWeatherAlerts } from './SevereWeatherAlerts'
@@ -33,7 +33,7 @@ type WeatherDashboardProps = {
     temperatureAnomaly: number
     baseline: string
   } | null
-  officialHeatAlerts: HeatAlert[]
+  officialWarnings: OfficialWarningsData | null
   mode: WeatherMode
   provenance: WeatherModeProvenance
   onModeChange: (mode: WeatherMode) => void
@@ -49,7 +49,7 @@ export function WeatherDashboard({
   onEcmwfPlaybackChange,
   airQuality,
   temperatureAnomaly,
-  officialHeatAlerts,
+  officialWarnings,
   location,
   mode,
   provenance,
@@ -83,7 +83,8 @@ export function WeatherDashboard({
       <Stack spacing={1.25}>
         <SevereWeatherAlerts
           weather={alertWeather}
-          officialHeatAlerts={officialHeatAlerts}
+          officialWarnings={officialWarnings?.warnings ?? []}
+          warningProviders={officialWarnings?.providers ?? []}
         />
         <Stack className="metric-grid">
           <Metric
