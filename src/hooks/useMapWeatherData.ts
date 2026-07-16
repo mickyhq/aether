@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import {
   AIR_QUALITY_REFRESH_INTERVAL,
@@ -28,7 +28,7 @@ import type {
   WeatherMode,
   WeatherViewport
 } from '../types/weather'
-import { usePageVisibility } from './usePageVisibility'
+import { usePollingScheduler } from './usePollingScheduler'
 
 type MapWeatherDataOptions = {
   viewport: WeatherViewport | null
@@ -52,7 +52,7 @@ export function useMapWeatherData({
   const [jetStreamSamples, setJetStreamSamples] = useState<JetStreamSample[]>([])
   const [airQualitySamples, setAirQualitySamples] = useState<AirQualityMapSample[]>([])
   const [oceanCurrentData, setOceanCurrentData] = useState<OceanCurrentData | null>(null)
-  const pageVisible = usePageVisibility()
+  const viewportKey = getViewportKey(viewport)
 
   useEffect(() => {
     if (!viewport || mode === 'jet-stream') {
@@ -60,70 +60,50 @@ export function useMapWeatherData({
     }
 
     let cancelled = false
-    let loading = false
     const cachedSamples = getCachedWeatherMapSamples(viewport)
 
     if (cachedSamples.length > 0) {
       setMapSamples(cachedSamples)
     }
 
-    const applyPersistentCache = async () => {
-      const samples = await hydrateWeatherMapCache(viewport)
-
+    void hydrateWeatherMapCache(viewport).then(samples => {
       if (!cancelled && samples.length > 0) {
         setMapSamples(current => current.length > 0 ? current : samples)
       }
-    }
-
-    void applyPersistentCache()
-
-    if (!forecastReady || !pageVisible) {
-      return () => {
-        cancelled = true
-      }
-    }
-
-    const controller = new AbortController()
-    const refreshVisibleWeather = async () => {
-      if (loading) {
-        return
-      }
-
-      loading = true
-
-      try {
-        const samples = await fetchWeatherMapSamples(viewport, controller.signal)
-
-        if (!cancelled && samples.length > 0) {
-          setMapSamples(samples)
-        }
-      } catch (error) {
-        if (!cancelled && !controller.signal.aborted) {
-          setStatus(error instanceof Error ? error.message : 'Map weather failed')
-        }
-      } finally {
-        loading = false
-      }
-    }
-    const timeout = window.setTimeout(refreshVisibleWeather, 120)
-    const interval = window.setInterval(
-      refreshVisibleWeather,
-      WEATHER_REFRESH_INTERVAL
-    )
-
-    window.addEventListener('online', refreshVisibleWeather)
+    })
 
     return () => {
       cancelled = true
-      controller.abort()
-      window.clearTimeout(timeout)
-      window.clearInterval(interval)
-      window.removeEventListener('online', refreshVisibleWeather)
     }
-  }, [forecastReady, mode, pageVisible, setStatus, viewport])
+  }, [mode, viewport])
+
+  const refreshVisibleWeather = useCallback(async (signal: AbortSignal) => {
+    if (!viewport) {
+      return
+    }
+
+    const samples = await fetchWeatherMapSamples(viewport, signal)
+
+    if (!signal.aborted && samples.length > 0) {
+      setMapSamples(samples)
+    }
+  }, [viewport])
+
+  const handleWeatherError = useCallback((error: unknown) => {
+    setStatus(error instanceof Error ? error.message : 'Map weather failed')
+  }, [setStatus])
+
+  usePollingScheduler({
+    enabled: Boolean(viewport) && mode !== 'jet-stream' && forecastReady,
+    intervalMs: WEATHER_REFRESH_INTERVAL,
+    initialDelayMs: 120,
+    restartKey: `${mode}:${forecastReady}:${viewportKey}`,
+    task: refreshVisibleWeather,
+    onError: handleWeatherError
+  })
 
   useEffect(() => {
-    if (!viewport || mode !== 'jet-stream' || !pageVisible) {
+    if (!viewport || mode !== 'jet-stream') {
       previousJetStreamViewportRef.current = null
       jetStreamViewportRef.current = null
       return
@@ -141,142 +121,80 @@ export function useMapWeatherData({
     if (locationChanged || !jetStreamViewportRef.current || !zoomChanged) {
       jetStreamViewportRef.current = viewport
     }
+  }, [location, mode, viewport])
 
+  const refreshJetStream = useCallback(async (signal: AbortSignal) => {
     const samplingViewport = jetStreamViewportRef.current
-    const controller = new AbortController()
-    let cancelled = false
-    let loading = false
 
-    const refreshJetStream = async () => {
-      if (loading) {
-        return
-      }
-
-      loading = true
-
-      try {
-        const samples = await fetchJetStreamSamples(
-          samplingViewport,
-          controller.signal
-        )
-
-        if (!cancelled && samples.length > 0) {
-          setJetStreamSamples(samples)
-        }
-      } finally {
-        loading = false
-      }
+    if (!samplingViewport) {
+      return
     }
-    const timeout = window.setTimeout(refreshJetStream, 120)
-    const interval = window.setInterval(
-      refreshJetStream,
-      JET_STREAM_REFRESH_INTERVAL
-    )
 
-    return () => {
-      cancelled = true
-      controller.abort()
-      window.clearTimeout(timeout)
-      window.clearInterval(interval)
+    const samples = await fetchJetStreamSamples(samplingViewport, signal)
+
+    if (!signal.aborted && samples.length > 0) {
+      setJetStreamSamples(samples)
     }
-  }, [location, mode, pageVisible, viewport])
+  }, [])
+
+  usePollingScheduler({
+    enabled: Boolean(viewport) && mode === 'jet-stream',
+    intervalMs: JET_STREAM_REFRESH_INTERVAL,
+    initialDelayMs: 120,
+    restartKey: `${location.latitude}:${location.longitude}:${viewportKey}`,
+    task: refreshJetStream
+  })
 
   useEffect(() => {
+    if (viewport) {
+      setAirQualitySamples(getCachedAirQualityMapSamples(viewport))
+    }
+  }, [viewport])
+
+  const refreshAirQuality = useCallback(async (signal: AbortSignal) => {
     if (!viewport) {
       return
     }
 
-    let cancelled = false
-    let loading = false
+    const samples = await fetchAirQualityMapSamples(viewport, signal)
 
-    setAirQualitySamples(getCachedAirQualityMapSamples(viewport))
+    if (!signal.aborted) {
+      setAirQualitySamples(samples)
+    }
+  }, [viewport])
 
-    if (!pageVisible) {
+  usePollingScheduler({
+    enabled: Boolean(viewport),
+    intervalMs: AIR_QUALITY_REFRESH_INTERVAL,
+    initialDelayMs: 180,
+    restartKey: viewportKey,
+    task: refreshAirQuality
+  })
+
+  const refreshOceanCurrents = useCallback(async (signal: AbortSignal) => {
+    if (!viewport) {
       return
     }
 
-    const controller = new AbortController()
+    const data = await fetchOceanCurrentData(viewport, signal)
 
-    const refreshAirQuality = async () => {
-      if (loading) {
-        return
-      }
-
-      loading = true
-
-      try {
-        const samples = await fetchAirQualityMapSamples(
-          viewport,
-          controller.signal
-        )
-
-        if (!cancelled) {
-          setAirQualitySamples(samples)
-        }
-      } finally {
-        loading = false
-      }
+    if (!signal.aborted) {
+      setOceanCurrentData(data)
     }
-    const timeout = window.setTimeout(refreshAirQuality, 180)
-    const interval = window.setInterval(
-      refreshAirQuality,
-      AIR_QUALITY_REFRESH_INTERVAL
-    )
+  }, [viewport])
 
-    window.addEventListener('online', refreshAirQuality)
+  const handleOceanCurrentError = useCallback((error: unknown) => {
+    setStatus(error instanceof Error ? error.message : 'Ocean currents failed')
+  }, [setStatus])
 
-    return () => {
-      cancelled = true
-      controller.abort()
-      window.clearTimeout(timeout)
-      window.clearInterval(interval)
-      window.removeEventListener('online', refreshAirQuality)
-    }
-  }, [pageVisible, viewport])
-
-  useEffect(() => {
-    if (!viewport || mode !== 'ocean-current' || !pageVisible) {
-      return
-    }
-
-    const controller = new AbortController()
-    let cancelled = false
-    let loading = false
-
-    const refreshOceanCurrents = async () => {
-      if (loading) {
-        return
-      }
-
-      loading = true
-
-      try {
-        const data = await fetchOceanCurrentData(viewport, controller.signal)
-
-        if (!cancelled) {
-          setOceanCurrentData(data)
-        }
-      } catch (error) {
-        if (!cancelled && !controller.signal.aborted) {
-          setStatus(error instanceof Error ? error.message : 'Ocean currents failed')
-        }
-      } finally {
-        loading = false
-      }
-    }
-    const timeout = window.setTimeout(refreshOceanCurrents, 120)
-    const interval = window.setInterval(
-      refreshOceanCurrents,
-      OCEAN_CURRENT_REFRESH_INTERVAL
-    )
-
-    return () => {
-      cancelled = true
-      controller.abort()
-      window.clearTimeout(timeout)
-      window.clearInterval(interval)
-    }
-  }, [mode, pageVisible, setStatus, viewport])
+  usePollingScheduler({
+    enabled: Boolean(viewport) && mode === 'ocean-current',
+    intervalMs: OCEAN_CURRENT_REFRESH_INTERVAL,
+    initialDelayMs: 120,
+    restartKey: `${mode}:${viewportKey}`,
+    task: refreshOceanCurrents,
+    onError: handleOceanCurrentError
+  })
 
   return {
     mapSamples,
@@ -284,4 +202,20 @@ export function useMapWeatherData({
     airQualitySamples,
     oceanCurrentData
   }
+}
+
+function getViewportKey(viewport: WeatherViewport | null) {
+  if (!viewport) {
+    return 'none'
+  }
+
+  return [
+    viewport.north,
+    viewport.south,
+    viewport.east,
+    viewport.west,
+    viewport.zoom,
+    viewport.width,
+    viewport.height
+  ].join(':')
 }

@@ -2,8 +2,8 @@
 
 ## Priority 2 — Reliability and regression coverage
 
-- [ ] Add fixture-based contract checks for every runtime response schema and reject invalid cached payloads during hydration.
-- [ ] Consolidate visibility-aware polling, abort, online-resume, and cleanup behavior into one reusable scheduler hook.
+- [x] Add fixture-based contract checks for every runtime response schema and reject invalid cached payloads during hydration.
+- [x] Consolidate visibility-aware polling, abort, online-resume, and cleanup behavior into one reusable scheduler hook.
 - [ ] Add stale-age and last-success metadata to all browser data states so cached data never appears silently current.
 
 ## Priority 3 — Production readiness and data clarity
