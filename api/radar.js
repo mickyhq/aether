@@ -55,7 +55,9 @@ async function sendRadarMetadata(response) {
         const upstream = await fetchCoalesced(
           'rainviewer:metadata',
           METADATA_URL,
-          'Aether Weather Radar'
+          'Aether Weather Radar',
+          {},
+          'radar'
         )
 
         if (!upstream.ok) {

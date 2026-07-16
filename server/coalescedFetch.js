@@ -1,5 +1,6 @@
 import { logCacheMetric } from './cacheMetrics.js'
 import { fetchWithTimeout } from '../shared/fetchTimeout.js'
+import { logUpstreamDiagnostics } from './providerDiagnostics.js'
 
 const pendingRequests = new Map()
 
@@ -32,8 +33,7 @@ export function fetchCoalesced(
   )
     .then(async response => {
       const rateLimit = readRateLimit(response.headers)
-
-      return {
+      const upstream = {
         body: await response.text(),
         contentType: response.headers.get('content-type') ?? 'application/json',
         ok: response.ok,
@@ -42,6 +42,10 @@ export function fetchCoalesced(
         retryAfter: response.headers.get('retry-after'),
         status: response.status
       }
+
+      logUpstreamDiagnostics(metricsRoute, metricsRoute, upstream)
+
+      return upstream
     })
     .finally(() => {
       if (pendingRequests.get(key) === request) {

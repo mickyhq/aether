@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from '../shared/fetchTimeout.js'
+import { logFetchDiagnostics } from './providerDiagnostics.js'
 
 const CURRENT_ENDPOINT = 'https://coastwatch.noaa.gov/erddap/griddap/noaacwBLENDEDNRTcurrentsDaily.json'
 const TEMPERATURE_ENDPOINT = 'https://coastwatch.pfeg.noaa.gov/erddap/griddap/ncdcOisst21NrtAgg_LonPM180.json'
@@ -111,6 +112,8 @@ async function fetchRoni() {
     }
   }, NOAA_TIMEOUT_MS)
 
+  logFetchDiagnostics('ocean-currents-roni', 'noaa', response)
+
   if (!response.ok) {
     throw new Error(`NOAA RONI service failed with ${response.status}`)
   }
@@ -163,6 +166,8 @@ async function fetchNoaaGrid(url) {
       'User-Agent': USER_AGENT
     }
   }, NOAA_TIMEOUT_MS)
+
+  logFetchDiagnostics('ocean-currents-grid', 'noaa', response)
 
   if (!response.ok) {
     throw new Error(`NOAA ocean service failed with ${response.status}`)

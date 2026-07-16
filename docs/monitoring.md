@@ -26,3 +26,17 @@ only aggregated animation timings and counters keyed by a fixed provider name:
 
 The client does not send coordinates, place names, request URLs, location keys,
 session identifiers, or location history with telemetry.
+
+Quota and backoff logs use `event: "aether.provider-diagnostic"` for these
+provider groups: weather, air quality, radar, geocoding, NOAA, webcam, and
+astronomy. Dashboard dimensions are:
+
+- `provider` and `route`
+- `status`, `quotaLevel`, `quotaRemaining`, and `quotaLimit`
+- `backoffState` and `retryAfterSeconds`
+- `cacheFallback` (`stale`, `none`, or `unknown`)
+
+Weather and air-quality responses also expose `X-Aether-Backoff` and
+`X-Aether-Backoff-Seconds` while a shared upstream block starts or remains
+active. Diagnostic events never include API keys, request URLs, query values,
+coordinates, or cache keys.

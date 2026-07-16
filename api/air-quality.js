@@ -30,6 +30,7 @@ import {
   isAirQualityResponse,
   parseProviderBody
 } from '../shared/providerValidation.js'
+import { logBackoffDiagnostic } from '../server/providerDiagnostics.js'
 
 const OPEN_METEO_ENDPOINT = 'https://air-quality-api.open-meteo.com/v1/air-quality'
 
@@ -67,6 +68,16 @@ export default async function handler(request, response) {
 
   if (blockedFor > 0) {
     const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
+
+    setBackoffHeaders(response, 'active', blockedFor)
+
+    logBackoffDiagnostic({
+      route: 'air-quality',
+      provider: 'air-quality',
+      state: 'active',
+      retryAfterSeconds: blockedFor,
+      cacheFallback: stale ? 'stale' : 'none'
+    })
 
     if (stale) {
       sendAirQuality(response, stale, 'stale')
@@ -119,6 +130,17 @@ export default async function handler(request, response) {
 
     const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
 
+    if (retryAfter) {
+      setBackoffHeaders(response, 'started', retryAfter)
+      logBackoffDiagnostic({
+        route: 'air-quality',
+        provider: 'air-quality',
+        state: 'started',
+        retryAfterSeconds: retryAfter,
+        cacheFallback: stale ? 'stale' : 'none'
+      })
+    }
+
     if (stale) {
       sendAirQuality(response, stale, 'stale')
       return
@@ -161,4 +183,9 @@ function sendAirQuality(response, record, cacheStatus) {
 
 function sendRateLimited(response, retryAfter) {
   sendProviderRateLimit(response, retryAfter, 'Air quality')
+}
+
+function setBackoffHeaders(response, state, retryAfter) {
+  response.setHeader('X-Aether-Backoff', state)
+  response.setHeader('X-Aether-Backoff-Seconds', String(retryAfter))
 }

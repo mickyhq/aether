@@ -35,6 +35,7 @@ import { handleTemperatureRecords } from '../server/temperatureRecords.js'
 import { handleSoilMoisture } from '../server/soilMoisture.js'
 import { handleWebcams } from '../server/webcams.js'
 import { handleStargazing } from '../server/stargazing.js'
+import { logBackoffDiagnostic } from '../server/providerDiagnostics.js'
 
 const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
 
@@ -93,6 +94,16 @@ export default async function handler(request, response) {
   if (blockedFor > 0) {
     const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
 
+    setBackoffHeaders(response, 'active', blockedFor)
+
+    logBackoffDiagnostic({
+      route: 'weather',
+      provider: 'weather',
+      state: 'active',
+      retryAfterSeconds: blockedFor,
+      cacheFallback: stale ? 'stale' : 'none'
+    })
+
     if (stale) {
       sendWeather(response, stale, 'stale')
       return
@@ -144,6 +155,17 @@ export default async function handler(request, response) {
     }
 
     const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
+
+    if (retryAfter) {
+      setBackoffHeaders(response, 'started', retryAfter)
+      logBackoffDiagnostic({
+        route: 'weather',
+        provider: 'weather',
+        state: 'started',
+        retryAfterSeconds: retryAfter,
+        cacheFallback: stale ? 'stale' : 'none'
+      })
+    }
 
     if (stale) {
       sendWeather(response, stale, 'stale')
@@ -198,4 +220,9 @@ function sendWeather(response, record, cacheStatus) {
 
 function sendRateLimited(response, retryAfter) {
   sendProviderRateLimit(response, retryAfter, 'Weather')
+}
+
+function setBackoffHeaders(response, state, retryAfter) {
+  response.setHeader('X-Aether-Backoff', state)
+  response.setHeader('X-Aether-Backoff-Seconds', String(retryAfter))
 }
