@@ -17,8 +17,19 @@ import { useState } from 'react'
 import { useI18n } from '../i18n/I18nContext'
 import { APP_LANGUAGES } from '../i18n/translations'
 import type { AppLanguage } from '../i18n/translations'
+import type { AnimationQuality } from '../types/weather'
 
-export function SetupDialog() {
+type SetupDialogProps = {
+  animationQuality: AnimationQuality
+  onAnimationQualityChange: (quality: AnimationQuality) => void
+}
+
+const ANIMATION_QUALITIES: AnimationQuality[] = ['low', 'balanced', 'high']
+
+export function SetupDialog({
+  animationQuality,
+  onAnimationQualityChange
+}: SetupDialogProps) {
   const [open, setOpen] = useState(false)
   const { language, setLanguage, t } = useI18n()
 
@@ -64,6 +75,8 @@ export function SetupDialog() {
               {t('setup.language')}
             </Typography>
             <RadioGroup
+              row
+              className="setup-option-group"
               aria-label={t('setup.language')}
               value={language}
               onChange={event => setLanguage(event.target.value as AppLanguage)}
@@ -74,6 +87,31 @@ export function SetupDialog() {
                   value={option}
                   control={<Radio />}
                   label={t(`language.${option}`)}
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+          <FormControl component="fieldset">
+            <Typography component="legend" className="setup-section-title">
+              {t('quality.title')}
+            </Typography>
+            <RadioGroup
+              row
+              className="setup-option-group"
+              aria-label={t('quality.title')}
+              value={animationQuality}
+              onChange={event => {
+                onAnimationQualityChange(
+                  event.target.value as AnimationQuality
+                )
+              }}
+            >
+              {ANIMATION_QUALITIES.map(option => (
+                <FormControlLabel
+                  key={option}
+                  value={option}
+                  control={<Radio />}
+                  label={t(`quality.${option}`)}
                 />
               ))}
             </RadioGroup>

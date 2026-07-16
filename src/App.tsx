@@ -1,7 +1,6 @@
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { AetherHeader } from './components/AetherHeader'
-import { AnimationQualityControl } from './components/AnimationQualityControl'
 import { ForecastDateLabel } from './components/ForecastDateLabel'
 import { MapWeatherTooltip } from './components/MapWeatherTooltip'
 import { OfflineStatus } from './components/OfflineStatus'
@@ -232,10 +231,6 @@ export default function App() {
             opacity={radarOpacity}
             onChange={handleRadarOpacityChange}
           />
-          <AnimationQualityControl
-            quality={animationQuality}
-            onChange={handleAnimationQualityChange}
-          />
           <MapWeatherTooltip reading={pointerWeather} />
         </WeatherErrorBoundary>
         <OfflineStatus />
@@ -243,8 +238,10 @@ export default function App() {
           location={selectedLocation}
           status={status}
           dataState={weatherDataState}
+          animationQuality={animationQuality}
           onSearch={handleCitySearch}
           onLocationSelect={handleSavedLocationSelect}
+          onAnimationQualityChange={handleAnimationQualityChange}
           onWeatherRetry={retryWeather}
         />
         <ForecastDateLabel time={ecmwfPlaybackTime} />

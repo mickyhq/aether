@@ -179,12 +179,26 @@
 }
 
 .setup-dialog-content .MuiFormControlLabel-root {
+  flex: 1 1 100px;
+  margin-left: 0;
   margin-right: 0;
   border-radius: 8px;
 }
 
+.setup-option-group {
+  display: flex;
+  flex-flow: row wrap !important;
+  align-items: stretch;
+  gap: 4px;
+}
+
 .setup-dialog-content .MuiFormControlLabel-root:hover {
   background: rgba(143, 229, 255, 0.08);
+}
+
+.setup-dialog-content .MuiFormControl-root + .MuiFormControl-root {
+  padding-top: 16px;
+  border-top: 1px solid var(--glass-line);
 }
 
 .about-dialog-content {

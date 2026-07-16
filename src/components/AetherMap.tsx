@@ -43,7 +43,6 @@ const WORLD_BOUNDS = L.latLngBounds(
 )
 const MAP_POINTER_BLOCK_SELECTOR = [
   '.aether-header',
-  '.animation-quality-control',
   '.fire-layer-status',
   '.leaflet-control',
   '.leaflet-marker-icon',

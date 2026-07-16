@@ -2,7 +2,11 @@ import SearchIcon from '@mui/icons-material/Search'
 import { Box, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import type { WeatherDataState, WeatherLocation } from '../types/weather'
+import type {
+  AnimationQuality,
+  WeatherDataState,
+  WeatherLocation
+} from '../types/weather'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { AboutDialog } from './AboutDialog'
@@ -14,8 +18,10 @@ type AetherHeaderProps = {
   location: WeatherLocation
   status: string
   dataState: WeatherDataState
+  animationQuality: AnimationQuality
   onSearch: (query: string) => void
   onLocationSelect: (location: WeatherLocation) => void
+  onAnimationQualityChange: (quality: AnimationQuality) => void
   onWeatherRetry: () => void
 }
 
@@ -23,8 +29,10 @@ export function AetherHeader({
   location,
   status,
   dataState,
+  animationQuality,
   onSearch,
   onLocationSelect,
+  onAnimationQualityChange,
   onWeatherRetry
 }: AetherHeaderProps) {
   const [query, setQuery] = useState('')
@@ -111,7 +119,10 @@ const dataStateTooltip = (
             />
           </Box>
         </Box>
-        <SetupDialog />
+        <SetupDialog
+          animationQuality={animationQuality}
+          onAnimationQualityChange={onAnimationQualityChange}
+        />
         <AboutDialog />
       </Box>
     </Box>
