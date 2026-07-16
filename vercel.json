@@ -5,8 +5,8 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/volcano-activity",
-      "destination": "/api/reported-fires?resource=volcano-activity"
+      "source": "/api/:route*",
+      "destination": "/api?__aether_route=:route*"
     }
   ],
   "headers": [

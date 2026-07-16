@@ -225,7 +225,7 @@ npm run dev
 
 Open the URL printed by Vite. Nodemon restarts Vite when server, API, or Vite configuration files change. React source uses Vite hot reload.
 
-Local development and Vercel production run the same handlers from `api/`. The local middleware only adapts the Node request and response objects.
+Local development and Vercel production run the same handlers from `routes/`. The local middleware only adapts the Node request and response objects. Production dispatches every public API URL through one Vercel Function so Hobby deployments remain below the function-count limit.
 
 ## Commands
 
@@ -274,8 +274,9 @@ Add any optional variables from the configuration table to Production and Previe
 ## Project structure
 
 ```text
-api/          Vercel API route handlers
-server/       Provider clients, caching, rate limits, and local API support
+api/          Single Vercel Function entrypoint
+routes/       API route handlers shared by local and production dispatchers
+server/       Provider clients, caching, routing, and local API support
 shared/       Browser/server cache, timeout, and validation utilities
 src/
   components/ React interface components

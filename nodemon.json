@@ -3,6 +3,7 @@
     "vite.config.ts",
     "server",
     "api",
+    "routes",
     "shared"
   ],
   "ext": "ts,js,json",

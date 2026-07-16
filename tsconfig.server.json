@@ -14,6 +14,8 @@
   "include": [
     "api/**/*.js",
     "api/**/*.ts",
+    "routes/**/*.js",
+    "routes/**/*.ts",
     "server/**/*.js",
     "server/**/*.ts",
     "shared/**/*.js",

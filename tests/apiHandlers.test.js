@@ -13,8 +13,8 @@ vi.mock('@vercel/functions', () => ({
   })
 }))
 
-import weatherHandler from '../api/weather.js'
-import airQualityHandler from '../api/air-quality.js'
+import weatherHandler from '../routes/weather.js'
+import airQualityHandler from '../routes/air-quality.js'
 
 const weatherQuery = {
   latitude: '48',

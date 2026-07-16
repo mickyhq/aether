@@ -1,42 +1,11 @@
-import airQualityHandler from '../api/air-quality.js'
-import clientErrorHandler from '../api/client-error.js'
-import clientTelemetryHandler from '../api/client-telemetry.js'
-import ecmwfHandler from '../api/ecmwf.js'
-import effisFireTileHandler from '../api/effis-fire-tile.js'
-import fireLayerStatusHandler from '../api/fire-layer-status.js'
-import fireTileHandler from '../api/fire-tile.js'
-import geocodeHandler from '../api/geocode.js'
-import heatAlertsHandler from '../api/heat-alerts.js'
-import oceanCurrentsHandler from '../api/ocean-currents.js'
-import radarHandler from '../api/radar.js'
-import reportedFiresHandler from '../api/reported-fires.js'
-import temperatureAnomalyHandler from '../api/temperature-anomaly.js'
-import weatherHandler from '../api/weather.js'
-import volcanoActivityHandler from './volcanoActivityHandler.js'
+import { getApiHandler } from './apiRoutes.js'
 
 const MAX_BODY_BYTES = 64 * 1024
-const handlers = new Map([
-  ['/api/air-quality', airQualityHandler],
-  ['/api/client-error', clientErrorHandler],
-  ['/api/client-telemetry', clientTelemetryHandler],
-  ['/api/ecmwf', ecmwfHandler],
-  ['/api/effis-fire-tile', effisFireTileHandler],
-  ['/api/fire-layer-status', fireLayerStatusHandler],
-  ['/api/fire-tile', fireTileHandler],
-  ['/api/geocode', geocodeHandler],
-  ['/api/heat-alerts', heatAlertsHandler],
-  ['/api/ocean-currents', oceanCurrentsHandler],
-  ['/api/radar', radarHandler],
-  ['/api/reported-fires', reportedFiresHandler],
-  ['/api/temperature-anomaly', temperatureAnomalyHandler],
-  ['/api/volcano-activity', volcanoActivityHandler],
-  ['/api/weather', weatherHandler]
-])
 
 export function createLocalApiMiddleware() {
   return async function localApiMiddleware(request, response, next) {
     const requestUrl = new URL(request.url ?? '/', 'http://localhost')
-    const handler = handlers.get(requestUrl.pathname)
+    const handler = getApiHandler(requestUrl.pathname)
 
     if (!handler) {
       next()
