@@ -15,7 +15,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; connect-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://icons.duckduckgo.com; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:; font-src 'self' data:; frame-src https://webcams.windy.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+          "value": "default-src 'self'; connect-src 'self' https://tiles.openfreemap.org; img-src 'self' data: blob: https://tiles.openfreemap.org https://*.tile.openstreetmap.org https://icons.duckduckgo.com; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:; font-src 'self' data:; frame-src https://webcams.windy.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         },
         {
           "key": "Referrer-Policy",
