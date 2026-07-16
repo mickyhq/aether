@@ -155,9 +155,9 @@ This product does not show tides, waves, rip currents, or detailed coastal flow.
 
 ### Radar
 
-Radar appears in Precipitation and Storm modes. Aether animates the six latest RainViewer frames, supports saved opacity, and shows only the latest frame when reduced motion is enabled.
+Radar appears in Precipitation and Storm modes. Aether animates the six latest RainViewer frames, supports saved opacity, and shows only the latest frame when reduced motion is enabled. Visual tiles load directly from RainViewer's CDN and are cached by the service worker; failed or incomplete frames never replace the last complete frame. World views scale the more detailed zoom-2 source tiles down and hold the latest complete frame instead of animating sparse zoom-0 tiles.
 
-The map tooltip samples the newest unsmoothed RainViewer radar tile at the hovered coordinate. It reports rain only above a small reflectivity threshold, verifies radar coverage before reporting no rain, and shows the observation age. Hover checks are debounced; metadata, decoded tiles, immutable frame tiles, and the coverage mask are cached separately to avoid repeated provider requests. Public RainViewer tiles are limited to zoom level 7, so this is the finest open composite cell available from this feed, not a rain-gauge measurement.
+The map tooltip samples the newest unsmoothed RainViewer radar tile through Aether's same-origin proxy at the hovered coordinate. It reports rain only above a small reflectivity threshold, verifies radar coverage before reporting no rain, and shows the observation age. Hover checks are debounced; metadata, decoded tiles, immutable frame tiles, and the coverage mask are cached separately to avoid repeated provider requests. Public RainViewer tiles are limited to zoom level 7, so this is the finest open composite cell available from this feed, not a rain-gauge measurement.
 
 ### Fire overlays
 

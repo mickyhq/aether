@@ -89,6 +89,23 @@ export default defineConfig(({ mode }) => {
           runtimeCaching: [
             {
               urlPattern: ({ url }) => (
+                url.origin === 'https://tilecache.rainviewer.com' &&
+                url.pathname.startsWith('/v2/radar/')
+              ),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: getCacheNamespace('rainviewer-radar-tiles'),
+                cacheableResponse: {
+                  statuses: [0, 200]
+                },
+                expiration: {
+                  maxEntries: 384,
+                  maxAgeSeconds: 24 * 60 * 60
+                }
+              }
+            },
+            {
+              urlPattern: ({ url }) => (
                 url.origin === self.location.origin &&
                 [
                   '/api/fire-tile',

@@ -24,6 +24,7 @@ export function addBaseMap(
   let currentLanguage = language
   const layer = L.maplibreGL({
     style: BASE_MAP_STYLE_URL,
+    renderWorldCopies: false,
     attributionControl: {
       customAttribution: BASE_MAP_ATTRIBUTION
     }

@@ -18,6 +18,9 @@ const METADATA_REFRESH = 5 * 60 * 1000
 const FRAME_DURATION = 1100
 const FRAME_COUNT = 6
 const PANE_NAME = 'weather-radar-pane'
+const TILE_HOST = 'https://tilecache.rainviewer.com'
+const MIN_NATIVE_ZOOM = 2
+const MIN_ANIMATED_ZOOM = 2
 
 export class WeatherRadarLayer {
   private map: L.Map
@@ -29,6 +32,7 @@ export class WeatherRadarLayer {
   private metadataInterval = 0
   private metadataController: AbortController | null = null
   private visible = false
+  private zooming = false
   private pageVisible = isPageVisible()
   private destroyed = false
   private unsubscribeVisibility: (() => void) | null = null
@@ -58,6 +62,8 @@ export class WeatherRadarLayer {
 
   start() {
     this.motionQuery.addEventListener('change', this.motionChangeHandler)
+    this.map.on('zoomstart', this.handleZoomStart)
+    this.map.on('zoomend', this.handleZoomEnd)
     this.unsubscribeVisibility = subscribeToPageVisibility(
       this.handlePageVisibility
     )
@@ -93,6 +99,8 @@ export class WeatherRadarLayer {
     this.stopFrameLoop()
     this.stopMetadataRefresh()
     this.motionQuery.removeEventListener('change', this.motionChangeHandler)
+    this.map.off('zoomstart', this.handleZoomStart)
+    this.map.off('zoomend', this.handleZoomEnd)
     this.unsubscribeVisibility?.()
     this.unsubscribeVisibility = null
     this.removeLayers()
@@ -197,6 +205,8 @@ export class WeatherRadarLayer {
   private startFrameLoop() {
     if (
       this.reducedMotion ||
+      this.zooming ||
+      this.map.getZoom() < MIN_ANIMATED_ZOOM ||
       !this.pageVisible ||
       this.frameInterval ||
       this.frames.length < 2
@@ -220,21 +230,35 @@ export class WeatherRadarLayer {
   }
 
   private showFrame(frame: RadarFrame) {
-    if (!this.visible || !this.pageVisible || this.loadingLayer) {
+    if (
+      !this.visible ||
+      !this.pageVisible ||
+      this.zooming ||
+      this.loadingLayer
+    ) {
       return
     }
 
-    const url = `/api/radar?path=${encodeURIComponent(frame.path)}&z={z}&x={x}&y={y}`
+    const url = `${TILE_HOST}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`
+    let tileErrorCount = 0
     const nextLayer = L.tileLayer(url, {
       pane: PANE_NAME,
       opacity: 0,
+      minNativeZoom: MIN_NATIVE_ZOOM,
       maxNativeZoom: 7,
       maxZoom: 19,
+      noWrap: true,
       tileSize: 256,
+      updateWhenZooming: false,
+      updateWhenIdle: true,
+      keepBuffer: 4,
       attribution: 'Weather radar © RainViewer'
     })
 
     this.loadingLayer = nextLayer
+    nextLayer.on('tileerror', () => {
+      tileErrorCount += 1
+    })
     nextLayer.once('load', () => {
       if (
         this.destroyed ||
@@ -243,6 +267,13 @@ export class WeatherRadarLayer {
         this.loadingLayer !== nextLayer
       ) {
         nextLayer.remove()
+        return
+      }
+
+      if (tileErrorCount > 0) {
+        nextLayer.remove()
+        this.loadingLayer = null
+        recordProviderFailure('radar')
         return
       }
 
@@ -259,5 +290,44 @@ export class WeatherRadarLayer {
     this.loadingLayer?.remove()
     this.currentLayer = null
     this.loadingLayer = null
+  }
+
+  private readonly handleZoomStart = () => {
+    if (!this.visible) {
+      return
+    }
+
+    this.zooming = true
+    this.stopFrameLoop()
+    this.loadingLayer?.remove()
+    this.loadingLayer = null
+  }
+
+  private readonly handleZoomEnd = () => {
+    if (!this.zooming) {
+      return
+    }
+
+    this.zooming = false
+
+    if (!this.visible || !this.pageVisible || this.frames.length === 0) {
+      return
+    }
+
+    if (!this.currentLayer) {
+      this.showLatestFrame()
+      this.startFrameLoop()
+      return
+    }
+
+    if (this.currentLayer.isLoading()) {
+      this.currentLayer.once('load', () => {
+        if (!this.destroyed && this.visible && this.pageVisible) {
+          this.startFrameLoop()
+        }
+      })
+    } else {
+      this.startFrameLoop()
+    }
   }
 }
