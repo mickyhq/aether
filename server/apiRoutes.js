@@ -10,6 +10,7 @@ import warningsHandler from '../routes/warnings.js'
 import oceanCurrentsHandler from '../routes/ocean-currents.js'
 import radarHandler from '../routes/radar.js'
 import reportedFiresHandler from '../routes/reported-fires.js'
+import seismicEventsHandler from '../routes/seismic-events.js'
 import temperatureAnomalyHandler from '../routes/temperature-anomaly.js'
 import weatherHandler from '../routes/weather.js'
 import volcanoActivityHandler from './volcanoActivityHandler.js'
@@ -28,6 +29,7 @@ const handlers = new Map([
   ['/api/ocean-currents', oceanCurrentsHandler],
   ['/api/radar', radarHandler],
   ['/api/reported-fires', reportedFiresHandler],
+  ['/api/seismic-events', seismicEventsHandler],
   ['/api/temperature-anomaly', temperatureAnomalyHandler],
   ['/api/volcano-activity', volcanoActivityHandler],
   ['/api/weather', weatherHandler]

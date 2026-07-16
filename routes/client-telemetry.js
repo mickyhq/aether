@@ -8,6 +8,7 @@ const PROVIDERS = new Set([
   'ocean-currents',
   'radar',
   'reported-fires',
+  'seismic',
   'soil-moisture',
   'stargazing',
   'temperature-records',

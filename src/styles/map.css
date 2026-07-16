@@ -444,6 +444,65 @@
   to { opacity: 0; transform: translateX(-50%) scale(1.55); }
 }
 
+.tsunami-warning-marker {
+  overflow: visible;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #ff3f34;
+  filter:
+    drop-shadow(0 3px 3px rgba(20, 4, 0, 0.72))
+    drop-shadow(0 0 7px rgba(255, 63, 52, 0.7));
+}
+
+.tsunami-warning-marker.is-advisory {
+  color: #ff8b2d;
+}
+
+.tsunami-warning-marker.is-watch,
+.tsunami-warning-marker.is-threat {
+  color: #ffd23f;
+}
+
+.tsunami-warning-marker.is-grace {
+  opacity: 0.72;
+  filter: grayscale(0.45) drop-shadow(0 2px 3px rgba(20, 4, 0, 0.6));
+}
+
+.tsunami-warning-symbol {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 31px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tsunami-warning-pulse {
+  position: absolute;
+  inset: 0;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  animation: tsunami-warning-pulse 1.8s ease-out infinite;
+}
+
+.tsunami-warning-marker.is-grace .tsunami-warning-pulse {
+  animation: none;
+}
+
+@keyframes tsunami-warning-pulse {
+  from { opacity: 0.9; transform: scale(0.8); }
+  to { opacity: 0; transform: scale(2.2); }
+}
+
 .volcano-activity-popup {
   display: grid;
   gap: 7px;
@@ -491,6 +550,75 @@
 .volcano-activity-popup small {
   padding-top: 6px;
   border-top: 1px solid #dce4e7;
+}
+
+.seismic-popup {
+  display: grid;
+  gap: 7px;
+  line-height: 1.45;
+}
+
+.seismic-popup > strong {
+  font-size: 16px;
+}
+
+.seismic-popup-location {
+  color: #344b55;
+  font-weight: 700;
+}
+
+.seismic-popup-meta,
+.seismic-popup small {
+  color: #53636a;
+}
+
+.seismic-popup p {
+  margin: 3px 0 0;
+}
+
+.seismic-popup-notice,
+.seismic-popup-instructions,
+.seismic-popup-grace {
+  padding: 7px 9px;
+  border-radius: 5px;
+  background: #eef7fa;
+}
+
+.seismic-popup-instructions {
+  border-left: 3px solid #ef533f;
+  background: #fff2ec;
+}
+
+.seismic-popup-grace {
+  background: #fff5cf;
+  color: #684e00;
+  font-weight: 700;
+}
+
+.seismic-popup small {
+  padding-top: 6px;
+  border-top: 1px solid #dce4e7;
+}
+
+.tsunami-popup-level {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #ef3340;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tsunami-popup-level.is-advisory {
+  background: #d85d00;
+}
+
+.tsunami-popup-level.is-watch,
+.tsunami-popup-level.is-threat {
+  background: #866400;
 }
 
 .reported-fire-flame {

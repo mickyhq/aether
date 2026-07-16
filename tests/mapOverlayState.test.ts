@@ -6,11 +6,12 @@ import {
 import type { MapOverlayId } from '../src/map/mapOverlayState'
 
 describe('map overlay lifecycle', () => {
-  test('enables volcano activity by default', () => {
+  test('enables geological activity by default', () => {
     const storage = new MemoryStorage()
 
     expect([...loadEnabledMapOverlays(storage)]).toEqual([
-      'volcano-activity'
+      'volcano-activity',
+      'seismic-activity'
     ])
   })
 
@@ -34,7 +35,7 @@ describe('map overlay lifecycle', () => {
     ])
 
     storage.setItem(
-      'aether:map-overlays',
+      'aether:map-overlays:v2',
       JSON.stringify(['volcano-activity', 'unknown-layer'])
     )
 
@@ -47,6 +48,7 @@ describe('map overlay lifecycle', () => {
 function createLayers() {
   return {
     'volcano-activity': Symbol('volcano-activity'),
+    'seismic-activity': Symbol('seismic-activity'),
     'heat-detections': Symbol('heat-detections'),
     'reported-wildfires': Symbol('reported-wildfires'),
     'africa-detections': Symbol('africa-detections'),

@@ -199,6 +199,42 @@ export const validRuntimeResponseFixtures = {
       profileUrl: 'https://volcano.si.edu/volcano.cfm?vn=211004'
     }]
   },
+  seismicEvents: {
+    generatedAt: '2026-07-17T10:00:00Z',
+    cacheState: 'live',
+    gracePeriodMinutes: 15,
+    earthquakes: [{
+      id: 'us-test-earthquake',
+      magnitude: 5.4,
+      place: 'Test region',
+      occurredAt: '2026-07-17T09:45:00Z',
+      updatedAt: '2026-07-17T09:50:00Z',
+      latitude: 35.2,
+      longitude: 140.1,
+      depthKm: 18,
+      tsunamiProduct: false,
+      alert: 'green',
+      status: 'reviewed',
+      source: 'USGS Earthquake Hazards Program',
+      sourceUrl: 'https://earthquake.usgs.gov/earthquakes/eventpage/us-test-earthquake'
+    }],
+    tsunamiWarnings: [{
+      id: 'PHEB-test',
+      level: 'warning',
+      title: 'Tsunami Warning',
+      description: 'Dangerous waves are possible.',
+      instructions: 'Follow local evacuation instructions.',
+      sentAt: '2026-07-17T09:55:00Z',
+      expiresAt: '2026-07-17T11:00:00Z',
+      latitude: 35.2,
+      longitude: 140.1,
+      magnitude: 7.2,
+      location: 'Test region',
+      source: 'NOAA Pacific Tsunami Warning Center',
+      sourceUrl: 'https://www.tsunami.gov/',
+      state: 'active'
+    }]
+  },
   radarMetadata: {
     frames: [{ time: 1784203200, path: '/v2/radar/1784203200' }]
   },
@@ -222,6 +258,7 @@ export const invalidRuntimeResponseFixtures = {
   oceanCurrent: { samples: 'ocean' },
   reportedFires: { fires: [{ id: 1 }] },
   volcanoActivity: { volcanoes: [{ activity: 'unknown' }] },
+  seismicEvents: { earthquakes: [{ magnitude: 'strong' }] },
   radarMetadata: { frames: [{ time: 'now', path: null }] },
   fireLayerStatus: { firmsConfigured: 'true' }
 } satisfies Record<RuntimeResponseSchemaName, unknown>

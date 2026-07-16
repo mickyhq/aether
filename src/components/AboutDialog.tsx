@@ -76,6 +76,16 @@ const DATA_SOURCES: Array<{
     url: 'https://www.meteoalarm.org/'
   },
   {
+    name: 'USGS Earthquake Hazards Program',
+    kind: 'source.earthquakes',
+    url: 'https://earthquake.usgs.gov/earthquakes/feed/'
+  },
+  {
+    name: 'NOAA Tsunami Warning Centers',
+    kind: 'source.tsunamiWarnings',
+    url: 'https://www.tsunami.gov/'
+  },
+  {
     name: 'NASA FIRMS',
     kind: 'source.worldHeat',
     url: 'https://firms.modaps.eosdis.nasa.gov/'

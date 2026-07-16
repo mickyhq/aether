@@ -1,11 +1,12 @@
 import type { FireLayerId } from './fireLayerStatus'
 
-const MAP_OVERLAYS_KEY = 'aether:map-overlays'
+const MAP_OVERLAYS_KEY = 'aether:map-overlays:v2'
 
-export type MapOverlayId = FireLayerId | 'volcano-activity'
+export type MapOverlayId = FireLayerId | 'volcano-activity' | 'seismic-activity'
 
 export const MAP_OVERLAY_IDS: MapOverlayId[] = [
   'volcano-activity',
+  'seismic-activity',
   'heat-detections',
   'reported-wildfires',
   'africa-detections',
@@ -21,7 +22,7 @@ export function loadEnabledMapOverlays(
     const value = storage.getItem(MAP_OVERLAYS_KEY)
 
     if (value === null) {
-      return new Set<MapOverlayId>(['volcano-activity'])
+      return defaultOverlays()
     }
 
     const parsed: unknown = JSON.parse(value)
@@ -34,8 +35,12 @@ export function loadEnabledMapOverlays(
       MAP_OVERLAY_IDS.filter(layerId => parsed.includes(layerId))
     )
   } catch {
-    return new Set<MapOverlayId>(['volcano-activity'])
+    return defaultOverlays()
   }
+}
+
+function defaultOverlays() {
+  return new Set<MapOverlayId>(['volcano-activity', 'seismic-activity'])
 }
 
 export function saveEnabledMapOverlays<Layer>(

@@ -94,6 +94,47 @@ export type VolcanoActivityResponse = {
   notice?: string
 }
 
+export type EarthquakeEvent = {
+  id: string
+  magnitude: number
+  place: string
+  occurredAt: string
+  updatedAt: string
+  latitude: number
+  longitude: number
+  depthKm: number
+  tsunamiProduct: boolean
+  alert: 'green' | 'yellow' | 'orange' | 'red' | null
+  status: string
+  source: string
+  sourceUrl: string
+}
+
+export type TsunamiWarning = {
+  id: string
+  level: 'warning' | 'advisory' | 'watch' | 'threat'
+  title: string
+  description: string
+  instructions: string | null
+  sentAt: string
+  expiresAt: string | null
+  latitude: number
+  longitude: number
+  magnitude: number | null
+  location: string
+  source: string
+  sourceUrl: string
+  state: 'active' | 'grace'
+}
+
+export type SeismicEventsResponse = {
+  generatedAt: string
+  cacheState: 'live' | 'grace'
+  gracePeriodMinutes: number
+  earthquakes: EarthquakeEvent[]
+  tsunamiWarnings: TsunamiWarning[]
+}
+
 export type RadarFrame = {
   time: number
   path: string
@@ -333,6 +374,52 @@ export const volcanoActivityResponseSchema = createSchema<VolcanoActivityRespons
     ))
 )
 
+export const seismicEventsResponseSchema = createSchema<SeismicEventsResponse>(
+  value => isRecord(value) &&
+    isString(value.generatedAt) &&
+    (value.cacheState === 'live' || value.cacheState === 'grace') &&
+    isFiniteNumber(value.gracePeriodMinutes) &&
+    Array.isArray(value.earthquakes) &&
+    value.earthquakes.every(earthquake => (
+      isRecord(earthquake) &&
+      isString(earthquake.id) &&
+      isFiniteNumber(earthquake.magnitude) &&
+      isString(earthquake.place) &&
+      isString(earthquake.occurredAt) &&
+      isString(earthquake.updatedAt) &&
+      isFiniteNumber(earthquake.latitude) &&
+      isFiniteNumber(earthquake.longitude) &&
+      isFiniteNumber(earthquake.depthKm) &&
+      isBoolean(earthquake.tsunamiProduct) &&
+      (
+        earthquake.alert === null ||
+        ['green', 'yellow', 'orange', 'red'].includes(String(earthquake.alert))
+      ) &&
+      isString(earthquake.status) &&
+      isString(earthquake.source) &&
+      isString(earthquake.sourceUrl)
+    )) &&
+    Array.isArray(value.tsunamiWarnings) &&
+    value.tsunamiWarnings.every(warning => (
+      isRecord(warning) &&
+      isString(warning.id) &&
+      ['warning', 'advisory', 'watch', 'threat']
+        .includes(String(warning.level)) &&
+      isString(warning.title) &&
+      isString(warning.description) &&
+      nullable(warning.instructions, isString) &&
+      isString(warning.sentAt) &&
+      nullable(warning.expiresAt, isString) &&
+      isFiniteNumber(warning.latitude) &&
+      isFiniteNumber(warning.longitude) &&
+      nullable(warning.magnitude, isFiniteNumber) &&
+      isString(warning.location) &&
+      isString(warning.source) &&
+      isString(warning.sourceUrl) &&
+      (warning.state === 'active' || warning.state === 'grace')
+    ))
+)
+
 export const radarMetadataResponseSchema = createSchema<RadarMetadataResponse>(
   value => isRecord(value) &&
     Array.isArray(value.frames) &&
@@ -364,6 +451,7 @@ export const runtimeResponseSchemas = {
   oceanCurrent: oceanCurrentResponseSchema,
   reportedFires: reportedFiresResponseSchema,
   volcanoActivity: volcanoActivityResponseSchema,
+  seismicEvents: seismicEventsResponseSchema,
   radarMetadata: radarMetadataResponseSchema,
   fireLayerStatus: fireLayerStatusResponseSchema
 } as const

@@ -111,6 +111,8 @@ The weekly report is preliminary and intentionally not comprehensive. Rapidly de
 | [Nominatim](https://nominatim.org/) | Location search and reverse geocoding |
 | [US National Weather Service](https://www.weather.gov/) | Active US CAP warnings and zone geometries |
 | [MeteoAlarm](https://api.meteoalarm.org/) | CAP and GeoJSON warnings issued by European member services |
+| [USGS Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/) | Real-time magnitude 2.5+ earthquake GeoJSON for the past day |
+| [NOAA Tsunami Warning Centers](https://www.tsunami.gov/?page=productRetrieval) | Official NTWC and PTWC tsunami CAP messages |
 | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) | Global VIIRS heat and thermal-anomaly detections |
 | [NIFC WFIGS](https://www.nifc.gov/) | Reported US wildfire incidents |
 | [NRCan CWFIS](https://cwfis.cfs.nrcan.gc.ca/en/) | Reported Canadian active fires |
@@ -168,6 +170,12 @@ NASA FIRMS uses a rolling 24-hour worldwide window and requires a server-side ma
 ### Volcano activity
 
 The volcano overlay uses the Smithsonian / USGS Weekly Volcanic Activity Report RSS feed. GeoRSS coordinates place each report on the map, while stable GVP volcano numbers link to the full report and volcano profile. The source normally updates on Thursday and does not claim to include every eruption or every continuously active volcano.
+
+### Earthquakes and tsunami warnings
+
+The seismic overlay shows USGS earthquakes of magnitude 2.5 or greater from the past day. Marker size follows magnitude; USGS alert colors and tsunami-product flags remain visible in details. A tsunami product flag is not treated as an active warning.
+
+Official tsunami warnings, advisories, watches, and threat messages come from the NOAA National and Pacific Tsunami Warning Centers' CAP feeds. Information and final messages are excluded. Stale or newly expired official messages remain visibly marked for no more than 15 minutes, then disappear.
 
 ## Requirements
 

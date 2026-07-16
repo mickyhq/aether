@@ -15,6 +15,7 @@ import {
 } from './mapOverlayState'
 import type { MapOverlayId } from './mapOverlayState'
 import { ReportedFireLayer } from './ReportedFireLayer'
+import { SeismicActivityLayer } from './SeismicActivityLayer'
 import {
   clipTileToBounds,
   maskTileToBounds
@@ -74,6 +75,7 @@ export function createAetherMapLayers({
     t
   )
   const volcanoActivity = new VolcanoActivityLayer(map, t)
+  const seismicActivity = new SeismicActivityLayer(map, t)
   const fireTiles = L.tileLayer(
     '/api/fire-tile?z={z}&x={x}&y={y}',
     {
@@ -118,9 +120,11 @@ export function createAetherMapLayers({
     }
   )
   const volcanoLayer = volcanoActivity.getLeafletLayer()
+  const seismicLayer = seismicActivity.getLeafletLayer()
   const reportedFireLayer = reportedFires.getLeafletLayer()
   const mapOverlayLayers: Record<MapOverlayId, L.Layer> = {
     'volcano-activity': volcanoLayer,
+    'seismic-activity': seismicLayer,
     'heat-detections': fireTiles,
     'reported-wildfires': reportedFireLayer,
     'africa-detections': africaFireTiles,
@@ -133,6 +137,7 @@ export function createAetherMapLayers({
     {},
     {
       [t('layers.volcanoName')]: volcanoLayer,
+      [t('layers.seismicName')]: seismicLayer,
       [t('layers.heatName')]: fireTiles,
       [t('layers.africaName')]: africaFireTiles,
       [t('layers.europeName')]: europeFireTiles,
@@ -154,6 +159,10 @@ export function createAetherMapLayers({
   const getOverlayId = (layer: L.Layer): MapOverlayId | null => {
     if (layer === volcanoLayer) {
       return 'volcano-activity'
+    }
+
+    if (layer === seismicLayer) {
+      return 'seismic-activity'
     }
 
     if (layer === fireTiles) {
@@ -178,7 +187,7 @@ export function createAetherMapLayers({
         enabled: true,
         state: firmsConfigured === false ? 'missing-key' : 'loading'
       })
-    } else if (layerId && layerId !== 'volcano-activity') {
+    } else if (layerId && isFireOverlayId(layerId)) {
       updateFireLayerStatus(layerId, { enabled: true, state: 'loading' })
     }
 
@@ -189,7 +198,7 @@ export function createAetherMapLayers({
   const handleOverlayRemove = (event: L.LayersControlEvent) => {
     const layerId = getOverlayId(event.layer)
 
-    if (layerId && layerId !== 'volcano-activity') {
+    if (layerId && isFireOverlayId(layerId)) {
       updateFireLayerStatus(layerId, { enabled: false, state: 'idle' })
     }
 
@@ -315,6 +324,7 @@ export function createAetherMapLayers({
   radar.start()
   reportedFires.start()
   volcanoActivity.start()
+  seismicActivity.start()
 
   for (const layerId of loadEnabledMapOverlays()) {
     mapOverlayLayers[layerId].addTo(map)
@@ -366,6 +376,7 @@ export function createAetherMapLayers({
       radar.destroy()
       reportedFires.destroy()
       volcanoActivity.destroy()
+      seismicActivity.destroy()
       layerControl.remove()
     }
   }
@@ -381,18 +392,23 @@ function decorateLayerControl(
     ) ?? []
   )
   const volcanoLayerInput = overlayInputs[0]
-  const heatLayerInput = overlayInputs[1]
-  const africaFireInput = overlayInputs[2]
-  const europeFireInput = overlayInputs[3]
-  const reportedFireInput = overlayInputs[4]
+  const seismicLayerInput = overlayInputs[1]
+  const heatLayerInput = overlayInputs[2]
+  const africaFireInput = overlayInputs[3]
+  const europeFireInput = overlayInputs[4]
+  const reportedFireInput = overlayInputs[5]
 
-  addLayerControlHeading(volcanoLayerInput, t('layers.volcanoes'))
+  addLayerControlHeading(volcanoLayerInput, t('layers.geological'))
   addLayerControlHeading(heatLayerInput, t('layers.satellite'))
   addLayerControlHeading(reportedFireInput, t('layers.reported'))
 
   volcanoLayerInput?.setAttribute(
     'aria-label',
     t('layers.volcanoDetail')
+  )
+  seismicLayerInput?.setAttribute(
+    'aria-label',
+    t('layers.seismicDetail')
   )
   heatLayerInput?.setAttribute(
     'aria-label',
@@ -417,6 +433,12 @@ function decorateLayerControl(
       label: t('layers.volcanoName'),
       detail: t('layers.volcanoDetail'),
       aboutLabel: t('layers.about', { layer: t('layers.volcanoName') })
+    }),
+    addLayerControlInfo(seismicLayerInput, {
+      id: 'seismic-activity',
+      label: t('layers.seismicShort'),
+      detail: t('layers.seismicDetail'),
+      aboutLabel: t('layers.about', { layer: t('layers.seismicShort') })
     }),
     addLayerControlInfo(heatLayerInput, {
       id: 'worldwide-heat',
@@ -443,6 +465,13 @@ function decorateLayerControl(
       aboutLabel: t('layers.about', { layer: t('layers.reportedShort') })
     })
   ]
+}
+
+function isFireOverlayId(layerId: MapOverlayId): layerId is FireLayerId {
+  return layerId === 'heat-detections' ||
+    layerId === 'reported-wildfires' ||
+    layerId === 'africa-detections' ||
+    layerId === 'europe-detections'
 }
 
 function addLayerControlHeading(

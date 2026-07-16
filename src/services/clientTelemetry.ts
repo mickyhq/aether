@@ -8,6 +8,7 @@ export type TelemetryProvider =
   'ocean-currents' |
   'radar' |
   'reported-fires' |
+  'seismic' |
   'soil-moisture' |
   'stargazing' |
   'temperature-records' |
