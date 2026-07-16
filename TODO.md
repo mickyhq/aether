@@ -10,6 +10,6 @@
 
 - [x] Add client performance telemetry for animation frame time, long frames, failed providers, and aborted refreshes without collecting location history.
 - [x] Add quota and backoff diagnostics for weather, air quality, radar, geocoding, NOAA, webcam, and astronomy providers.
-- [ ] Make the base-map tile endpoint configurable and document a production alternative to the public OpenStreetMap tile server.
+- [x] Make the base-map tile endpoint configurable and document a production alternative to the public OpenStreetMap tile server.
 - [ ] Show observation time, refresh time, source, and resolution consistently in map tooltips and dashboard cards.
 - [ ] Convert remaining server provider modules from JavaScript plus handwritten declarations to TypeScript.

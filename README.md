@@ -169,22 +169,45 @@ The volcano overlay uses the Smithsonian / USGS Weekly Volcanic Activity Report 
 
 ## Configuration
 
-Create a `.env` file or set these server-side environment variables:
+Create a `.env` file or set these environment variables:
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `FIRMS_MAP_KEY` | No | Enables worldwide NASA FIRMS heat-detection tiles |
-| `WINDY_KEY` | No | Enables nearby public webcams from Windy |
-| `METEOGATE_KEY` | No | Enables official European heat warnings |
-| `ECMWF_KEY` | No | Uses the Open-Meteo customer endpoint for ECMWF before trying the free endpoint |
-| `UPSTASH_REDIS_REST_URL` | No | Enables shared Upstash caching |
-| `UPSTASH_REDIS_REST_TOKEN` | No | Authenticates the shared Upstash cache |
+| Variable | Scope | Required | Purpose |
+| --- | --- | --- | --- |
+| `FIRMS_MAP_KEY` | Server | No | Enables worldwide NASA FIRMS heat-detection tiles |
+| `WINDY_KEY` | Server | No | Enables nearby public webcams from Windy |
+| `METEOGATE_KEY` | Server | No | Enables official European heat warnings |
+| `ECMWF_KEY` | Server | No | Uses the Open-Meteo customer endpoint for ECMWF before trying the free endpoint |
+| `UPSTASH_REDIS_REST_URL` | Server | No | Enables shared Upstash caching |
+| `UPSTASH_REDIS_REST_TOKEN` | Server | No | Authenticates the shared Upstash cache |
+| `VITE_BASE_MAP_STYLE_URL` | Browser | No | MapLibre style endpoint; defaults to OpenFreeMap Positron |
+| `VITE_BASE_MAP_ATTRIBUTION` | Browser | No | Attribution shown for the configured style and its data |
 
 Without Upstash, production falls back to Vercel Runtime Cache and local development falls back to memory. OpenFreeMap, US National Weather Service alerts, EFFIS, RainViewer, NOAA, Nominatim, and the free Open-Meteo endpoints do not need project keys.
 
 Request a [NASA FIRMS map key](https://firms.modaps.eosdis.nasa.gov/api/map_key/) if you want the worldwide heat-detection overlay.
 
 Request a [Windy Webcams API key](https://api.windy.com/keys) to enable nearby live cameras. Camera players are loaded only when the webcam panel is opened.
+
+### Production base map
+
+The default OpenFreeMap endpoint is useful for development and modest public
+traffic, but its public instance has no service-level agreement. Production
+deployments can use a managed MapLibre-compatible style from
+[MapTiler Cloud](https://docs.maptiler.com/maplibre/) or self-host OpenMapTiles
+with [TileServer GL](https://openmaptiles.org/docs/host/tileserver-gl/).
+
+Example managed configuration:
+
+```dotenv
+VITE_BASE_MAP_STYLE_URL=https://api.maptiler.com/maps/streets-v2/style.json?key=YOUR_PUBLIC_BROWSER_KEY
+VITE_BASE_MAP_ATTRIBUTION=© MapTiler · © OpenStreetMap contributors
+```
+
+The style document must be reachable over HTTPS in production and must include
+working HTTPS tile, glyph, and sprite URLs. Set the attribution required by both
+the host and the underlying map data. `VITE_` values are embedded in browser
+JavaScript, so use only a public, origin-restricted browser key here. Keep all
+secret provider keys in server-only variables.
 
 ## Local development
 
