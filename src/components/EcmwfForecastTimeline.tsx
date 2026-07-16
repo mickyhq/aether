@@ -5,7 +5,8 @@ import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 import type { EcmwfForecast } from '../types/weather'
 import { prefersReducedMotion } from '../utils/motion'
 import { usePageVisibility } from '../hooks/usePageVisibility'
-import { describeWeatherCode } from '../weather/weatherCode'
+import { getWeatherCodeTranslationKey } from '../weather/weatherCode'
+import { useI18n } from '../i18n/I18nContext'
 
 type EcmwfForecastTimelineProps = {
   forecast: EcmwfForecast | null
@@ -20,6 +21,7 @@ export function EcmwfForecastTimeline({
   onFrameChange,
   onPlaybackChange
 }: EcmwfForecastTimelineProps) {
+  const { language, t } = useI18n()
   const pageVisible = usePageVisibility()
   const [frameIndex, setFrameIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -70,30 +72,30 @@ export function EcmwfForecastTimeline({
   }, [frames.length, pageVisible, playing])
 
   if (loading) {
-    return <Box className="ecmwf-forecast">Loading ECMWF forecast</Box>
+    return <Box className="ecmwf-forecast">{t('ecmwf.loading')}</Box>
   }
 
   if (!forecast || !selected) {
-    return <Box className="ecmwf-forecast">ECMWF forecast unavailable</Box>
+    return <Box className="ecmwf-forecast">{t('ecmwf.unavailable')}</Box>
   }
 
   return (
     <Box
       className={`ecmwf-forecast ${isEcmwf ? '' : 'ecmwf-forecast-fallback'}`}
-      aria-label="ECMWF visual forecast"
+      aria-label={t('ecmwf.visualAria')}
     >
       <Box className="ecmwf-forecast-heading">
         <Box>
           <Typography className="ecmwf-forecast-model">
-            {isEcmwf ? forecast.model : 'ECMWF unavailable'}
+            {isEcmwf ? forecast.model : t('ecmwf.unavailable')}
           </Typography>
           <Typography className="ecmwf-forecast-time">
-            {formatForecastTime(selected.time)}
+            {formatForecastTime(selected.time, language)}
           </Typography>
         </Box>
         <IconButton
           size="small"
-          aria-label={playing ? 'Pause ECMWF forecast' : 'Play ECMWF forecast'}
+          aria-label={playing ? t('ecmwf.pause') : t('ecmwf.play')}
           onClick={() => {
             setHasPlayed(true)
             setPlaying(current => !current)
@@ -106,7 +108,7 @@ export function EcmwfForecastTimeline({
 
       {!isEcmwf && (
         <Typography className="ecmwf-forecast-note">
-          Showing standard forecast until ECMWF data answers.
+          {t('ecmwf.fallback')}
         </Typography>
       )}
 
@@ -119,7 +121,7 @@ export function EcmwfForecastTimeline({
       <Box
         className="ecmwf-visual-preview"
         style={buildForecastStyle(selected, temperatureRange)}
-        aria-label="ECMWF animated weather preview"
+        aria-label={t('ecmwf.previewAria')}
       >
         <Box className="ecmwf-visual-sky" />
         <Box className="ecmwf-visual-clouds" />
@@ -131,7 +133,7 @@ export function EcmwfForecastTimeline({
           <span>➤</span>
         </Box>
         <Box className="ecmwf-visual-caption">
-          {describeWeatherCode(selected.weatherCode)}
+          {t(getWeatherCodeTranslationKey(selected.weatherCode))}
         </Box>
       </Box>
 
@@ -139,7 +141,7 @@ export function EcmwfForecastTimeline({
         className="ecmwf-temperature-chart"
         viewBox="0 0 240 42"
         role="img"
-        aria-label="ECMWF five-day temperature trend"
+        aria-label={t('ecmwf.trendAria')}
       >
         <polyline points={points} fill="none" stroke="#8fe5ff" strokeWidth="2" />
         <line
@@ -158,7 +160,7 @@ export function EcmwfForecastTimeline({
         min="0"
         max={Math.max(0, frames.length - 1)}
         value={frameIndex}
-        aria-label="ECMWF forecast time"
+        aria-label={t('ecmwf.timeAria')}
         onChange={event => {
           setPlaying(false)
           setHasPlayed(true)
@@ -231,8 +233,8 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value))
 }
 
-function formatForecastTime(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
+function formatForecastTime(value: string, language: string) {
+  return new Intl.DateTimeFormat(language, {
     weekday: 'short',
     hour: '2-digit',
     minute: '2-digit'

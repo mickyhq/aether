@@ -16,6 +16,7 @@ import { TemperatureRecords } from './TemperatureRecords'
 import { SoilMoisture } from './SoilMoisture'
 import { NearbyWebcams } from './NearbyWebcams'
 import { StargazingIndex } from './StargazingIndex'
+import { useI18n } from '../i18n/I18nContext'
 
 type WeatherDashboardProps = {
   weather: WeatherConfig | null
@@ -44,6 +45,7 @@ export function WeatherDashboard({
   mode,
   onModeChange
 }: WeatherDashboardProps) {
+  const { t } = useI18n()
   const visualForecast = useMemo(() => {
     if (ecmwfForecast) {
       return ecmwfForecast
@@ -54,15 +56,15 @@ export function WeatherDashboard({
     }
 
     return {
-      model: 'Standard forecast',
+      model: t('forecast.standard'),
       latitude: 0,
       longitude: 0,
       frames: weather.evolution
     }
-  }, [ecmwfForecast, weather])
+  }, [ecmwfForecast, t, weather])
 
   return (
-    <Box component="aside" className="weather-panel" aria-label="Weather layers and forecast">
+    <Box component="aside" className="weather-panel" aria-label={t('forecast.panelAria')}>
       <Stack spacing={1.25}>
         <SevereWeatherAlerts
           weather={alertWeather}
@@ -71,49 +73,49 @@ export function WeatherDashboard({
         <Stack className="metric-grid">
           <Metric
             icon={<DeviceThermostatIcon />}
-            label="Temp"
+            label={t('mode.temp')}
             value={formatTemperature(weather)}
             selected={mode === 'temperature'}
             onClick={() => onModeChange('temperature')}
           />
           <Metric
             icon={<AirIcon />}
-            label="Wind"
+            label={t('mode.wind')}
             value={formatWind(weather)}
             selected={mode === 'wind'}
             onClick={() => onModeChange('wind')}
           />
           <Metric
             icon={<FlightIcon />}
-            label="Jet stream"
+            label={t('mode.jetStream')}
             value="250 hPa"
             selected={mode === 'jet-stream'}
             onClick={() => onModeChange('jet-stream')}
           />
           <Metric
             icon={<WaterDropIcon />}
-            label="Precipitation"
+            label={t('mode.precipitation')}
             value={formatPrecipitation(weather)}
             selected={mode === 'precipitation'}
             onClick={() => onModeChange('precipitation')}
           />
           <Metric
             icon={<ThunderstormIcon />}
-            label="Storm"
-            value={weather?.isThunderstorm ? 'Yes' : 'No'}
+            label={t('mode.storm')}
+            value={weather?.isThunderstorm ? t('common.yes') : t('common.no')}
             selected={mode === 'storm'}
             onClick={() => onModeChange('storm')}
           />
           <Metric
             icon={<BlurOnIcon />}
-            label="Air quality"
+            label={t('mode.airQuality')}
             value={formatAirQuality(airQuality)}
             selected={mode === 'air-quality'}
             onClick={() => onModeChange('air-quality')}
           />
           <Metric
             icon={<WavesIcon />}
-            label="Ocean current"
+            label={t('mode.oceanCurrent')}
             value="NOAA · Global"
             selected={mode === 'ocean-current'}
             onClick={() => onModeChange(
@@ -144,16 +146,17 @@ export function WeatherDashboard({
 }
 
 function HourlyForecast({ frames }: { frames: WeatherEvolutionFrame[] }) {
+  const { t } = useI18n()
   const visibleFrames = frames.slice(0, 12)
 
   if (visibleFrames.length === 0) {
     return (
       <Box className="hourly-forecast">
         <Typography variant="caption" className="hourly-forecast-label">
-          12-hour forecast
+          {t('forecast.twelveHour')}
         </Typography>
         <Box className="hourly-forecast-empty">
-          Forecast unavailable
+          {t('forecast.unavailable')}
         </Box>
       </Box>
     )
@@ -200,7 +203,7 @@ function HourlyForecast({ frames }: { frames: WeatherEvolutionFrame[] }) {
   return (
     <Box className="hourly-forecast">
       <Typography variant="caption" className="hourly-forecast-label">
-        12-hour forecast
+        {t('forecast.twelveHour')}
       </Typography>
       <Box className="hourly-forecast-chart">
         <svg
@@ -209,7 +212,7 @@ function HourlyForecast({ frames }: { frames: WeatherEvolutionFrame[] }) {
           height={chartHeight + 22}
           preserveAspectRatio="xMinYMid meet"
           role="img"
-          aria-label="12-hour temperature and precipitation forecast"
+          aria-label={t('forecast.chartAria')}
         >
           <defs>
             <linearGradient id="forecast-temp-line" x1="0" y1="0" x2="0" y2="1">

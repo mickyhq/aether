@@ -2,6 +2,7 @@ type LayerControlInfo = {
   id: string
   label: string
   detail: string
+  aboutLabel: string
 }
 
 export function addLayerControlInfo(
@@ -23,7 +24,7 @@ export function addLayerControlInfo(
   button.type = 'button'
   button.className = 'leaflet-layer-info-button'
   button.textContent = 'i'
-  button.setAttribute('aria-label', `About ${info.label}`)
+  button.setAttribute('aria-label', info.aboutLabel)
   button.setAttribute('aria-expanded', 'false')
   button.setAttribute('aria-controls', popoverId)
   button.setAttribute('aria-haspopup', 'dialog')

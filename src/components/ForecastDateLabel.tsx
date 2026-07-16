@@ -1,10 +1,13 @@
 import { Typography } from '@mui/material'
+import { useI18n } from '../i18n/I18nContext'
 
 type ForecastDateLabelProps = {
   time: string | null
 }
 
 export function ForecastDateLabel({ time }: ForecastDateLabelProps) {
+  const { language, t } = useI18n()
+
   if (!time) {
     return null
   }
@@ -12,16 +15,16 @@ export function ForecastDateLabel({ time }: ForecastDateLabelProps) {
   return (
     <Typography
       className="forecast-date-label"
-      aria-label="Forecast date"
+      aria-label={t('forecast.dateAria')}
       aria-live="polite"
     >
-      Forecast · {formatForecastDate(time)}
+      {t('forecast.date', { date: formatForecastDate(time, language) })}
     </Typography>
   )
 }
 
-function formatForecastDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
+function formatForecastDate(value: string, language: string) {
+  return new Intl.DateTimeFormat(language, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',

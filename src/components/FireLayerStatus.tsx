@@ -1,18 +1,27 @@
 import type { FireLayerStatus as FireLayerStatusValue } from '../map/fireLayerStatus'
+import { useI18n } from '../i18n/I18nContext'
+import type { TranslationKey } from '../i18n/translations'
 
 type FireLayerStatusProps = {
   statuses: FireLayerStatusValue[]
 }
 
-const STATE_LABELS: Record<FireLayerStatusValue['state'], string> = {
-  idle: 'Off',
-  loading: 'Loading…',
-  available: 'Ready',
-  unavailable: 'Unavailable',
-  'missing-key': 'NASA key missing'
+const STATE_LABELS: Record<FireLayerStatusValue['state'], TranslationKey> = {
+  idle: 'fire.off',
+  loading: 'common.loading',
+  available: 'fire.ready',
+  unavailable: 'common.unavailable',
+  'missing-key': 'fire.keyMissing'
+}
+const LAYER_LABELS: Record<FireLayerStatusValue['id'], TranslationKey> = {
+  'heat-detections': 'fire.worldwideLayer',
+  'reported-wildfires': 'fire.reportedLayer',
+  'africa-detections': 'fire.africaLayer',
+  'europe-detections': 'fire.europeLayer'
 }
 
 export function FireLayerStatus({ statuses }: FireLayerStatusProps) {
+  const { t } = useI18n()
   const enabledStatuses = statuses.filter(status => status.enabled)
   const effisStatuses = enabledStatuses.filter(status => (
     status.id === 'europe-detections' || status.id === 'africa-detections'
@@ -33,25 +42,25 @@ export function FireLayerStatus({ statuses }: FireLayerStatusProps) {
   return (
     <aside
       className="fire-layer-status"
-      aria-label="Fire layer status"
+      aria-label={t('fire.statusAria')}
       aria-live="polite"
     >
       {enabledStatuses.map(status => (
         <div className="fire-layer-status-row" key={status.id}>
-          <span className="fire-layer-status-name">{status.label}</span>
+          <span className="fire-layer-status-name">{t(LAYER_LABELS[status.id])}</span>
           <span
             className={`fire-layer-status-state is-${status.state}`}
           >
-            {STATE_LABELS[status.state]}
+            {t(STATE_LABELS[status.state])}
           </span>
           {(status.lastUpdated || typeof status.itemCount === 'number') && (
             <span className="fire-layer-status-detail">
               {typeof status.itemCount === 'number'
-                ? `${status.itemCount.toLocaleString()} reports · `
+                ? t('fire.reports', { count: status.itemCount.toLocaleString() })
                 : ''}
               {status.lastUpdated
-                ? `Loaded ${formatTime(status.lastUpdated)}`
-                : 'Not loaded yet'}
+                ? t('fire.loaded', { time: formatTime(status.lastUpdated) })
+                : t('fire.notLoaded')}
             </span>
           )}
         </div>
@@ -59,15 +68,15 @@ export function FireLayerStatus({ statuses }: FireLayerStatusProps) {
       {detectionStatus && (
         <section
           className="effis-fire-legend"
-          aria-label="VIIRS detection age legend"
+          aria-label={t('fire.legendAria')}
         >
-          <strong>{formatLegendTitle(hasEffis, hasFirms)}</strong>
+          <strong>{t(formatLegendTitle(hasEffis, hasFirms))}</strong>
           <div className="effis-fire-legend-ages">
-            <span><i className="is-six-hours" />≤ 6 hours</span>
-            <span><i className="is-twelve-hours" />6–12 hours</span>
-            <span><i className="is-day" />12–24 hours</span>
+            <span><i className="is-six-hours" />{t('fire.sixHours')}</span>
+            <span><i className="is-twelve-hours" />{t('fire.twelveHours')}</span>
+            <span><i className="is-day" />{t('fire.day')}</span>
             {hasEffis && (
-              <span><i className="is-older" />Older · yesterday</span>
+              <span><i className="is-older" />{t('fire.older')}</span>
             )}
           </div>
           {hasEffis && (
@@ -76,9 +85,9 @@ export function FireLayerStatus({ statuses }: FireLayerStatusProps) {
             </span>
           )}
           <span className="effis-fire-legend-time">
-            {formatSourceWindow(hasEffis, hasFirms)}
+            {formatSourceWindow(hasEffis, hasFirms, t)}
             {detectionStatus.lastUpdated
-              ? ` · Tiles loaded ${formatTime(detectionStatus.lastUpdated)}`
+              ? ` · ${t('fire.tilesLoaded', { time: formatTime(detectionStatus.lastUpdated) })}`
               : ''}
           </span>
         </section>
@@ -87,22 +96,26 @@ export function FireLayerStatus({ statuses }: FireLayerStatusProps) {
   )
 }
 
-function formatLegendTitle(hasEffis: boolean, hasFirms: boolean) {
+function formatLegendTitle(hasEffis: boolean, hasFirms: boolean): TranslationKey {
   if (hasEffis && hasFirms) {
-    return 'VIIRS detection age'
+    return 'fire.legendTitle'
   }
 
-  return hasFirms ? 'NASA FIRMS VIIRS detection age' : 'EFFIS VIIRS detection age'
+  return hasFirms ? 'fire.firmsLegendTitle' : 'fire.effisLegendTitle'
 }
 
-function formatSourceWindow(hasEffis: boolean, hasFirms: boolean) {
+function formatSourceWindow(
+  hasEffis: boolean,
+  hasFirms: boolean,
+  t: ReturnType<typeof useI18n>['t']
+) {
   if (hasEffis && hasFirms) {
-    return `Source windows UTC: Worldwide last 24h · EFFIS ${formatEffisWindow()}`
+    return t('fire.combinedWindow', { window: formatEffisWindow() })
   }
 
   return hasFirms
-    ? 'Source window UTC: Worldwide last 24 hours'
-    : `Source window UTC: ${formatEffisWindow()}`
+    ? t('fire.worldwideWindow')
+    : t('fire.effisWindow', { window: formatEffisWindow() })
 }
 
 function formatTime(timestamp: number) {

@@ -11,6 +11,26 @@ import type {
   WeatherLocation
 } from '../types/weather'
 import { usePageVisibility } from '../hooks/usePageVisibility'
+import { useI18n } from '../i18n/I18nContext'
+import type { TranslationKey } from '../i18n/translations'
+
+const RATING_KEYS: Record<string, TranslationKey> = {
+  Excellent: 'rating.excellent',
+  Good: 'rating.good',
+  Fair: 'rating.fair',
+  Poor: 'rating.poor',
+  Bad: 'rating.bad'
+}
+const MOON_KEYS: Record<string, TranslationKey> = {
+  'New moon': 'moon.new',
+  'Waxing crescent': 'moon.waxingCrescent',
+  'First quarter': 'moon.firstQuarter',
+  'Waxing gibbous': 'moon.waxingGibbous',
+  'Full moon': 'moon.full',
+  'Waning gibbous': 'moon.waningGibbous',
+  'Last quarter': 'moon.lastQuarter',
+  'Waning crescent': 'moon.waningCrescent'
+}
 
 export function StargazingIndex({ location }: { location: WeatherLocation | null }) {
   const [forecast, setForecast] = useState<StargazingForecast | null>(null)
@@ -18,6 +38,7 @@ export function StargazingIndex({ location }: { location: WeatherLocation | null
   const [loading, setLoading] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
   const pageVisible = usePageVisibility()
+  const { language, t } = useI18n()
 
   useEffect(() => {
     if (!location) {
@@ -58,20 +79,20 @@ export function StargazingIndex({ location }: { location: WeatherLocation | null
       <Box className="stargazing-heading">
         <Box>
           <NightsStayIcon />
-          <Typography variant="caption">Stargazing index</Typography>
+          <Typography variant="caption">{t('stars.title')}</Typography>
         </Box>
-        <Typography variant="caption">3-night astro forecast</Typography>
+        <Typography variant="caption">{t('stars.subtitle')}</Typography>
       </Box>
 
-      {loading && <Typography variant="caption">Reading the night sky…</Typography>}
-      {unavailable && <Typography variant="caption">Stargazing forecast unavailable</Typography>}
+      {loading && <Typography variant="caption">{t('stars.reading')}</Typography>}
+      {unavailable && <Typography variant="caption">{t('stars.unavailable')}</Typography>}
       {forecast && forecast.nights.length === 0 && (
-        <Typography variant="caption">No dark observing window in the next three days.</Typography>
+        <Typography variant="caption">{t('stars.noWindow')}</Typography>
       )}
 
       {forecast && forecast.nights.length > 0 && (
         <>
-          <Box className="stargazing-nights" role="tablist" aria-label="Night forecast">
+          <Box className="stargazing-nights" role="tablist" aria-label={t('stars.nightAria')}>
             {forecast.nights.map((item, index) => (
               <button
                 key={item.date}
@@ -80,7 +101,7 @@ export function StargazingIndex({ location }: { location: WeatherLocation | null
                 className={nightIndex === index ? 'is-selected' : ''}
                 onClick={() => setNightIndex(index)}
               >
-                {formatNight(item.date)}
+                {formatNight(item.date, language)}
                 <strong>{item.score}</strong>
               </button>
             ))}
@@ -93,21 +114,24 @@ export function StargazingIndex({ location }: { location: WeatherLocation | null
                 style={{ '--stargazing-score': `${night.score}%` } as CSSProperties}
               >
                 <strong>{night.score}</strong>
-                <span>{night.rating}</span>
+                <span>{t(RATING_KEYS[night.rating] ?? 'rating.fair')}</span>
               </Box>
               <Box className="stargazing-factors">
-                <Factor icon={<CloudIcon />} label={`${night.cloudCover}% cloud`} />
-                <Factor icon={<VisibilityIcon />} label={`${night.seeingArcseconds.toFixed(1)}″ seeing`} />
+                <Factor icon={<CloudIcon />} label={t('stars.cloud', { value: night.cloudCover })} />
+                <Factor icon={<VisibilityIcon />} label={t('stars.seeing', { value: night.seeingArcseconds.toFixed(1) })} />
                 <Factor icon={<VisibilityIcon />} label={`${night.transparency.toFixed(2)} mag/airmass`} />
                 <Factor
                   icon={<Brightness2Icon />}
-                  label={`${night.moonIllumination}% moon · ${night.moonPhase}`}
+                  label={t('stars.moon', {
+                    value: night.moonIllumination,
+                    phase: t(MOON_KEYS[night.moonPhase] ?? 'moon.new')
+                  })}
                 />
                 <Factor
                   icon={<NightsStayIcon />}
                   label={forecast.lightPollution
-                    ? `Estimated Bortle ${forecast.lightPollution.estimatedBortle}`
-                    : 'Light pollution unavailable'}
+                    ? t('stars.bortle', { value: forecast.lightPollution.estimatedBortle })
+                    : t('stars.lightUnavailable')}
                 />
               </Box>
             </Box>
@@ -115,7 +139,7 @@ export function StargazingIndex({ location }: { location: WeatherLocation | null
 
           {night && (
             <Typography variant="caption" className="stargazing-best-time">
-              Best forecast slot: {formatUtcTime(night)} · 7Timer + World Atlas estimate
+              {t('stars.bestTime', { time: formatUtcTime(night, language) })}
             </Typography>
           )}
         </>
@@ -133,8 +157,8 @@ function Factor({ icon, label }: { icon: React.ReactNode, label: string }) {
   )
 }
 
-function formatNight(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
+function formatNight(value: string, language: string) {
+  return new Intl.DateTimeFormat(language, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -142,8 +166,8 @@ function formatNight(value: string) {
   }).format(new Date(`${value}T12:00:00Z`))
 }
 
-function formatUtcTime(night: StargazingNight) {
-  return new Intl.DateTimeFormat(undefined, {
+function formatUtcTime(night: StargazingNight, language: string) {
+  return new Intl.DateTimeFormat(language, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,

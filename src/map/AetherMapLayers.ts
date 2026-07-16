@@ -21,33 +21,14 @@ import {
 } from './regionalTileClip'
 import { VolcanoActivityLayer } from './VolcanoActivityLayer'
 import { WeatherRadarLayer } from './WeatherRadarLayer'
+import type { TranslationKey } from '../i18n/translations'
 
 const AFRICA_FIRE_BOUNDS = L.latLngBounds([-35, -20], [40, 55])
 const EUROPE_FIRE_BOUNDS = L.latLngBounds([40, -25], [72, 45])
-const FIRE_LAYER_DESCRIPTION = [
-  'Satellite heat detections from the last 24 hours.',
-  'They may include extinguished fires or other hot sources,',
-  'and clouds can hide active fires.'
-].join(' ')
-const FIRMS_HOVER_INFO: MapFirePointer = {
-  title: 'Worldwide heat detection',
-  source: 'NASA FIRMS · VIIRS',
-  detail: 'Detected within the last 24 hours. Not a confirmed active fire.'
-}
-const AFRICA_EFFIS_HOVER_INFO: MapFirePointer = {
-  title: 'Africa heat detection',
-  source: 'Copernicus EFFIS · VIIRS',
-  detail: 'Detected today or yesterday. Not a confirmed active fire.'
-}
-const EUROPE_EFFIS_HOVER_INFO: MapFirePointer = {
-  title: 'Europe heat detection',
-  source: 'Copernicus EFFIS · VIIRS',
-  detail: 'Detected today or yesterday. Not a confirmed active fire.'
-}
-
 type AetherMapLayersOptions = {
   map: L.Map
   mapLanguage: string
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string
   onReportedFirePointerChange: (blocked: boolean) => void
   updateFireLayerStatus: (
     id: FireLayerId,
@@ -67,15 +48,32 @@ export type AetherMapLayers = {
 export function createAetherMapLayers({
   map,
   mapLanguage,
+  t,
   onReportedFirePointerChange,
   updateFireLayerStatus
 }: AetherMapLayersOptions): AetherMapLayers {
+  const firmsHoverInfo: MapFirePointer = {
+    title: t('layers.worldwideDetection'),
+    source: 'NASA FIRMS · VIIRS',
+    detail: t('layers.lastDayDetail')
+  }
+  const africaEffisHoverInfo: MapFirePointer = {
+    title: t('layers.africaDetection'),
+    source: 'Copernicus EFFIS · VIIRS',
+    detail: t('layers.twoDayDetail')
+  }
+  const europeEffisHoverInfo: MapFirePointer = {
+    title: t('layers.europeDetection'),
+    source: 'Copernicus EFFIS · VIIRS',
+    detail: t('layers.twoDayDetail')
+  }
   const reportedFires = new ReportedFireLayer(
     map,
     status => updateFireLayerStatus('reported-wildfires', status),
-    fire => onReportedFirePointerChange(Boolean(fire))
+    fire => onReportedFirePointerChange(Boolean(fire)),
+    t
   )
-  const volcanoActivity = new VolcanoActivityLayer(map)
+  const volcanoActivity = new VolcanoActivityLayer(map, t)
   const fireTiles = L.tileLayer(
     '/api/fire-tile?z={z}&x={x}&y={y}',
     {
@@ -134,11 +132,11 @@ export function createAetherMapLayers({
   const layerControl = L.control.layers(
     {},
     {
-      'Worldwide weekly volcano activity': volcanoLayer,
-      'Worldwide heat detections · 24h': fireTiles,
-      'Africa fire detections · Today + yesterday': africaFireTiles,
-      'Europe fire detections · Today + yesterday': europeFireTiles,
-      'Reported open wildfires': reportedFireLayer
+      [t('layers.volcanoName')]: volcanoLayer,
+      [t('layers.heatName')]: fireTiles,
+      [t('layers.africaName')]: africaFireTiles,
+      [t('layers.europeName')]: europeFireTiles,
+      [t('layers.reportedName')]: reportedFireLayer
     },
     {
       collapsed: true,
@@ -322,7 +320,7 @@ export function createAetherMapLayers({
     mapOverlayLayers[layerId].addTo(map)
   }
 
-  const layerInfoCleanups = decorateLayerControl(layerControl)
+  const layerInfoCleanups = decorateLayerControl(layerControl, t)
 
   return {
     badgeLayer,
@@ -330,15 +328,15 @@ export function createAetherMapLayers({
     findFireAtPoint: point => findFireTileAtPoint(map, point, [
       {
         layer: africaFireTiles,
-        info: AFRICA_EFFIS_HOVER_INFO,
+        info: africaEffisHoverInfo,
         bounds: AFRICA_FIRE_BOUNDS
       },
       {
         layer: europeFireTiles,
-        info: EUROPE_EFFIS_HOVER_INFO,
+        info: europeEffisHoverInfo,
         bounds: EUROPE_FIRE_BOUNDS
       },
-      { layer: fireTiles, info: FIRMS_HOVER_INFO }
+      { layer: fireTiles, info: firmsHoverInfo }
     ]),
     setMapLanguage: baseMap.setLanguage,
     setWeatherMode: (mode, radarOpacity) => {
@@ -373,7 +371,10 @@ export function createAetherMapLayers({
   }
 }
 
-function decorateLayerControl(layerControl: L.Control.Layers) {
+function decorateLayerControl(
+  layerControl: L.Control.Layers,
+  t: AetherMapLayersOptions['t']
+) {
   const overlayInputs = Array.from(
     layerControl.getContainer()?.querySelectorAll<HTMLInputElement>(
       'input.leaflet-control-layers-selector[type="checkbox"]'
@@ -385,56 +386,61 @@ function decorateLayerControl(layerControl: L.Control.Layers) {
   const europeFireInput = overlayInputs[3]
   const reportedFireInput = overlayInputs[4]
 
-  addLayerControlHeading(volcanoLayerInput, 'Volcanoes')
-  addLayerControlHeading(heatLayerInput, 'Satellite detections')
-  addLayerControlHeading(reportedFireInput, 'Reported incidents')
+  addLayerControlHeading(volcanoLayerInput, t('layers.volcanoes'))
+  addLayerControlHeading(heatLayerInput, t('layers.satellite'))
+  addLayerControlHeading(reportedFireInput, t('layers.reported'))
 
   volcanoLayerInput?.setAttribute(
     'aria-label',
-    'Worldwide weekly volcano activity from Smithsonian GVP and USGS. Reports are preliminary and not comprehensive.'
+    t('layers.volcanoDetail')
   )
   heatLayerInput?.setAttribute(
     'aria-label',
-    `Worldwide heat detections from the last 24 hours. ${FIRE_LAYER_DESCRIPTION}`
+    t('layers.heatDetail')
   )
   reportedFireInput?.setAttribute(
     'aria-label',
-    'Reported open wildfires from NIFC, CWFIS, and NASA EONET. Coverage is incomplete and status can lag.'
+    t('layers.reportedDetail')
   )
   africaFireInput?.setAttribute(
     'aria-label',
-    'Copernicus Africa fire detections from today and yesterday. These are not confirmed incident reports.'
+    t('layers.africaDetail')
   )
   europeFireInput?.setAttribute(
     'aria-label',
-    'Copernicus Europe fire detections from today and yesterday. These are not confirmed incident reports.'
+    t('layers.europeDetail')
   )
 
   return [
     addLayerControlInfo(volcanoLayerInput, {
       id: 'volcanoes',
-      label: 'worldwide weekly volcano activity',
-      detail: 'Preliminary worldwide activity reported this week by the Smithsonian Global Volcanism Program and USGS.'
+      label: t('layers.volcanoName'),
+      detail: t('layers.volcanoDetail'),
+      aboutLabel: t('layers.about', { layer: t('layers.volcanoName') })
     }),
     addLayerControlInfo(heatLayerInput, {
       id: 'worldwide-heat',
-      label: 'worldwide heat detections',
-      detail: FIRE_LAYER_DESCRIPTION
+      label: t('layers.heatShort'),
+      detail: t('layers.heatDetail'),
+      aboutLabel: t('layers.about', { layer: t('layers.heatShort') })
     }),
     addLayerControlInfo(africaFireInput, {
       id: 'africa-fire',
-      label: 'Africa fire detections',
-      detail: 'Copernicus EFFIS filtered VIIRS detections from today and yesterday across Africa. These are not confirmed incident reports.'
+      label: t('layers.africaShort'),
+      detail: t('layers.africaDetail'),
+      aboutLabel: t('layers.about', { layer: t('layers.africaShort') })
     }),
     addLayerControlInfo(europeFireInput, {
       id: 'europe-fire',
-      label: 'Europe fire detections',
-      detail: 'Copernicus EFFIS filtered VIIRS detections from today and yesterday across Europe. These are not confirmed incident reports.'
+      label: t('layers.europeShort'),
+      detail: t('layers.europeDetail'),
+      aboutLabel: t('layers.about', { layer: t('layers.europeShort') })
     }),
     addLayerControlInfo(reportedFireInput, {
       id: 'reported-fires',
-      label: 'reported open wildfires',
-      detail: 'Open wildfire incidents from NIFC in the USA, CWFIS in Canada, and NASA EONET elsewhere. Coverage is incomplete and status can lag.'
+      label: t('layers.reportedShort'),
+      detail: t('layers.reportedDetail'),
+      aboutLabel: t('layers.about', { layer: t('layers.reportedShort') })
     })
   ]
 }

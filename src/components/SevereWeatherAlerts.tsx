@@ -1,6 +1,8 @@
 import { Alert, AlertTitle, Stack } from '@mui/material'
 import { useState } from 'react'
 import type { HeatAlert, WeatherConfig } from '../types/weather'
+import { useI18n } from '../i18n/I18nContext'
+import type { TranslationKey } from '../i18n/translations'
 
 const THUNDERSTORM_CODES = new Set([95, 96, 99])
 const HEAVY_RAIN_CODES = new Set([65, 67, 82])
@@ -11,8 +13,10 @@ const SNOW_THRESHOLD = 0.5
 type SevereAlert = {
   id: string
   severity: 'error' | 'warning'
-  title: string
-  message: string
+  title: TranslationKey | string
+  message: TranslationKey | string
+  values?: Record<string, string | number>
+  translated?: boolean
 }
 
 export function SevereWeatherAlerts({
@@ -22,7 +26,8 @@ export function SevereWeatherAlerts({
   weather: WeatherConfig | null
   officialHeatAlerts: HeatAlert[]
 }) {
-  const alerts = getSevereWeatherAlerts(weather, officialHeatAlerts)
+  const { t } = useI18n()
+  const alerts = getSevereWeatherAlerts(weather, officialHeatAlerts, t)
   const signature = [
     weather?.zone,
     weather?.weatherCode,
@@ -54,7 +59,7 @@ export function SevereWeatherAlerts({
   }
 
   return (
-    <Stack spacing={0.75} aria-label="Severe weather alerts">
+    <Stack spacing={0.75} aria-label={t('alert.aria')}>
       {visibleAlerts.map(alert => (
         <Alert
           key={alert.id}
@@ -63,8 +68,10 @@ export function SevereWeatherAlerts({
           className="severe-weather-alert"
           onClose={() => dismiss(alert.id)}
         >
-          <AlertTitle>{alert.title}</AlertTitle>
-          {alert.message}
+          <AlertTitle>
+            {alert.translated ? alert.title : t(alert.title as TranslationKey, alert.values)}
+          </AlertTitle>
+          {alert.translated ? alert.message : t(alert.message as TranslationKey, alert.values)}
         </Alert>
       ))}
     </Stack>
@@ -73,7 +80,11 @@ export function SevereWeatherAlerts({
 
 export function getSevereWeatherAlerts(
   weather: WeatherConfig | null,
-  officialHeatAlerts: HeatAlert[] = []
+  officialHeatAlerts: HeatAlert[] = [],
+  translate: (
+    key: TranslationKey,
+    values?: Record<string, string | number>
+  ) => string = defaultTranslate
 ): SevereAlert[] {
   if (!weather) {
     return []
@@ -86,7 +97,11 @@ export function getSevereWeatherAlerts(
       id: `official-heat:${alert.id}`,
       severity: alert.severity,
       title: alert.title,
-      message: `${alert.message} Source: ${alert.source}.`
+      message: translate('alert.source', {
+        message: alert.message,
+        source: alert.source
+      }),
+      translated: true
     })
   }
 
@@ -99,15 +114,19 @@ export function getSevereWeatherAlerts(
       id: `forecast-${heatRisk.kind}`,
       severity: heatRisk.maximumTemperature >= 40 ? 'error' : 'warning',
       title: isHeatWave
-        ? 'Heat wave forecast'
+        ? 'alert.heatWave'
         : isExtremeHeat
-          ? 'Extreme heat forecast'
-          : 'High heat',
+          ? 'alert.extremeHeat'
+          : 'alert.highHeat',
       message: isHeatWave
-        ? `${heatRisk.days} hot days forecast, reaching ${Math.round(heatRisk.maximumTemperature)}°C. Stay hydrated and avoid peak heat.`
+        ? 'alert.heatWaveMessage'
         : isExtremeHeat
-          ? `Temperatures may reach ${Math.round(heatRisk.maximumTemperature)}°C. Stay hydrated and avoid peak heat.`
-          : `${Math.round(heatRisk.maximumTemperature)}°C detected or forecast. Stay hydrated and avoid peak heat.`
+          ? 'alert.heatMessage'
+          : 'alert.highHeatMessage',
+      values: {
+        days: heatRisk.days,
+        temperature: Math.round(heatRisk.maximumTemperature)
+      }
     })
   }
 
@@ -118,8 +137,8 @@ export function getSevereWeatherAlerts(
     alerts.push({
       id: 'thunderstorm',
       severity: 'error',
-      title: 'Thunderstorm',
-      message: 'Avoid exposed areas and watch for lightning.'
+      title: 'alert.thunderstorm',
+      message: 'alert.thunderstormMessage'
     })
   }
 
@@ -130,8 +149,9 @@ export function getSevereWeatherAlerts(
     alerts.push({
       id: 'heavy-rain',
       severity: 'warning',
-      title: 'Heavy rain',
-      message: `${weather.precipitation.toFixed(1)} mm detected. Watch for flooding.`
+      title: 'alert.heavyRain',
+      message: 'alert.heavyRainMessage',
+      values: { amount: weather.precipitation.toFixed(1) }
     })
   }
 
@@ -142,10 +162,21 @@ export function getSevereWeatherAlerts(
     alerts.push({
       id: 'snow',
       severity: 'warning',
-      title: 'Snow',
-      message: 'Roads and paths may be slippery.'
+      title: 'alert.snow',
+      message: 'alert.snowMessage'
     })
   }
 
   return alerts
+}
+
+function defaultTranslate(
+  key: TranslationKey,
+  values: Record<string, string | number> = {}
+) {
+  if (key === 'alert.source') {
+    return `${values.message} Source: ${values.source}.`
+  }
+
+  return key
 }

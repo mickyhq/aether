@@ -34,6 +34,7 @@ import type {
   WeatherMode,
   WeatherViewport
 } from '../types/weather'
+import { useI18n } from '../i18n/I18nContext'
 
 const WORLD_BOUNDS = L.latLngBounds(
   [-85.05112878, -180],
@@ -82,9 +83,9 @@ export function AetherMap({
   onPointerWeatherChange,
   onMapClick
 }: AetherMapProps) {
+  const { t } = useI18n()
   const elementRef = useRef<HTMLDivElement | null>(null)
   const initialLocationRef = useRef(location)
-  const initialMapLanguageRef = useRef(mapLanguage)
   const locationRef = useRef(location)
   const mapRef = useRef<L.Map | null>(null)
   const badgeLayerRef = useRef<L.LayerGroup | null>(null)
@@ -183,7 +184,8 @@ export function AetherMap({
 
     const layers = createAetherMapLayers({
       map,
-      mapLanguage: initialMapLanguageRef.current,
+      mapLanguage,
+      t,
       updateFireLayerStatus,
       onReportedFirePointerChange: blocked => {
         reportedFirePointerBlockedRef.current = blocked
@@ -198,7 +200,11 @@ export function AetherMap({
 
     badgeLayerRef.current = layers.badgeLayer
     layersRef.current = layers
-    const animation = new WeatherMapAnimation(map, mapElement)
+    const animation = new WeatherMapAnimation(
+      map,
+      mapElement,
+      t('ocean.seaTemperature')
+    )
     animation.start()
     animationRef.current = animation
 
@@ -398,7 +404,7 @@ export function AetherMap({
       animationRef.current = null
       layersRef.current = null
     }
-  }, [onViewportChange])
+  }, [mapLanguage, onViewportChange, t])
 
   useEffect(() => {
     layersRef.current?.setMapLanguage(mapLanguage)
@@ -461,7 +467,10 @@ export function AetherMap({
         interactive: false,
         icon: L.divIcon({
           className: 'weather-badge-marker',
-          html: renderWeatherBadge(sample, mode),
+          html: renderWeatherBadge(sample, mode, {
+            storm: t('mode.storm'),
+            noStorm: t('mode.noStorm')
+          }),
           iconSize: [112, 46],
           iconAnchor: [-8, 36]
         })
@@ -469,7 +478,7 @@ export function AetherMap({
 
       marker.addTo(badgeLayer)
     }
-  }, [samples, mode])
+  }, [samples, mode, t])
 
   useEffect(() => {
     animationRef.current?.setData(
@@ -530,13 +539,12 @@ export function AetherMap({
         className="aether-map"
         role="region"
         tabIndex={0}
-        aria-label={`Interactive weather map for ${location.label}`}
+        aria-label={t('map.aria', { location: location.label })}
         aria-describedby="map-keyboard-instructions"
         onKeyDown={handleMapKeyDown}
       />
       <p id="map-keyboard-instructions" className="visually-hidden">
-        Use arrow keys to pan, plus and minus to zoom, Enter to select the
-        center of the map, and Home to return to the selected location.
+        {t('map.instructions')}
       </p>
       <FireLayerStatus statuses={fireLayerStatuses} />
     </>

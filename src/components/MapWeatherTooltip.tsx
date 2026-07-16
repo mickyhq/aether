@@ -8,12 +8,16 @@ import RadarIcon from '@mui/icons-material/Radar'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import WavesIcon from '@mui/icons-material/Waves'
 import type { MapWeatherPointer } from '../types/weather'
+import { useI18n } from '../i18n/I18nContext'
+import type { TranslationKey } from '../i18n/translations'
 
 type MapWeatherTooltipProps = {
   reading: MapWeatherPointer | null
 }
 
 export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
+  const { t } = useI18n()
+
   if (!reading) {
     return null
   }
@@ -48,14 +52,17 @@ export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
           <div className="map-weather-tooltip-row">
             <WavesIcon />
             <span>
-              Current {reading.oceanCurrentSpeed.toFixed(2)} m/s {formatWindDirection(reading.oceanCurrentAngle)}
+              {t('map.current', {
+                speed: reading.oceanCurrentSpeed.toFixed(2),
+                direction: formatWindDirection(reading.oceanCurrentAngle)
+              })}
             </span>
           </div>
           {reading.seaSurfaceTemperature !== undefined && (
             <span>
-              Sea {reading.seaSurfaceTemperature.toFixed(1)}°C
+              {t('map.sea', { temperature: reading.seaSurfaceTemperature.toFixed(1) })}
               {reading.seaSurfaceTemperatureAnomaly !== undefined && (
-                ` · ${formatAnomaly(reading.seaSurfaceTemperatureAnomaly)} anomaly`
+                ` · ${t('map.anomaly', { value: formatAnomaly(reading.seaSurfaceTemperatureAnomaly) })}`
               )}
             </span>
           )}
@@ -66,7 +73,10 @@ export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
         <div className="map-weather-tooltip-row">
           <FlightIcon />
           <span>
-            Jet {Math.round(reading.jetStreamSpeed)} km/h {formatWindDirection(reading.jetStreamAngle)}
+            {t('map.jet', {
+              speed: Math.round(reading.jetStreamSpeed),
+              direction: formatWindDirection(reading.jetStreamAngle)
+            })}
           </span>
         </div>
       )}
@@ -87,11 +97,13 @@ export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
         <div className={`map-weather-tooltip-radar is-${reading.radarRain.status}`}>
           <div className="map-weather-tooltip-row">
             <RadarIcon />
-            <strong>{formatRadarRain(reading.radarRain)}</strong>
+            <strong>{t(formatRadarRainKey(reading.radarRain))}</strong>
           </div>
           {reading.radarRain.observedAt && (
             <span>
-              Latest radar · {formatRadarAge(reading.radarRain.observedAt)}
+              {t('map.latestRadar', {
+                age: formatRadarAge(reading.radarRain.observedAt, t)
+              })}
             </span>
           )}
         </div>
@@ -132,31 +144,38 @@ function formatAnomaly(anomaly: number) {
   return `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(1)}°C`
 }
 
-function formatRadarRain(reading: NonNullable<MapWeatherPointer['radarRain']>) {
+function formatRadarRainKey(
+  reading: NonNullable<MapWeatherPointer['radarRain']>
+): TranslationKey {
   if (reading.status === 'checking') {
-    return 'Checking local radar…'
+    return 'map.radarChecking'
   }
 
   if (reading.status === 'rain') {
-    return 'Radar detects rain here'
+    return 'map.radarRain'
   }
 
   if (reading.status === 'dry') {
-    return 'No rain detected here'
+    return 'map.radarDry'
   }
 
   if (reading.status === 'no-coverage') {
-    return 'No radar coverage here'
+    return 'map.radarNoCoverage'
   }
 
-  return 'Radar unavailable here'
+  return 'map.radarUnavailable'
 }
 
-function formatRadarAge(observedAt: string) {
+function formatRadarAge(
+  observedAt: string,
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string
+) {
   const minutes = Math.max(
     0,
     Math.round((Date.now() - Date.parse(observedAt)) / 60000)
   )
 
-  return minutes < 1 ? 'just now' : `${minutes} min ago`
+  return minutes < 1
+    ? t('map.justNow')
+    : t('map.minutesAgo', { minutes })
 }

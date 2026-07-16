@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { useI18n } from '../i18n/I18nContext'
 
 type WeatherErrorBoundaryProps = {
   area: 'map' | 'forecast'
@@ -58,22 +59,27 @@ export class WeatherErrorBoundary extends Component<
       return this.props.children
     }
 
-    const isMap = this.props.area === 'map'
-
-    return (
-      <div
-        className={isMap
-          ? 'render-error render-error-map'
-          : 'weather-panel render-error'
-        }
-        role="alert"
-      >
-        <strong>{isMap ? 'Map could not render' : 'Forecast could not render'}</strong>
-        <span>Try reloading Aether.</span>
-        <button type="button" onClick={() => window.location.reload()}>
-          Reload
-        </button>
-      </div>
-    )
+    return <WeatherErrorFallback area={this.props.area} />
   }
+}
+
+function WeatherErrorFallback({ area }: { area: 'map' | 'forecast' }) {
+  const { t } = useI18n()
+  const isMap = area === 'map'
+
+  return (
+    <div
+      className={isMap
+        ? 'render-error render-error-map'
+        : 'weather-panel render-error'
+      }
+      role="alert"
+    >
+      <strong>{t(isMap ? 'error.map' : 'error.forecast')}</strong>
+      <span>{t('error.reloadHint')}</span>
+      <button type="button" onClick={() => window.location.reload()}>
+        {t('error.reload')}
+      </button>
+    </div>
+  )
 }

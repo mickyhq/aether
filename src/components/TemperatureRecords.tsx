@@ -5,12 +5,14 @@ import { useEffect, useState } from 'react'
 import { fetchTemperatureRecords } from '../services/temperatureRecords'
 import type { TemperatureRecords as TemperatureRecordsData, WeatherLocation } from '../types/weather'
 import { usePageVisibility } from '../hooks/usePageVisibility'
+import { useI18n } from '../i18n/I18nContext'
 
 export function TemperatureRecords({ location }: { location: WeatherLocation | null }) {
   const [records, setRecords] = useState<TemperatureRecordsData | null>(null)
   const [loading, setLoading] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
   const pageVisible = usePageVisibility()
+  const { language, t } = useI18n()
 
   useEffect(() => {
     if (!location) {
@@ -46,33 +48,38 @@ export function TemperatureRecords({ location }: { location: WeatherLocation | n
   return (
     <Box className="temperature-records" aria-live="polite">
       <Box className="temperature-records-heading">
-        <Typography variant="caption">Temperature records</Typography>
+        <Typography variant="caption">{t('records.title')}</Typography>
         <Typography variant="caption">ERA5-Land · 11 km</Typography>
       </Box>
 
-      {loading && <Box className="temperature-records-status">Reading history…</Box>}
-      {unavailable && <Box className="temperature-records-status">History unavailable</Box>}
+      {loading && <Box className="temperature-records-status">{t('records.reading')}</Box>}
+      {unavailable && <Box className="temperature-records-status">{t('records.unavailable')}</Box>}
 
       {records && (
         <>
           <Box className="temperature-record-values">
             <RecordValue
               icon={<AcUnitIcon />}
-              label="Lowest"
+              label={t('records.lowest')}
               temperature={records.lowest.temperature}
               date={records.lowest.date}
               kind="low"
+              language={language}
             />
             <RecordValue
               icon={<LocalFireDepartmentIcon />}
-              label="Highest"
+              label={t('records.highest')}
               temperature={records.highest.temperature}
               date={records.highest.date}
               kind="high"
+              language={language}
             />
           </Box>
           <Typography variant="caption" className="temperature-records-period">
-            Estimated grid values · {formatYear(records.period.start)}–{formatYear(records.period.end)}
+            {t('records.period', {
+              start: formatYear(records.period.start),
+              end: formatYear(records.period.end)
+            })}
           </Typography>
         </>
       )}
@@ -85,13 +92,15 @@ function RecordValue({
   label,
   temperature,
   date,
-  kind
+  kind,
+  language
 }: {
   icon: React.ReactNode
   label: string
   temperature: number
   date: string
   kind: 'low' | 'high'
+  language: string
 }) {
   return (
     <Box className={`temperature-record is-${kind}`}>
@@ -99,14 +108,14 @@ function RecordValue({
       <Box>
         <Typography variant="caption">{label}</Typography>
         <Typography variant="body2">{temperature.toFixed(1)}°C</Typography>
-        <Typography variant="caption">{formatDate(date)}</Typography>
+        <Typography variant="caption">{formatDate(date, language)}</Typography>
       </Box>
     </Box>
   )
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
+function formatDate(value: string, language: string) {
+  return new Intl.DateTimeFormat(language, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

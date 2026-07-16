@@ -13,6 +13,15 @@ import {
   isPageVisible,
   subscribeToPageVisibility
 } from '../utils/pageVisibility'
+import type { TranslationKey } from '../i18n/translations'
+
+const ACTIVITY_KEYS: Record<VolcanoActivity, TranslationKey> = {
+  'new-eruption': 'volcano.newEruption',
+  eruption: 'volcano.eruption',
+  'new-unrest': 'volcano.newUnrest',
+  unrest: 'volcano.unrest',
+  other: 'volcano.other'
+}
 
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000
 const REQUEST_TIMEOUT_MS = 10000
@@ -20,13 +29,18 @@ const REQUEST_TIMEOUT_MS = 10000
 export class VolcanoActivityLayer {
   private readonly layer = L.layerGroup()
   private readonly map: L.Map
+  private readonly t: (
+    key: TranslationKey,
+    values?: Record<string, string | number>
+  ) => string
   private abortController: AbortController | null = null
   private refreshTimeout = 0
   private pageVisible = isPageVisible()
   private unsubscribeVisibility: (() => void) | null = null
 
-  constructor(map: L.Map) {
+  constructor(map: L.Map, t: VolcanoActivityLayer['t']) {
     this.map = map
+    this.t = t
   }
 
   getLeafletLayer() {
@@ -128,7 +142,7 @@ export class VolcanoActivityLayer {
         `${volcano.name} · ${volcano.activityLabel}`,
         { direction: 'top', offset: [0, -12] }
       )
-      marker.bindPopup(buildPopup(volcano, payload), {
+      marker.bindPopup(buildPopup(volcano, payload, this.t), {
         maxHeight: 320,
         maxWidth: 340
       })
@@ -173,7 +187,8 @@ function createVolcanoIcon(activity: VolcanoActivity) {
 
 function buildPopup(
   volcano: VolcanoReport,
-  payload: VolcanoActivityResponse
+  payload: VolcanoActivityResponse,
+  t: VolcanoActivityLayer['t']
 ) {
   const container = document.createElement('article')
 
@@ -193,7 +208,7 @@ function buildPopup(
   const status = document.createElement('span')
 
   status.className = `volcano-activity-popup-status is-${volcano.activity}`
-  status.textContent = volcano.activityLabel
+  status.textContent = t(ACTIVITY_KEYS[volcano.activity])
   container.append(status)
 
   const period = document.createElement('p')
@@ -201,9 +216,9 @@ function buildPopup(
 
   period.className = 'volcano-activity-popup-period'
   period.textContent = [
-    `Report for ${volcano.reportPeriod}`,
+    t('volcano.reportFor', { period: volcano.reportPeriod }),
     publishedAt
-      ? `Published ${new Date(publishedAt).toLocaleDateString()}`
+      ? t('volcano.published', { date: new Date(publishedAt).toLocaleDateString() })
       : null
   ].filter(Boolean).join(' · ')
   container.append(period)
@@ -217,14 +232,14 @@ function buildPopup(
 
   links.className = 'volcano-activity-popup-links'
   links.append(
-    createLink(volcano.reportUrl, 'Weekly report'),
-    createLink(volcano.profileUrl, 'Volcano profile')
+    createLink(volcano.reportUrl, t('volcano.weeklyReport')),
+    createLink(volcano.profileUrl, t('volcano.profile'))
   )
   container.append(links)
 
   const notice = document.createElement('small')
 
-  notice.textContent = payload.notice ?? 'Preliminary weekly activity report.'
+  notice.textContent = payload.notice ?? t('volcano.preliminary')
   container.append(notice)
 
   return container

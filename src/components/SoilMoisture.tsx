@@ -5,12 +5,25 @@ import { useEffect, useState } from 'react'
 import { fetchSoilMoisture } from '../services/soilMoisture'
 import type { SoilMoistureReading, WeatherLocation } from '../types/weather'
 import { usePageVisibility } from '../hooks/usePageVisibility'
+import { useI18n } from '../i18n/I18nContext'
+import type { TranslationKey } from '../i18n/translations'
+
+const DROUGHT_KEYS: Record<string, TranslationKey> = {
+  'Exceptional drought': 'drought.exceptional',
+  'Extreme drought': 'drought.extreme',
+  'Severe drought': 'drought.severe',
+  Dry: 'drought.dry',
+  'Dry watch': 'drought.watch',
+  Wet: 'drought.wet',
+  'Near normal': 'drought.normal'
+}
 
 export function SoilMoisture({ location }: { location: WeatherLocation | null }) {
   const [reading, setReading] = useState<SoilMoistureReading | null>(null)
   const [loading, setLoading] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
   const pageVisible = usePageVisibility()
+  const { language, t } = useI18n()
 
   useEffect(() => {
     if (!location) {
@@ -46,12 +59,12 @@ export function SoilMoisture({ location }: { location: WeatherLocation | null })
   return (
     <Box className="soil-moisture" aria-live="polite">
       <Box className="soil-moisture-heading">
-        <Typography variant="caption">Drought & soil moisture</Typography>
+        <Typography variant="caption">{t('soil.title')}</Typography>
         <Typography variant="caption">ERA5-Land · 11 km</Typography>
       </Box>
 
-      {loading && <Box className="soil-moisture-status">Reading soil…</Box>}
-      {unavailable && <Box className="soil-moisture-status">Soil data unavailable</Box>}
+      {loading && <Box className="soil-moisture-status">{t('soil.reading')}</Box>}
+      {unavailable && <Box className="soil-moisture-status">{t('soil.unavailable')}</Box>}
 
       {reading && (
         <>
@@ -59,27 +72,32 @@ export function SoilMoisture({ location }: { location: WeatherLocation | null })
             <Box className={`soil-moisture-category ${getCategoryClass(reading.percentile)}`}>
               <GrassIcon />
               <Box>
-                <Typography variant="body2">{reading.category}</Typography>
+                <Typography variant="body2">
+                  {t(DROUGHT_KEYS[reading.category] ?? 'drought.normal')}
+                </Typography>
                 <Typography variant="caption">
-                  {reading.percentile}th percentile
+                  {t('soil.percentile', { value: reading.percentile })}
                 </Typography>
               </Box>
             </Box>
             <Box className="soil-moisture-values">
-              <span><WaterDropIcon />Root {reading.rootZonePercent.toFixed(1)}%</span>
-              <span>Surface {reading.surfacePercent.toFixed(1)}%</span>
+              <span><WaterDropIcon />{t('soil.root', { value: reading.rootZonePercent.toFixed(1) })}</span>
+              <span>{t('soil.surface', { value: reading.surfacePercent.toFixed(1) })}</span>
             </Box>
           </Box>
 
-          <Box className="soil-moisture-scale" aria-label={`Soil moisture ${reading.percentile}th percentile`}>
+          <Box className="soil-moisture-scale" aria-label={t('soil.aria', { value: reading.percentile })}>
             <span style={{ left: `${Math.max(1, Math.min(99, reading.percentile))}%` }} />
           </Box>
 
           <Typography variant="caption" className="soil-moisture-detail">
-            {formatTrend(reading.trend)} · Updated {formatDate(reading.date)}
+            {t('soil.updated', {
+              trend: formatTrend(reading.trend, t),
+              date: formatDate(reading.date, language)
+            })}
           </Typography>
           <Typography variant="caption" className="soil-moisture-note">
-            14-day root-zone estimate vs {reading.baseline}; not a garden sensor
+            {t('soil.note', { baseline: reading.baseline })}
           </Typography>
         </>
       )}
@@ -94,14 +112,14 @@ function getCategoryClass(percentile: number) {
   return 'is-normal'
 }
 
-function formatTrend(trend: number) {
-  if (trend <= -0.3) return `Drying ${Math.abs(trend).toFixed(1)} points this week`
-  if (trend >= 0.3) return `Wetting ${trend.toFixed(1)} points this week`
-  return 'Steady this week'
+function formatTrend(trend: number, t: ReturnType<typeof useI18n>['t']) {
+  if (trend <= -0.3) return t('soil.drying', { value: Math.abs(trend).toFixed(1) })
+  if (trend >= 0.3) return t('soil.wetting', { value: trend.toFixed(1) })
+  return t('soil.steady')
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
+function formatDate(value: string, language: string) {
+  return new Intl.DateTimeFormat(language, {
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC'

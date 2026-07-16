@@ -62,7 +62,7 @@ const WeatherDashboard = lazy(async () => ({
 }))
 
 export default function App() {
-  const { language } = useI18n()
+  const { language, t } = useI18n()
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
     loadInitialLocation
   )
@@ -170,7 +170,7 @@ export default function App() {
           area="map"
           resetKey={`${selectedLocation.latitude}:${selectedLocation.longitude}:${mapWeatherMode}`}
         >
-          <Suspense fallback={<div className="map-loading">Loading map</div>}>
+          <Suspense fallback={<div className="map-loading">{t('app.loadingMap')}</div>}>
             <AetherMap
               location={selectedLocation}
               mapLanguage={language}
@@ -211,7 +211,7 @@ export default function App() {
           area="forecast"
           resetKey={`${selectedLocation.latitude}:${selectedLocation.longitude}:${weatherMode}`}
         >
-          <Suspense fallback={<div className="weather-panel">Loading forecast</div>}>
+          <Suspense fallback={<div className="weather-panel">{t('app.loadingForecast')}</div>}>
             <WeatherDashboard
               weather={displayedWeather}
               alertWeather={weather}

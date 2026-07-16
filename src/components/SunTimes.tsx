@@ -1,6 +1,7 @@
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import { Box, Typography } from '@mui/material'
+import { useI18n } from '../i18n/I18nContext'
 
 type SunTimesProps = {
   sunrise: string | null
@@ -8,16 +9,18 @@ type SunTimesProps = {
 }
 
 export function SunTimes({ sunrise, sunset }: SunTimesProps) {
+  const { t } = useI18n()
+
   return (
     <Box className="sun-times">
       <SunTime
         icon={<LightModeIcon />}
-        label="Sunrise"
+        label={t('sun.sunrise')}
         value={formatSunTime(sunrise)}
       />
       <SunTime
         icon={<DarkModeIcon />}
-        label="Sunset"
+        label={t('sun.sunset')}
         value={formatSunTime(sunset)}
       />
     </Box>

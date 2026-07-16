@@ -13,6 +13,7 @@ import {
   isPageVisible,
   subscribeToPageVisibility
 } from '../utils/pageVisibility'
+import type { TranslationKey } from '../i18n/translations'
 
 const REFRESH_INTERVAL_MS = SOURCE_REFRESH_MS
 const REQUEST_TIMEOUT_MS = 8000
@@ -23,6 +24,10 @@ export class ReportedFireLayer {
   private readonly map: L.Map
   private readonly onStatusChange: (status: FireLayerStatusPatch) => void
   private readonly onFireHover: (fire: MapFirePointer | null) => void
+  private readonly t: (
+    key: TranslationKey,
+    values?: Record<string, string | number>
+  ) => string
   private abortController: AbortController | null = null
   private fires: ReportedFire[] = []
   private refreshTimeout = 0
@@ -32,11 +37,13 @@ export class ReportedFireLayer {
   constructor(
     map: L.Map,
     onStatusChange: (status: FireLayerStatusPatch) => void,
-    onFireHover: (fire: MapFirePointer | null) => void
+    onFireHover: (fire: MapFirePointer | null) => void,
+    t: ReportedFireLayer['t']
   ) {
     this.map = map
     this.onStatusChange = onStatusChange
     this.onFireHover = onFireHover
+    this.t = t
   }
 
   getLeafletLayer() {
@@ -151,8 +158,8 @@ export class ReportedFireLayer {
     visibleFires.forEach((fire, index) => {
       const marker = this.createMarker(fire, index)
 
-      marker.bindPopup(buildPopup(fire), { maxWidth: 280 })
-      marker.on('mouseover', () => this.onFireHover(buildHoverInfo(fire)))
+      marker.bindPopup(buildPopup(fire, this.t), { maxWidth: 280 })
+      marker.on('mouseover', () => this.onFireHover(buildHoverInfo(fire, this.t)))
       marker.on('mouseout', () => this.onFireHover(null))
       marker.addTo(this.layer)
     })
@@ -198,23 +205,23 @@ export class ReportedFireLayer {
   }
 }
 
-function buildHoverInfo(fire: ReportedFire): MapFirePointer {
+function buildHoverInfo(fire: ReportedFire, t: ReportedFireLayer['t']): MapFirePointer {
   const details = [
     fire.magnitude,
     fire.reportedAt
-      ? `Reported ${new Date(fire.reportedAt).toLocaleString()}`
+      ? t('report.reportedAt', { date: new Date(fire.reportedAt).toLocaleString() })
       : null,
     fire.description
   ].filter(Boolean)
 
   return {
     title: fire.title,
-    source: `${fire.source} · reported wildfire`,
-    detail: details.join(' · ') || 'Open wildfire report'
+    source: `${fire.source} · ${t('report.wildfire')}`,
+    detail: details.join(' · ') || t('report.openWildfire')
   }
 }
 
-function buildPopup(fire: ReportedFire) {
+function buildPopup(fire: ReportedFire, t: ReportedFireLayer['t']) {
   const container = document.createElement('div')
   const title = document.createElement('strong')
 
@@ -231,7 +238,7 @@ function buildPopup(fire: ReportedFire) {
   const details = [
     fire.magnitude,
     fire.reportedAt
-      ? `Reported ${new Date(fire.reportedAt).toLocaleString()}`
+      ? t('report.reportedAt', { date: new Date(fire.reportedAt).toLocaleString() })
       : null
   ].filter(Boolean)
 
@@ -248,7 +255,7 @@ function buildPopup(fire: ReportedFire) {
     source.href = fire.sourceUrl
     source.target = '_blank'
     source.rel = 'noreferrer'
-    source.textContent = `Open ${fire.source} report`
+    source.textContent = t('report.openSource', { source: fire.source })
     container.append(source)
   }
 

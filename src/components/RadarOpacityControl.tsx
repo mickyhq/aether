@@ -1,6 +1,7 @@
 import OpacityIcon from '@mui/icons-material/Opacity'
 import { Box, Slider, Typography } from '@mui/material'
 import type { WeatherMode } from '../types/weather'
+import { useI18n } from '../i18n/I18nContext'
 
 type RadarOpacityControlProps = {
   mode: WeatherMode
@@ -13,6 +14,8 @@ export function RadarOpacityControl({
   opacity,
   onChange
 }: RadarOpacityControlProps) {
+  const { t } = useI18n()
+
   if (mode !== 'precipitation' && mode !== 'storm') {
     return null
   }
@@ -21,7 +24,7 @@ export function RadarOpacityControl({
     <Box className="radar-opacity-control">
       <Box className="radar-opacity-heading">
         <OpacityIcon />
-        <Typography variant="caption">Radar</Typography>
+        <Typography variant="caption">{t('radar.title')}</Typography>
         <Typography variant="caption">
           {Math.round(opacity * 100)}%
         </Typography>
@@ -32,7 +35,7 @@ export function RadarOpacityControl({
         max={1}
         step={0.05}
         value={opacity}
-        aria-label="Radar opacity"
+        aria-label={t('radar.opacity')}
         onChange={(_, value) => onChange(value as number)}
       />
     </Box>

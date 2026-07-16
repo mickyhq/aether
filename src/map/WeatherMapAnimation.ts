@@ -69,7 +69,11 @@ export class WeatherMapAnimation {
     }
   }
 
-  constructor(map: L.Map, container: HTMLElement) {
+  constructor(
+    map: L.Map,
+    container: HTMLElement,
+    seaTemperatureLabel: string
+  ) {
     this.map = map
     this.canvas = document.createElement('canvas')
     this.canvas.className = 'weather-map-animation-canvas'
@@ -83,7 +87,11 @@ export class WeatherMapAnimation {
 
     this.context = context
     this.fieldRenderer = new WeatherFieldRenderer(this.canvas, context)
-    this.particleRenderer = new WeatherParticleRenderer(map, context)
+    this.particleRenderer = new WeatherParticleRenderer(
+      map,
+      context,
+      seaTemperatureLabel
+    )
   }
 
   start() {

@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
 import type { WeatherLocation } from '../types/weather'
+import { useI18n } from '../i18n/I18nContext'
 
 type LocationBookmarksProps = {
   location: WeatherLocation
@@ -30,6 +31,7 @@ export function LocationBookmarks({
   onSelect
 }: LocationBookmarksProps) {
   const [anchorElement, setAnchorElement] = useState<HTMLElement | null>(null)
+  const { t } = useI18n()
   const [favorites, setFavorites] = useState<WeatherLocation[]>(
     () => loadLocations(FAVORITES_KEY)
   )
@@ -79,10 +81,10 @@ export function LocationBookmarks({
 
   return (
     <>
-      <Tooltip title="Favorite and recent locations">
+      <Tooltip title={t('bookmarks.tooltip')}>
         <IconButton
           type="button"
-          aria-label="Favorite and recent locations"
+          aria-label={t('bookmarks.tooltip')}
           aria-haspopup="menu"
           aria-expanded={Boolean(anchorElement)}
           className="location-bookmarks-button"
@@ -105,25 +107,25 @@ export function LocationBookmarks({
         <MenuItem onClick={toggleFavorite}>
           {isFavorite ? <StarIcon /> : <StarBorderIcon />}
           <Typography>
-            {isFavorite ? 'Remove current favorite' : 'Favorite current location'}
+            {isFavorite ? t('bookmarks.removeFavorite') : t('bookmarks.addFavorite')}
           </Typography>
         </MenuItem>
 
         <Divider />
         <LocationSection
           icon={<StarIcon />}
-          title="Favorites"
+          title={t('bookmarks.favorites')}
           locations={favorites}
-          emptyLabel="No favorites"
+          emptyLabel={t('bookmarks.noFavorites')}
           onSelect={selectLocation}
         />
 
         <Divider />
         <LocationSection
           icon={<HistoryIcon />}
-          title="Recent"
+          title={t('bookmarks.recent')}
           locations={recents}
-          emptyLabel="No recent locations"
+          emptyLabel={t('bookmarks.noRecent')}
           onSelect={selectLocation}
         />
       </Menu>

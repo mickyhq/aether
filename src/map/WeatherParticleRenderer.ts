@@ -17,10 +17,18 @@ export class WeatherParticleRenderer {
   private readonly precipitation: PrecipitationParticleRenderer
   private readonly storm: StormRenderer
 
-  constructor(map: L.Map, context: CanvasRenderingContext2D) {
+  constructor(
+    map: L.Map,
+    context: CanvasRenderingContext2D,
+    seaTemperatureLabel: string
+  ) {
     this.wind = new WindParticleRenderer(map, context)
     this.jetStream = new JetStreamParticleRenderer(map, context)
-    this.oceanCurrent = new OceanCurrentParticleRenderer(map, context)
+    this.oceanCurrent = new OceanCurrentParticleRenderer(
+      map,
+      context,
+      seaTemperatureLabel
+    )
     this.precipitation = new PrecipitationParticleRenderer(map, context)
     this.storm = new StormRenderer(context)
   }

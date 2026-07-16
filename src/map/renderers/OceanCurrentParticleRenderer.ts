@@ -18,9 +18,15 @@ const OCEAN_SPEED_STOPS = [0.3, 0.8]
 
 export class OceanCurrentParticleRenderer extends ParticleModeRenderer {
   private vectorGrid: ScreenVectorGrid | null = null
+  private readonly seaTemperatureLabel: string
 
-  constructor(map: L.Map, context: CanvasRenderingContext2D) {
+  constructor(
+    map: L.Map,
+    context: CanvasRenderingContext2D,
+    seaTemperatureLabel: string
+  ) {
     super(map, context)
+    this.seaTemperatureLabel = seaTemperatureLabel
   }
 
   override reset() {
@@ -179,7 +185,7 @@ export class OceanCurrentParticleRenderer extends ParticleModeRenderer {
     this.context.fillStyle = 'rgba(214, 242, 255, 0.9)'
     this.context.font = '700 9px Inter, system-ui, sans-serif'
     this.context.textAlign = 'left'
-    this.context.fillText('SEA SURFACE TEMPERATURE · NOAA OISST', x, y - 9)
+    this.context.fillText(this.seaTemperatureLabel, x, y - 9)
     this.context.fillStyle = gradient
     this.context.fillRect(x, y, legendWidth, 12)
     this.context.fillStyle = 'rgba(247, 252, 255, 0.96)'
