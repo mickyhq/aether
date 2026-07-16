@@ -19,10 +19,14 @@ import {
   getCachedWeatherMapSamples,
   hydrateWeatherMapCache
 } from '../services/weatherGrid'
+import {
+  fetchTemperatureAnomalySamples
+} from '../services/temperatureAnomaly'
 import type {
   AirQualityMapSample,
   JetStreamSample,
   OceanCurrentData,
+  TemperatureAnomalySample,
   WeatherLocation,
   WeatherMapSample,
   WeatherMode,
@@ -52,6 +56,7 @@ export function useMapWeatherData({
   const [jetStreamSamples, setJetStreamSamples] = useState<JetStreamSample[]>([])
   const [airQualitySamples, setAirQualitySamples] = useState<AirQualityMapSample[]>([])
   const [oceanCurrentData, setOceanCurrentData] = useState<OceanCurrentData | null>(null)
+  const [temperatureAnomalySamples, setTemperatureAnomalySamples] = useState<TemperatureAnomalySample[]>([])
   const viewportKey = getViewportKey(viewport)
 
   useEffect(() => {
@@ -101,6 +106,32 @@ export function useMapWeatherData({
     telemetryProvider: 'map-weather',
     task: refreshVisibleWeather,
     onError: handleWeatherError
+  })
+
+  const refreshTemperatureAnomaly = useCallback(async (signal: AbortSignal) => {
+    const samples = await fetchTemperatureAnomalySamples(mapSamples, signal)
+
+    if (!signal.aborted && samples.length > 0) {
+      setTemperatureAnomalySamples(samples)
+    }
+  }, [mapSamples])
+  const latestWeatherUpdate = Math.max(
+    0,
+    ...mapSamples.map(sample => sample.updatedAt ?? 0)
+  )
+
+  usePollingScheduler({
+    enabled: mode === 'temperature-anomaly' && mapSamples.length > 0,
+    intervalMs: 6 * 60 * 60 * 1000,
+    initialDelayMs: 80,
+    restartKey: `${viewportKey}:${latestWeatherUpdate}`,
+    telemetryProvider: 'temperature-anomaly',
+    task: refreshTemperatureAnomaly,
+    onError: error => setStatus(
+      error instanceof Error
+        ? error.message
+        : 'Temperature anomaly failed'
+    )
   })
 
   useEffect(() => {
@@ -204,7 +235,8 @@ export function useMapWeatherData({
     mapSamples,
     jetStreamSamples,
     airQualitySamples,
-    oceanCurrentData
+    oceanCurrentData,
+    temperatureAnomalySamples
   }
 }
 

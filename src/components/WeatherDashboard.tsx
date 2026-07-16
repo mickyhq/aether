@@ -1,6 +1,7 @@
 import AirIcon from '@mui/icons-material/Air'
 import BlurOnIcon from '@mui/icons-material/BlurOn'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
+import CompareIcon from '@mui/icons-material/Compare'
 import FlightIcon from '@mui/icons-material/Flight'
 import ThunderstormIcon from '@mui/icons-material/Thunderstorm'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
@@ -27,6 +28,11 @@ type WeatherDashboardProps = {
   onEcmwfFrameChange: ((frame: EcmwfForecast['frames'][number] | null) => void) | null
   onEcmwfPlaybackChange: (time: string | null) => void
   airQuality: AirQualityReading | null
+  temperatureAnomaly: {
+    normalTemperature: number
+    temperatureAnomaly: number
+    baseline: string
+  } | null
   officialHeatAlerts: HeatAlert[]
   mode: WeatherMode
   provenance: WeatherModeProvenance
@@ -42,6 +48,7 @@ export function WeatherDashboard({
   onEcmwfFrameChange,
   onEcmwfPlaybackChange,
   airQuality,
+  temperatureAnomaly,
   officialHeatAlerts,
   location,
   mode,
@@ -81,6 +88,14 @@ export function WeatherDashboard({
             selected={mode === 'temperature'}
             onClick={() => onModeChange('temperature')}
             provenance={provenance.temperature}
+          />
+          <Metric
+            icon={<CompareIcon />}
+            label={t('mode.temperatureAnomaly')}
+            value={formatAnomaly(temperatureAnomaly?.temperatureAnomaly)}
+            selected={mode === 'temperature-anomaly'}
+            onClick={() => onModeChange('temperature-anomaly')}
+            provenance={provenance['temperature-anomaly']}
           />
           <Metric
             icon={<AirIcon />}
@@ -337,6 +352,14 @@ function Metric({
 
 function formatTemperature(weather: WeatherConfig | null) {
   return weather ? `${Math.round(weather.temperature)}°C` : '--'
+}
+
+function formatAnomaly(value?: number) {
+  if (value === undefined) {
+    return '--'
+  }
+
+  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}°C`
 }
 
 function formatWind(weather: WeatherConfig | null) {

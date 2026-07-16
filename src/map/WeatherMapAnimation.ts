@@ -5,6 +5,7 @@ import type {
   AirQualityMapSample,
   JetStreamSample,
   OceanCurrentSample,
+  TemperatureAnomalySample,
   WeatherMapSample,
   WeatherMode
 } from '../types/weather'
@@ -12,6 +13,7 @@ import { WeatherFieldRenderer } from './WeatherFieldRenderer'
 import { WeatherParticleRenderer } from './WeatherParticleRenderer'
 import type {
   ProjectedAirQualitySample,
+  ProjectedTemperatureAnomalySample,
   ProjectedOceanCurrentSample,
   ProjectedSample
 } from './weatherAnimationTypes'
@@ -35,9 +37,11 @@ export class WeatherMapAnimation {
   private airQualitySamples: AirQualityMapSample[] = []
   private jetStreamSamples: JetStreamSample[] = []
   private oceanCurrentSamples: OceanCurrentSample[] = []
+  private temperatureAnomalySamples: TemperatureAnomalySample[] = []
   private projectedSamples: ProjectedSample[] | null = null
   private projectedAirQualitySamples: ProjectedAirQualitySample[] | null = null
   private projectedOceanCurrentSamples: ProjectedOceanCurrentSample[] | null = null
+  private projectedTemperatureAnomalySamples: ProjectedTemperatureAnomalySample[] | null = null
   private mode: WeatherMode = 'temperature'
   private animationFrame = 0
   private lastTime = 0
@@ -143,19 +147,23 @@ export class WeatherMapAnimation {
     mode: WeatherMode,
     airQualitySamples: AirQualityMapSample[],
     jetStreamSamples: JetStreamSample[],
-    oceanCurrentSamples: OceanCurrentSample[]
+    oceanCurrentSamples: OceanCurrentSample[],
+    temperatureAnomalySamples: TemperatureAnomalySample[]
   ) {
     const samplesChanged = samples !== this.samples
     const airQualityChanged = airQualitySamples !== this.airQualitySamples
     const jetStreamChanged = jetStreamSamples !== this.jetStreamSamples
     const oceanCurrentChanged = oceanCurrentSamples !== this.oceanCurrentSamples
+    const temperatureAnomalyChanged = temperatureAnomalySamples !== this.temperatureAnomalySamples
     const activeDataChanged = mode === 'jet-stream'
       ? jetStreamChanged
       : mode === 'air-quality'
         ? airQualityChanged
         : mode === 'ocean-current'
           ? oceanCurrentChanged
-          : samplesChanged
+        : mode === 'temperature-anomaly'
+            ? temperatureAnomalyChanged
+            : samplesChanged
 
     if (mode !== this.mode || activeDataChanged) {
       this.particleRenderer.reset()
@@ -166,6 +174,7 @@ export class WeatherMapAnimation {
     this.airQualitySamples = airQualitySamples
     this.jetStreamSamples = jetStreamSamples
     this.oceanCurrentSamples = oceanCurrentSamples
+    this.temperatureAnomalySamples = temperatureAnomalySamples
 
     if (samplesChanged) {
       this.projectedSamples = null
@@ -179,8 +188,16 @@ export class WeatherMapAnimation {
       this.projectedOceanCurrentSamples = null
     }
 
+    if (temperatureAnomalyChanged) {
+      this.projectedTemperatureAnomalySamples = null
+    }
+
     this.mode = mode
-    this.fieldRenderer.markDataChanged(samplesChanged, airQualityChanged)
+    this.fieldRenderer.markDataChanged(
+      samplesChanged,
+      airQualityChanged,
+      temperatureAnomalyChanged
+    )
 
     if (this.reducedMotion && this.pageVisible) {
       this.render(0, 0)
@@ -297,6 +314,11 @@ export class WeatherMapAnimation {
       return
     }
 
+    if (this.mode === 'temperature-anomaly') {
+      this.renderTemperatureAnomaly()
+      return
+    }
+
     if (this.mode === 'jet-stream') {
       this.particleRenderer.drawJetStream(
         this.jetStreamSamples,
@@ -348,6 +370,16 @@ export class WeatherMapAnimation {
     )
   }
 
+  private renderTemperatureAnomaly() {
+    if (this.temperatureAnomalySamples.length === 0) {
+      return
+    }
+
+    this.fieldRenderer.drawTemperatureAnomaly(
+      this.getProjectedTemperatureAnomalySamples()
+    )
+  }
+
   private getProjectedSamples() {
     this.projectedSamples ??= this.projectSamples(this.samples)
 
@@ -368,6 +400,14 @@ export class WeatherMapAnimation {
     )
 
     return this.projectedOceanCurrentSamples
+  }
+
+  private getProjectedTemperatureAnomalySamples() {
+    this.projectedTemperatureAnomalySamples ??= this.projectSamples(
+      this.temperatureAnomalySamples
+    )
+
+    return this.projectedTemperatureAnomalySamples
   }
 
   private projectSamples<T extends { latitude: number, longitude: number }>(
@@ -391,5 +431,6 @@ export class WeatherMapAnimation {
     this.projectedSamples = null
     this.projectedAirQualitySamples = null
     this.projectedOceanCurrentSamples = null
+    this.projectedTemperatureAnomalySamples = null
   }
 }

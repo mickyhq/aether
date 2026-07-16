@@ -11,6 +11,7 @@ export type TelemetryProvider =
   'soil-moisture' |
   'stargazing' |
   'temperature-records' |
+  'temperature-anomaly' |
   'volcanoes' |
   'weather' |
   'webcams'

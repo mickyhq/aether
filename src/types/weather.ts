@@ -154,7 +154,7 @@ export type OpenMeteoAirQualityResponse = {
   current: OpenMeteoAirQualityCurrent
 }
 
-export type WeatherMode = 'temperature' | 'wind' | 'jet-stream' | 'precipitation' | 'storm' | 'air-quality' | 'ocean-current'
+export type WeatherMode = 'temperature' | 'temperature-anomaly' | 'wind' | 'jet-stream' | 'precipitation' | 'storm' | 'air-quality' | 'ocean-current'
 
 export type AnimationQuality = 'low' | 'balanced' | 'high'
 
@@ -256,6 +256,32 @@ export type AirQualityMapSample = {
   ozone: number
 }
 
+export type TemperatureNormalResponse = {
+  baseline: '1991–2020'
+  source: string
+  resolution: string
+  targetTime: string
+  samples: Array<{
+    latitude: number
+    longitude: number
+    normalTemperature: number
+    yearCount: number
+  }>
+}
+
+export type TemperatureAnomalySample = {
+  latitude: number
+  longitude: number
+  actualTemperature: number
+  normalTemperature: number
+  anomaly: number
+  baseline: string
+  source: string
+  resolution: string
+  observedAt: string
+  refreshedAt: number
+}
+
 export type JetStreamSample = {
   latitude: number
   longitude: number
@@ -341,6 +367,9 @@ export type MapWeatherPointer = {
   oceanCurrentAngle?: number
   seaSurfaceTemperature?: number
   seaSurfaceTemperatureAnomaly?: number
+  normalTemperature?: number
+  temperatureAnomaly?: number
+  temperatureBaseline?: string
   radarRain?: RadarRainReading
   fire?: MapFirePointer
   provenance?: DataProvenance

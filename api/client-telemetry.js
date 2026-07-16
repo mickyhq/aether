@@ -11,6 +11,7 @@ const PROVIDERS = new Set([
   'soil-moisture',
   'stargazing',
   'temperature-records',
+  'temperature-anomaly',
   'volcanoes',
   'weather',
   'webcams'

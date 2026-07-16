@@ -67,6 +67,16 @@ export function temperatureColor(temperature: number) {
   ])
 }
 
+export function temperatureAnomalyColor(anomaly: number) {
+  return interpolateColor(anomaly, [
+    { value: -10, r: 32, g: 82, b: 190 },
+    { value: -5, r: 83, g: 154, b: 230 },
+    { value: 0, r: 241, g: 244, b: 238 },
+    { value: 5, r: 239, g: 127, b: 78 },
+    { value: 10, r: 172, g: 30, b: 69 }
+  ])
+}
+
 type ColorStop = {
   value: number
   r: number

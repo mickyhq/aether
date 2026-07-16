@@ -53,6 +53,18 @@ export const validRuntimeResponseFixtures = {
       wind_direction_250hPa: 275
     }
   },
+  temperatureNormal: {
+    baseline: '1991–2020',
+    source: 'ERA5-Land via Open-Meteo',
+    resolution: '11 km',
+    targetTime: '2026-07-16T12:00:00.000Z',
+    samples: [{
+      latitude: 48.8566,
+      longitude: 2.3522,
+      normalTemperature: 22.4,
+      yearCount: 30
+    }]
+  },
   heatAlerts: {
     alerts: [{
       id: 'heat-1',
@@ -180,6 +192,7 @@ export const invalidRuntimeResponseFixtures = {
   openMeteo: { current: {}, hourly: {} },
   airQuality: { current: { european_aqi: 'bad' } },
   jetStream: { current: { wind_speed_250hPa: null } },
+  temperatureNormal: { baseline: '1991–2020', samples: [{ yearCount: '30' }] },
   heatAlerts: { alerts: [{ severity: 'notice' }] },
   stargazing: { initializedAt: 123, lightPollution: null, nights: [] },
   soilMoisture: { date: '2026-07-15', percentile: Number.NaN },

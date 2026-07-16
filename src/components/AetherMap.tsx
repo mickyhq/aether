@@ -18,6 +18,7 @@ import { interpolateWeatherAt } from '../services/weatherGrid'
 import { interpolateAirQualityAt } from '../services/airQuality'
 import { interpolateJetStreamAt } from '../services/jetStream'
 import { interpolateOceanCurrentAt } from '../services/oceanCurrents'
+import { interpolateTemperatureAnomalyAt } from '../services/temperatureAnomaly'
 import {
   REDUCED_MOTION_QUERY,
   prefersReducedMotion
@@ -28,6 +29,7 @@ import type {
   AirQualityMapSample,
   JetStreamSample,
   OceanCurrentSample,
+  TemperatureAnomalySample,
   MapWeatherPointer,
   WeatherLocation,
   WeatherMapSample,
@@ -62,6 +64,7 @@ type AetherMapProps = {
   jetStreamSamples: JetStreamSample[]
   airQualitySamples: AirQualityMapSample[]
   oceanCurrentSamples: OceanCurrentSample[]
+  temperatureAnomalySamples: TemperatureAnomalySample[]
   provenance: WeatherModeProvenance
   radarOpacity: number
   animationQuality: AnimationQuality
@@ -78,6 +81,7 @@ export function AetherMap({
   jetStreamSamples,
   airQualitySamples,
   oceanCurrentSamples,
+  temperatureAnomalySamples,
   provenance,
   radarOpacity,
   animationQuality,
@@ -97,6 +101,7 @@ export function AetherMap({
   const jetStreamSamplesRef = useRef(jetStreamSamples)
   const airQualitySamplesRef = useRef(airQualitySamples)
   const oceanCurrentSamplesRef = useRef(oceanCurrentSamples)
+  const temperatureAnomalySamplesRef = useRef(temperatureAnomalySamples)
   const modeRef = useRef(mode)
   const provenanceRef = useRef(provenance)
   const pointerCallbackRef = useRef(onPointerWeatherChange)
@@ -140,6 +145,11 @@ export function AetherMap({
     oceanCurrentSamplesRef.current = oceanCurrentSamples
     pointerRefreshRef.current()
   }, [oceanCurrentSamples])
+
+  useEffect(() => {
+    temperatureAnomalySamplesRef.current = temperatureAnomalySamples
+    pointerRefreshRef.current()
+  }, [temperatureAnomalySamples])
 
   useEffect(() => {
     modeRef.current = mode
@@ -271,6 +281,13 @@ export function AetherMap({
             oceanCurrentSamplesRef.current
           )
         : null
+      const temperatureAnomaly = modeRef.current === 'temperature-anomaly'
+        ? interpolateTemperatureAnomalyAt(
+            pointer.latitude,
+            pointer.longitude,
+            temperatureAnomalySamplesRef.current
+          )
+        : null
       const fire = layers.findFireAtPoint(L.point(pointer.x, pointer.y))
 
       pointerCallbackRef.current({
@@ -278,6 +295,14 @@ export function AetherMap({
         ...(jetStream ?? {}),
         ...(airQuality ?? {}),
         ...(oceanCurrent ?? {}),
+        ...(temperatureAnomaly
+          ? {
+              normalTemperature: temperatureAnomaly.normalTemperature,
+              temperatureAnomaly: reading.temperature -
+                temperatureAnomaly.normalTemperature,
+              temperatureBaseline: temperatureAnomaly.baseline
+            }
+          : {}),
         ...(fire ? { fire } : {}),
         provenance: provenanceRef.current[modeRef.current],
         screenX: Math.max(12, Math.min(pointer.x + 16, size.x - 236)),
@@ -473,6 +498,7 @@ export function AetherMap({
 
     if (
       mode === 'air-quality' ||
+      mode === 'temperature-anomaly' ||
       mode === 'jet-stream' ||
       mode === 'ocean-current'
     ) {
@@ -503,7 +529,8 @@ export function AetherMap({
       mode,
       airQualitySamples,
       jetStreamSamples,
-      oceanCurrentSamples
+      oceanCurrentSamples,
+      temperatureAnomalySamples
     )
     animationRef.current?.setQuality(animationQuality)
     layersRef.current?.setWeatherMode(mode, radarOpacity)
@@ -512,6 +539,7 @@ export function AetherMap({
     animationQuality,
     jetStreamSamples,
     oceanCurrentSamples,
+    temperatureAnomalySamples,
     samples,
     mode,
     radarOpacity

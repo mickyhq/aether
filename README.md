@@ -11,6 +11,7 @@ Aether is a full-screen weather and environmental map built with React, TypeScri
 ### Weather map
 
 - Interpolated temperature field with a color legend
+- Land temperature-anomaly field comparing current conditions with the 1991–2020 ERA5-Land normal for the same UTC hour and calendar day
 - Animated wind particles colored by speed
 - Animated precipitation particles and RainViewer radar
 - Storm mode with radar, cloud effects, rain, and lightning
@@ -97,7 +98,7 @@ The weekly report is preliminary and intentionally not comprehensive. Rapidly de
 
 | Source | Used for |
 | --- | --- |
-| [Open-Meteo](https://open-meteo.com/) | Current weather, hourly and daily forecasts, map weather fields, Jet Stream wind, and forecast fallback |
+| [Open-Meteo](https://open-meteo.com/) | Current weather, hourly and daily forecasts, map weather fields, Jet Stream wind, ERA5-Land historical normals, and forecast fallback |
 | [ECMWF](https://www.ecmwf.int/) | IFS 9 km forecast selected through the Open-Meteo forecast API |
 | [Copernicus CAMS](https://atmosphere.copernicus.eu/) | Air-quality data delivered through the Open-Meteo Air Quality API |
 | [NOAA NESDIS CoastWatch](https://coastwatch.noaa.gov/) | Daily global geostrophic surface currents |
@@ -141,6 +142,10 @@ Aether proxies these feeds, coalesces duplicate requests, caches reported incide
 ### Jet Stream
 
 The Jet Stream layer requests wind speed and direction at 250 hPa, converts meteorological bearings into vectors, and interpolates them geographically. Samples remain stable while zooming. The colored outer bands identify northern polar, northern subtropical, southern subtropical, and southern polar latitude regions; they are visual guides, not detected jet axes.
+
+### Temperature anomaly
+
+The temperature-anomaly layer subtracts the 1991–2020 ERA5-Land average for the same UTC hour and calendar day from the current map temperature. Blue is colder than normal, white is near normal, and red is warmer than normal. Aether samples a coarse climatology grid, interpolates it across the viewport, and caches each normal for one year. Hover details show current temperature, normal temperature, difference, baseline, source, and resolution.
 
 ### Ocean currents
 

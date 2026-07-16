@@ -48,6 +48,24 @@ export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
         <span>{Math.round(reading.temperature)}°C</span>
       </div>
 
+      {reading.normalTemperature !== undefined && reading.temperatureAnomaly !== undefined && (
+        <div className="map-weather-tooltip-anomaly">
+          <span>
+            {t('map.normalTemperature', {
+              temperature: reading.normalTemperature.toFixed(1)
+            })}
+          </span>
+          <strong>
+            {t('map.temperatureDifference', {
+              difference: formatAnomaly(reading.temperatureAnomaly)
+            })}
+          </strong>
+          {reading.temperatureBaseline && (
+            <span>{t('map.temperatureBaseline', { baseline: reading.temperatureBaseline })}</span>
+          )}
+        </div>
+      )}
+
       {reading.oceanCurrentSpeed !== undefined && reading.oceanCurrentAngle !== undefined && (
         <div className="map-weather-tooltip-ocean">
           <div className="map-weather-tooltip-row">

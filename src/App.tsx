@@ -22,6 +22,7 @@ import {
   updateUrlLocation
 } from './services/appState'
 import { getWeatherMapSamplesAtTime } from './services/weatherGrid'
+import { interpolateTemperatureAnomalyAt } from './services/temperatureAnomaly'
 import { describeWeatherCode } from './weather/weatherCode'
 import type {
   AnimationQuality,
@@ -89,7 +90,8 @@ export default function App() {
     mapSamples,
     jetStreamSamples,
     airQualitySamples,
-    oceanCurrentData
+    oceanCurrentData,
+    temperatureAnomalySamples
   } = useMapWeatherData({
     viewport,
     mode: mapWeatherMode,
@@ -129,6 +131,14 @@ export default function App() {
     ),
     [airQualitySamples, selectedLocation]
   )
+  const selectedTemperatureAnomaly = useMemo(
+    () => interpolateTemperatureAnomalyAt(
+      selectedLocation.latitude,
+      selectedLocation.longitude,
+      temperatureAnomalySamples
+    ),
+    [selectedLocation, temperatureAnomalySamples]
+  )
   const mapProvenance = useMemo(() => buildModeProvenance(
     latestSurfaceProvenance(mapSamples),
     latestSampleProvenance(
@@ -148,14 +158,22 @@ export default function App() {
           source: oceanCurrentData.source,
           resolution: `${oceanCurrentData.stride}× sampled native grid`
         }
-      : null
-  ), [airQualitySamples, jetStreamSamples, mapSamples, oceanCurrentData])
+      : null,
+    latestTemperatureAnomalyProvenance(temperatureAnomalySamples)
+  ), [
+    airQualitySamples,
+    jetStreamSamples,
+    mapSamples,
+    oceanCurrentData,
+    temperatureAnomalySamples
+  ])
   const displayedWeather = useMemo(() => {
     if (
       !weather ||
       !ecmwfFrame ||
       weatherMode === 'jet-stream' ||
-      weatherMode === 'air-quality'
+      weatherMode === 'air-quality' ||
+      weatherMode === 'temperature-anomaly'
     ) {
       return weather
     }
@@ -177,7 +195,8 @@ export default function App() {
         }
       : null,
     mapProvenance['jet-stream'] ?? null,
-    mapProvenance['ocean-current'] ?? null
+    mapProvenance['ocean-current'] ?? null,
+    mapProvenance['temperature-anomaly'] ?? null
   ), [displayedWeather, mapProvenance, selectedAirQuality])
   const displayedSamples = useMemo(
     () => getWeatherMapSamplesAtTime(mapSamples, ecmwfPlaybackTime),
@@ -186,6 +205,12 @@ export default function App() {
   useEffect(() => {
     updateUrlLocation(selectedLocation, weatherMode)
   }, [selectedLocation, weatherMode])
+
+  useEffect(() => {
+    if (weatherMode === 'temperature-anomaly') {
+      setEcmwfPlaybackTime(null)
+    }
+  }, [weatherMode])
 
   const handleViewportChange = useCallback((nextViewport: WeatherViewport) => {
     setViewport(nextViewport)
@@ -218,6 +243,7 @@ export default function App() {
               jetStreamSamples={jetStreamSamples}
               airQualitySamples={airQualitySamples}
               oceanCurrentSamples={oceanCurrentData?.samples ?? []}
+              temperatureAnomalySamples={temperatureAnomalySamples}
               provenance={mapProvenance}
               radarOpacity={radarOpacity}
               animationQuality={animationQuality}
@@ -258,12 +284,21 @@ export default function App() {
               onEcmwfFrameChange={
                 weatherMode === 'jet-stream' ||
                 weatherMode === 'air-quality' ||
-                weatherMode === 'ocean-current'
+                weatherMode === 'ocean-current' ||
+                weatherMode === 'temperature-anomaly'
                   ? null
                   : setEcmwfFrame
               }
               onEcmwfPlaybackChange={setEcmwfPlaybackTime}
               airQuality={selectedAirQuality}
+              temperatureAnomaly={selectedTemperatureAnomaly
+                ? {
+                    ...selectedTemperatureAnomaly,
+                    temperatureAnomaly: weather
+                      ? weather.temperature - selectedTemperatureAnomaly.normalTemperature
+                      : selectedTemperatureAnomaly.temperatureAnomaly
+                  }
+                : null}
               officialHeatAlerts={officialHeatAlerts}
               location={dashboardLocation}
               mode={weatherMode}
@@ -281,7 +316,8 @@ function buildModeProvenance(
   surface: DataProvenance | null,
   airQuality: DataProvenance | null,
   jetStream: DataProvenance | null,
-  oceanCurrent: DataProvenance | null
+  oceanCurrent: DataProvenance | null,
+  temperatureAnomaly: DataProvenance | null
 ): WeatherModeProvenance {
   return {
     temperature: surface ?? undefined,
@@ -290,8 +326,32 @@ function buildModeProvenance(
     storm: surface ?? undefined,
     'air-quality': airQuality ?? undefined,
     'jet-stream': jetStream ?? undefined,
-    'ocean-current': oceanCurrent ?? undefined
+    'ocean-current': oceanCurrent ?? undefined,
+    'temperature-anomaly': temperatureAnomaly ?? undefined
   }
+}
+
+function latestTemperatureAnomalyProvenance(
+  samples: Array<{
+    observedAt: string
+    refreshedAt: number
+    source: string
+    resolution: string
+    baseline: string
+  }>
+): DataProvenance | null {
+  const latest = [...samples].sort(
+    (first, second) => second.refreshedAt - first.refreshedAt
+  )[0]
+
+  return latest
+    ? {
+        observedAt: latest.observedAt,
+        refreshedAt: latest.refreshedAt,
+        source: `${latest.source} · ${latest.baseline}`,
+        resolution: `${latest.resolution} normal · model-dependent actual`
+      }
+    : null
 }
 
 function latestSurfaceProvenance(

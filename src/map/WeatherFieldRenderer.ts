@@ -1,9 +1,11 @@
 import {
   airQualityColor,
+  temperatureAnomalyColor,
   temperatureColor
 } from './weatherPalette'
 import type {
   ProjectedAirQualitySample,
+  ProjectedTemperatureAnomalySample,
   ProjectedSample
 } from './weatherAnimationTypes'
 
@@ -16,8 +18,11 @@ export class WeatherFieldRenderer {
   private readonly temperatureContext: CanvasRenderingContext2D
   private readonly airQualityCanvas = document.createElement('canvas')
   private readonly airQualityContext: CanvasRenderingContext2D
+  private readonly anomalyCanvas = document.createElement('canvas')
+  private readonly anomalyContext: CanvasRenderingContext2D
   private temperatureTextureDirty = true
   private airQualityTextureDirty = true
+  private anomalyTextureDirty = true
   private width = 1
   private height = 1
   private reducedMotion = false
@@ -36,13 +41,19 @@ export class WeatherFieldRenderer {
     }
 
     const airQualityContext = this.airQualityCanvas.getContext('2d')
+    const anomalyContext = this.anomalyCanvas.getContext('2d')
 
     if (!airQualityContext) {
       throw new Error('Air quality canvas unavailable')
     }
 
+    if (!anomalyContext) {
+      throw new Error('Temperature anomaly canvas unavailable')
+    }
+
     this.temperatureContext = temperatureContext
     this.airQualityContext = airQualityContext
+    this.anomalyContext = anomalyContext
   }
 
   setViewport(width: number, height: number, reducedMotion: boolean) {
@@ -51,7 +62,11 @@ export class WeatherFieldRenderer {
     this.reducedMotion = reducedMotion
   }
 
-  markDataChanged(temperatureChanged: boolean, airQualityChanged: boolean) {
+  markDataChanged(
+    temperatureChanged: boolean,
+    airQualityChanged: boolean,
+    anomalyChanged: boolean
+  ) {
     if (temperatureChanged) {
       this.temperatureTextureDirty = true
     }
@@ -59,11 +74,16 @@ export class WeatherFieldRenderer {
     if (airQualityChanged) {
       this.airQualityTextureDirty = true
     }
+
+    if (anomalyChanged) {
+      this.anomalyTextureDirty = true
+    }
   }
 
   invalidate() {
     this.temperatureTextureDirty = true
     this.airQualityTextureDirty = true
+    this.anomalyTextureDirty = true
   }
 
   drawTemperature(samples: ProjectedSample[], time: number) {
@@ -94,6 +114,19 @@ export class WeatherFieldRenderer {
     this.context.drawImage(this.airQualityCanvas, 0, 0, this.width, this.height)
     this.context.restore()
     this.drawAirQualityLegend(samples)
+  }
+
+  drawTemperatureAnomaly(samples: ProjectedTemperatureAnomalySample[]) {
+    if (this.anomalyTextureDirty) {
+      this.renderTemperatureAnomalyTexture(samples)
+    }
+
+    this.context.save()
+    this.context.globalAlpha = 0.68
+    this.context.imageSmoothingEnabled = true
+    this.context.drawImage(this.anomalyCanvas, 0, 0, this.width, this.height)
+    this.context.restore()
+    this.drawTemperatureAnomalyLegend()
   }
 
   private renderTemperatureTexture(samples: ProjectedSample[]) {
@@ -182,6 +215,47 @@ export class WeatherFieldRenderer {
     ).toFixed(1)
   }
 
+  private renderTemperatureAnomalyTexture(
+    samples: ProjectedTemperatureAnomalySample[]
+  ) {
+    const startedAt = performance.now()
+    const scale = 8
+    const width = Math.max(1, Math.ceil(this.width / scale))
+    const height = Math.max(1, Math.ceil(this.height / scale))
+    const valueSamples = samples.map(projected => ({
+      x: projected.x,
+      y: projected.y,
+      value: projected.sample.anomaly
+    }))
+
+    this.anomalyCanvas.width = width
+    this.anomalyCanvas.height = height
+
+    const image = this.anomalyContext.createImageData(width, height)
+
+    for (let row = 0; row < height; row += 1) {
+      const screenY = (row + 0.5) * this.height / height
+
+      for (let column = 0; column < width; column += 1) {
+        const screenX = (column + 0.5) * this.width / width
+        const anomaly = interpolateNearestFour(screenX, screenY, valueSamples)
+        const color = temperatureAnomalyColor(anomaly)
+        const offset = (row * width + column) * 4
+
+        image.data[offset] = color.r
+        image.data[offset + 1] = color.g
+        image.data[offset + 2] = color.b
+        image.data[offset + 3] = 255
+      }
+    }
+
+    this.anomalyContext.putImageData(image, 0, 0)
+    this.anomalyTextureDirty = false
+    this.targetCanvas.dataset.temperatureAnomalyTextureMs = (
+      performance.now() - startedAt
+    ).toFixed(1)
+  }
+
   private drawTemperatureLegend(samples: ProjectedSample[]) {
     const temperatures = samples.map(({ sample }) => sample.temperature)
     const minimum = Math.min(...temperatures)
@@ -234,6 +308,31 @@ export class WeatherFieldRenderer {
       x + legendWidth,
       y + 29
     )
+  }
+
+  private drawTemperatureAnomalyLegend() {
+    const legendWidth = Math.min(440, this.width - 48)
+    const x = (this.width - legendWidth) / 2
+    const y = this.height - LEGEND_BOTTOM_INSET
+    const gradient = this.context.createLinearGradient(x, 0, x + legendWidth, 0)
+
+    for (let step = 0; step <= 10; step += 1) {
+      const color = temperatureAnomalyColor(-10 + step * 2)
+
+      gradient.addColorStop(step / 10, `rgb(${color.r}, ${color.g}, ${color.b})`)
+    }
+
+    this.drawLegendFrame(x, y, legendWidth)
+    this.context.fillStyle = gradient
+    this.context.fillRect(x, y, legendWidth, 12)
+    this.context.fillStyle = 'rgba(247, 252, 255, 0.94)'
+    this.context.font = '700 12px Inter, system-ui, sans-serif'
+    this.context.textAlign = 'left'
+    this.context.fillText('−10°C', x, y + 29)
+    this.context.textAlign = 'center'
+    this.context.fillText('0°C', x + legendWidth / 2, y + 29)
+    this.context.textAlign = 'right'
+    this.context.fillText('+10°C', x + legendWidth, y + 29)
   }
 
   private drawLegendFrame(

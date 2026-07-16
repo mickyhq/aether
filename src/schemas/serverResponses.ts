@@ -13,6 +13,7 @@ import type {
   SoilMoistureReading,
   StargazingForecast,
   TemperatureRecords,
+  TemperatureNormalResponse,
   WeatherLocation
 } from '../types/weather'
 
@@ -145,6 +146,22 @@ export const airQualityResponseSchema = createSchema<
 export const jetStreamResponseSchema = createSchema<
   JetStreamResponse | JetStreamResponse[]
 >(value => isJetStreamResponse(value))
+
+export const temperatureNormalResponseSchema = createSchema<TemperatureNormalResponse>(
+  value => isRecord(value) &&
+    value.baseline === '1991–2020' &&
+    isString(value.source) &&
+    isString(value.resolution) &&
+    isString(value.targetTime) &&
+    Array.isArray(value.samples) &&
+    value.samples.every(sample => (
+      isRecord(sample) &&
+      isFiniteNumber(sample.latitude) &&
+      isFiniteNumber(sample.longitude) &&
+      isFiniteNumber(sample.normalTemperature) &&
+      isFiniteNumber(sample.yearCount)
+    ))
+)
 
 export const heatAlertsResponseSchema = createSchema<HeatAlertsResponse>(
   value => isRecord(value) &&
@@ -326,6 +343,7 @@ export const runtimeResponseSchemas = {
   openMeteo: openMeteoResponseSchema,
   airQuality: airQualityResponseSchema,
   jetStream: jetStreamResponseSchema,
+  temperatureNormal: temperatureNormalResponseSchema,
   heatAlerts: heatAlertsResponseSchema,
   stargazing: stargazingResponseSchema,
   soilMoisture: soilMoistureResponseSchema,

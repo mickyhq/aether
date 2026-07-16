@@ -15,6 +15,7 @@ const ANIMATION_QUALITIES: readonly AnimationQuality[] = [
 ]
 const WEATHER_MODES: readonly WeatherMode[] = [
   'temperature',
+  'temperature-anomaly',
   'wind',
   'jet-stream',
   'precipitation',
