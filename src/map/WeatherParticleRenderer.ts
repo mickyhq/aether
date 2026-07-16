@@ -69,11 +69,12 @@ export class WeatherParticleRenderer {
     this.oceanCurrent.draw(samples, deltaTime)
   }
 
-  drawPrecipitation(samples: ProjectedSample[], deltaTime: number) {
+  drawPrecipitation(
+    samples: ProjectedSample[],
+    deltaTime: number,
+    time: number
+  ) {
     this.precipitation.draw(samples, deltaTime)
-  }
-
-  drawStorm(samples: ProjectedSample[], deltaTime: number, time: number) {
     this.storm.draw(samples, deltaTime, time)
   }
 }

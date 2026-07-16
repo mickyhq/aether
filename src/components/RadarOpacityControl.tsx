@@ -16,7 +16,7 @@ export function RadarOpacityControl({
 }: RadarOpacityControlProps) {
   const { t } = useI18n()
 
-  if (mode !== 'precipitation' && mode !== 'storm') {
+  if (mode !== 'precipitation') {
     return null
   }
 

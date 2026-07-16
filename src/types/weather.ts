@@ -154,7 +154,7 @@ export type OpenMeteoAirQualityResponse = {
   current: OpenMeteoAirQualityCurrent
 }
 
-export type WeatherMode = 'temperature' | 'temperature-anomaly' | 'wind' | 'jet-stream' | 'precipitation' | 'storm' | 'air-quality' | 'ocean-current'
+export type WeatherMode = 'temperature' | 'temperature-anomaly' | 'wind' | 'jet-stream' | 'precipitation' | 'air-quality' | 'ocean-current'
 
 export type AnimationQuality = 'low' | 'balanced' | 'high'
 

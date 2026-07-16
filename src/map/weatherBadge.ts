@@ -3,14 +3,14 @@ import type { WeatherMapSample, WeatherMode } from '../types/weather'
 export function renderWeatherBadge(
   sample: WeatherMapSample,
   mode: WeatherMode,
-  stormLabels: { storm: string, noStorm: string }
+  stormLabel: string
 ) {
   const estimate = sample.estimated ? '~' : ''
 
   return `
     <div class="weather-map-badge">
       <span class="weather-map-badge-place">${escapeHtml(sample.label)}</span>
-      <span class="weather-map-badge-value">${estimate}${escapeHtml(formatMetric(sample, mode, stormLabels))}</span>
+      <span class="weather-map-badge-value">${estimate}${escapeHtml(formatMetric(sample, mode, stormLabel))}</span>
     </div>
   `
 }
@@ -18,14 +18,18 @@ export function renderWeatherBadge(
 function formatMetric(
   sample: WeatherMapSample,
   mode: WeatherMode,
-  stormLabels: { storm: string, noStorm: string }
+  stormLabel: string
 ) {
   if (mode === 'temperature') return `${Math.round(sample.temperature)}°C`
   if (mode === 'wind') return `${Math.round(sample.rawWindSpeed)} km/h`
   if (mode === 'jet-stream') return '--'
-  if (mode === 'precipitation') return `${sample.precipitation.toFixed(1)} mm`
+  if (mode === 'precipitation') {
+    const amount = `${sample.precipitation.toFixed(1)} mm`
 
-  return sample.isThunderstorm ? stormLabels.storm : stormLabels.noStorm
+    return sample.isThunderstorm ? `${stormLabel} · ${amount}` : amount
+  }
+
+  return '--'
 }
 
 function escapeHtml(value: string) {

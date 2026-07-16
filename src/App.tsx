@@ -345,7 +345,6 @@ function buildModeProvenance(
     temperature: surface ?? undefined,
     wind: surface ?? undefined,
     precipitation: surface ?? undefined,
-    storm: surface ?? undefined,
     'air-quality': airQuality ?? undefined,
     'jet-stream': jetStream ?? undefined,
     'ocean-current': oceanCurrent ?? undefined,

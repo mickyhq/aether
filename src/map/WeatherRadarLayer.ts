@@ -71,7 +71,7 @@ export class WeatherRadarLayer {
   }
 
   setMode(mode: WeatherMode) {
-    const visible = mode === 'precipitation' || mode === 'storm'
+    const visible = mode === 'precipitation'
 
     if (visible === this.visible) {
       return

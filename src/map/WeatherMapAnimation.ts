@@ -352,11 +352,12 @@ export class WeatherMapAnimation {
     }
 
     if (this.mode === 'precipitation') {
-      this.particleRenderer.drawPrecipitation(projectedSamples, deltaTime)
-      return
+      this.particleRenderer.drawPrecipitation(
+        projectedSamples,
+        deltaTime,
+        time
+      )
     }
-
-    this.particleRenderer.drawStorm(projectedSamples, deltaTime, time)
   }
 
   private renderAirQuality(time: number) {

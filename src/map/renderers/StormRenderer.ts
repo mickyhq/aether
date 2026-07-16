@@ -24,7 +24,7 @@ export class StormRenderer {
 
   draw(samples: ProjectedSample[], deltaTime: number, time: number) {
     const stormSamples = samples.filter(({ sample }) => (
-      sample.isThunderstorm || sample.precipitation > 0.5
+      sample.isThunderstorm
     ))
 
     for (const { sample, x, y } of stormSamples) {

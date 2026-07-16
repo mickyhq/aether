@@ -3,7 +3,6 @@ import BlurOnIcon from '@mui/icons-material/BlurOn'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
 import CompareIcon from '@mui/icons-material/Compare'
 import FlightIcon from '@mui/icons-material/Flight'
-import ThunderstormIcon from '@mui/icons-material/Thunderstorm'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import WavesIcon from '@mui/icons-material/Waves'
 import { Box, Stack, Typography } from '@mui/material'
@@ -122,18 +121,10 @@ export function WeatherDashboard({
           <Metric
             icon={<WaterDropIcon />}
             label={t('mode.precipitation')}
-            value={formatPrecipitation(weather)}
+            value={formatPrecipitation(weather, t('mode.storm'))}
             selected={mode === 'precipitation'}
             onClick={() => onModeChange('precipitation')}
             provenance={provenance.precipitation}
-          />
-          <Metric
-            icon={<ThunderstormIcon />}
-            label={t('mode.storm')}
-            value={weather?.isThunderstorm ? t('common.yes') : t('common.no')}
-            selected={mode === 'storm'}
-            onClick={() => onModeChange('storm')}
-            provenance={provenance.storm}
           />
           <Metric
             icon={<BlurOnIcon />}
@@ -372,8 +363,17 @@ function formatWind(weather: WeatherConfig | null) {
   return weather ? `${Math.round(weather.rawWindSpeed)} km/h` : '--'
 }
 
-function formatPrecipitation(weather: WeatherConfig | null) {
-  return weather ? `${weather.precipitation.toFixed(1)} mm` : '--'
+function formatPrecipitation(
+  weather: WeatherConfig | null,
+  stormLabel: string
+) {
+  if (!weather) {
+    return '--'
+  }
+
+  const amount = `${weather.precipitation.toFixed(1)} mm`
+
+  return weather.isThunderstorm ? `${stormLabel} · ${amount}` : amount
 }
 
 function formatAirQuality(airQuality: AirQualityReading | null) {

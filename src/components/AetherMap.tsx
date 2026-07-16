@@ -544,10 +544,7 @@ export function AetherMap({
         interactive: false,
         icon: L.divIcon({
           className: 'weather-badge-marker',
-          html: renderWeatherBadge(sample, mode, {
-            storm: t('mode.storm'),
-            noStorm: t('mode.noStorm')
-          }),
+          html: renderWeatherBadge(sample, mode, t('mode.storm')),
           iconSize: [112, 46],
           iconAnchor: [-8, 36]
         })

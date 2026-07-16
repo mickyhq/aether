@@ -20,7 +20,6 @@ const WEATHER_MODES: readonly WeatherMode[] = [
   'wind',
   'jet-stream',
   'precipitation',
-  'storm',
   'air-quality',
   'ocean-current'
 ]
@@ -32,6 +31,10 @@ export function loadInitialLocation() {
 export function readUrlMode(): WeatherMode {
   try {
     const raw = new URLSearchParams(window.location.search).get('mode')
+
+    if (raw === 'storm') {
+      return 'precipitation'
+    }
 
     return raw && WEATHER_MODES.includes(raw as WeatherMode)
       ? raw as WeatherMode
