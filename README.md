@@ -51,6 +51,7 @@ Aether is a full-screen weather and environmental map built with React, TypeScri
 - Live, cached, stale, and unavailable data status
 - Manual retry for stale or unavailable weather
 - Keyboard map selection and responsive controls
+- Responsive regional zoom limit prevents zooming out to a full-world view
 - Reduced-motion behavior for map, radar, forecast, and interface animation
 - Isolated recovery when the map or forecast UI crashes
 - About dialog with author and provider links
@@ -75,6 +76,7 @@ Satellite hotspots are not confirmed fire perimeters. They may include industria
 
 - Worldwide weekly activity reports from the Smithsonian Global Volcanism Program and USGS
 - Separate markers for new eruptions, continuing eruptions, new unrest, and continuing unrest
+- Coordinate-centered point markers at world zoom keep volcano locations accurate
 - Report period, source summary, full weekly report, and volcano profile in each popup
 - Saved overlay selection and six-hour background refresh
 

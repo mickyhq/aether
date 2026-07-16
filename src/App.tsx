@@ -6,6 +6,7 @@ import { MapWeatherTooltip } from './components/MapWeatherTooltip'
 import { OfflineStatus } from './components/OfflineStatus'
 import { RadarOpacityControl } from './components/RadarOpacityControl'
 import { WeatherErrorBoundary } from './components/WeatherErrorBoundary'
+import { WeatherPanelToggle } from './components/WeatherPanelToggle'
 import { useLocationSelection } from './hooks/useLocationSelection'
 import { useLocationWeather } from './hooks/useLocationWeather'
 import { useMapWeatherData } from './hooks/useMapWeatherData'
@@ -16,8 +17,10 @@ import {
   loadInitialLocation,
   loadAnimationQuality,
   loadRadarOpacity,
+  loadWeatherPanelCollapsed,
   persistAnimationQuality,
   persistRadarOpacity,
+  persistWeatherPanelCollapsed,
   readUrlMode,
   updateUrlLocation
 } from './services/appState'
@@ -123,6 +126,9 @@ export default function App() {
   const [animationQuality, setAnimationQuality] = useState<AnimationQuality>(
     loadAnimationQuality
   )
+  const [weatherPanelCollapsed, setWeatherPanelCollapsed] = useState(
+    loadWeatherPanelCollapsed
+  )
   const selectedAirQuality = useMemo(
     () => interpolateAirQualityAt(
       selectedLocation.latitude,
@@ -226,6 +232,15 @@ export default function App() {
     persistAnimationQuality(quality)
   }
 
+  function handleWeatherPanelToggle() {
+    setWeatherPanelCollapsed(collapsed => {
+      const nextCollapsed = !collapsed
+
+      persistWeatherPanelCollapsed(nextCollapsed)
+      return nextCollapsed
+    })
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -275,37 +290,43 @@ export default function App() {
           area="forecast"
           resetKey={`${selectedLocation.latitude}:${selectedLocation.longitude}:${weatherMode}`}
         >
-          <Suspense fallback={<div className="weather-panel">{t('app.loadingForecast')}</div>}>
-            <WeatherDashboard
-              weather={displayedWeather}
-              alertWeather={weather}
-              ecmwfForecast={ecmwfForecast}
-              ecmwfLoading={ecmwfLoading}
-              onEcmwfFrameChange={
-                weatherMode === 'jet-stream' ||
-                weatherMode === 'air-quality' ||
-                weatherMode === 'ocean-current' ||
-                weatherMode === 'temperature-anomaly'
-                  ? null
-                  : setEcmwfFrame
-              }
-              onEcmwfPlaybackChange={setEcmwfPlaybackTime}
-              airQuality={selectedAirQuality}
-              temperatureAnomaly={selectedTemperatureAnomaly
-                ? {
-                    ...selectedTemperatureAnomaly,
-                    temperatureAnomaly: weather
-                      ? weather.temperature - selectedTemperatureAnomaly.normalTemperature
-                      : selectedTemperatureAnomaly.temperatureAnomaly
-                  }
-                : null}
-              officialHeatAlerts={officialHeatAlerts}
-              location={dashboardLocation}
-              mode={weatherMode}
-              provenance={dashboardProvenance}
-              onModeChange={setWeatherMode}
-            />
-          </Suspense>
+          <div className={`weather-panel-region ${weatherPanelCollapsed ? 'is-collapsed' : ''}`}>
+            <Suspense fallback={<div className="weather-panel">{t('app.loadingForecast')}</div>}>
+              <WeatherDashboard
+                weather={displayedWeather}
+                alertWeather={weather}
+                ecmwfForecast={ecmwfForecast}
+                ecmwfLoading={ecmwfLoading}
+                onEcmwfFrameChange={
+                  weatherMode === 'jet-stream' ||
+                  weatherMode === 'air-quality' ||
+                  weatherMode === 'ocean-current' ||
+                  weatherMode === 'temperature-anomaly'
+                    ? null
+                    : setEcmwfFrame
+                }
+                onEcmwfPlaybackChange={setEcmwfPlaybackTime}
+                airQuality={selectedAirQuality}
+                temperatureAnomaly={selectedTemperatureAnomaly
+                  ? {
+                      ...selectedTemperatureAnomaly,
+                      temperatureAnomaly: weather
+                        ? weather.temperature - selectedTemperatureAnomaly.normalTemperature
+                        : selectedTemperatureAnomaly.temperatureAnomaly
+                    }
+                  : null}
+                officialHeatAlerts={officialHeatAlerts}
+                location={dashboardLocation}
+                mode={weatherMode}
+                provenance={dashboardProvenance}
+                onModeChange={setWeatherMode}
+              />
+            </Suspense>
+          </div>
+          <WeatherPanelToggle
+            collapsed={weatherPanelCollapsed}
+            onToggle={handleWeatherPanelToggle}
+          />
         </WeatherErrorBoundary>
       </main>
     </ThemeProvider>

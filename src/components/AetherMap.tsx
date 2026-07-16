@@ -43,6 +43,11 @@ const WORLD_BOUNDS = L.latLngBounds(
   [-85.05112878, -180],
   [85.05112878, 180]
 )
+const REGIONAL_VIEW_BOUNDS = L.latLngBounds(
+  [34, -12],
+  [72, 40]
+)
+const ABSOLUTE_MIN_ZOOM = 2
 const MAP_POINTER_BLOCK_SELECTOR = [
   '.aether-header',
   '.fire-layer-status',
@@ -53,7 +58,8 @@ const MAP_POINTER_BLOCK_SELECTOR = [
   '.leaflet-tooltip',
   '.offline-status',
   '.radar-opacity-control',
-  '.weather-panel'
+  '.weather-panel',
+  '.weather-panel-toggle'
 ].join(', ')
 
 type AetherMapProps = {
@@ -195,6 +201,14 @@ export function AetherMap({
       maxBoundsViscosity: 1,
       worldCopyJump: false
     })
+    const updateMinimumZoom = () => {
+      map.setMinZoom(Math.max(
+        ABSOLUTE_MIN_ZOOM,
+        map.getBoundsZoom(REGIONAL_VIEW_BOUNDS)
+      ))
+    }
+
+    updateMinimumZoom()
 
     const layers = createAetherMapLayers({
       map,
@@ -404,6 +418,7 @@ export function AetherMap({
     }
     map.on('moveend zoomend resize', scheduleViewport)
     map.on('moveend zoomend resize', animation.invalidate, animation)
+    map.on('resize', updateMinimumZoom)
     map.on('click', handleMapClick)
     map.on('movestart zoomstart', clearPointerWeather)
     mapElement.addEventListener('mousemove', handleMouseMove, {
@@ -432,6 +447,7 @@ export function AetherMap({
       }
       map.off('moveend zoomend resize', scheduleViewport)
       map.off('moveend zoomend resize', animation.invalidate, animation)
+      map.off('resize', updateMinimumZoom)
       map.off('click', handleMapClick)
       map.off('movestart zoomstart', clearPointerWeather)
       mapElement.removeEventListener('mousemove', handleMouseMove, true)

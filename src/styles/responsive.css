@@ -55,11 +55,15 @@
   .weather-panel {
     top: auto;
     bottom: calc(var(--footer-height) + 8px);
-    width: min(278px, calc(100vw - 12px));
+    width: var(--weather-panel-width);
     max-height: calc(
       100dvh - var(--header-height) - var(--footer-height) - 16px
     );
     padding: 12px;
+  }
+
+  .app-shell {
+    --weather-panel-width: min(278px, calc(100vw - 12px));
   }
 
   .fire-layer-status {

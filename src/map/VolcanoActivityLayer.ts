@@ -26,6 +26,14 @@ const ACTIVITY_KEYS: Record<VolcanoActivity, TranslationKey> = {
 
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000
 const REQUEST_TIMEOUT_MS = 10000
+const COMPACT_MARKER_MAX_ZOOM = 4
+const ACTIVITY_COLORS: Record<VolcanoActivity, string> = {
+  'new-eruption': '#ff5b3f',
+  eruption: '#ffb04f',
+  'new-unrest': '#ffd45d',
+  unrest: '#e9c46a',
+  other: '#e9c46a'
+}
 
 export class VolcanoActivityLayer {
   private readonly layer = L.layerGroup()
@@ -38,6 +46,8 @@ export class VolcanoActivityLayer {
   private refreshTimeout = 0
   private pageVisible = isPageVisible()
   private unsubscribeVisibility: (() => void) | null = null
+  private payload: VolcanoActivityResponse | null = null
+  private compactMarkers = false
 
   constructor(map: L.Map, t: VolcanoActivityLayer['t']) {
     this.map = map
@@ -51,6 +61,7 @@ export class VolcanoActivityLayer {
   start() {
     this.map.on('overlayadd', this.handleOverlayAdd)
     this.map.on('overlayremove', this.handleOverlayRemove)
+    this.map.on('zoomend', this.handleZoomEnd)
     this.unsubscribeVisibility = subscribeToPageVisibility(
       this.handlePageVisibility
     )
@@ -59,10 +70,12 @@ export class VolcanoActivityLayer {
   destroy() {
     this.map.off('overlayadd', this.handleOverlayAdd)
     this.map.off('overlayremove', this.handleOverlayRemove)
+    this.map.off('zoomend', this.handleZoomEnd)
     this.unsubscribeVisibility?.()
     this.unsubscribeVisibility = null
     this.stopRefresh()
     this.layer.clearLayers()
+    this.payload = null
   }
 
   private readonly handleOverlayAdd = (event: L.LayersControlEvent) => {
@@ -128,22 +141,26 @@ export class VolcanoActivityLayer {
   }
 
   private render(payload: VolcanoActivityResponse) {
+    this.payload = payload
+    this.compactMarkers = this.map.getZoom() <= COMPACT_MARKER_MAX_ZOOM
     this.layer.clearLayers()
 
     for (const volcano of payload.volcanoes ?? []) {
-      const marker = L.marker(
-        [volcano.latitude, volcano.longitude],
-        {
-          icon: createVolcanoIcon(volcano.activity),
-          riseOnHover: true,
-          riseOffset: 600,
-          title: `${volcano.name}: ${volcano.activityLabel}`
-        }
-      )
+      const marker = this.compactMarkers
+        ? createCompactVolcanoMarker(volcano)
+        : L.marker(
+            [volcano.latitude, volcano.longitude],
+            {
+              icon: createVolcanoIcon(volcano.activity),
+              riseOnHover: true,
+              riseOffset: 600,
+              title: `${volcano.name}: ${volcano.activityLabel}`
+            }
+          )
 
       marker.bindTooltip(
         `${volcano.name} · ${volcano.activityLabel}`,
-        { direction: 'top', offset: [0, -12] }
+        { direction: 'top', offset: [0, this.compactMarkers ? -6 : -12] }
       )
       marker.bindPopup(buildPopup(volcano, payload, this.t), {
         maxHeight: 320,
@@ -168,6 +185,30 @@ export class VolcanoActivityLayer {
       void this.load()
     }
   }
+
+  private readonly handleZoomEnd = () => {
+    const compactMarkers = this.map.getZoom() <= COMPACT_MARKER_MAX_ZOOM
+
+    if (
+      compactMarkers !== this.compactMarkers
+      && this.payload
+      && this.map.hasLayer(this.layer)
+    ) {
+      this.render(this.payload)
+    }
+  }
+}
+
+function createCompactVolcanoMarker(volcano: VolcanoReport) {
+  return L.circleMarker([volcano.latitude, volcano.longitude], {
+    pane: 'markerPane',
+    radius: volcano.activity.startsWith('new-') ? 5 : 4,
+    color: '#fff0d7',
+    weight: 1.25,
+    fillColor: ACTIVITY_COLORS[volcano.activity],
+    fillOpacity: 0.95,
+    bubblingMouseEvents: false
+  })
 }
 
 function createVolcanoIcon(activity: VolcanoActivity) {

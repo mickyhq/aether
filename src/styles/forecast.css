@@ -1,8 +1,12 @@
+.app-shell {
+  --weather-panel-width: min(286px, calc(100vw - 12px));
+}
+
 .weather-panel {
   position: fixed;
   top: calc(var(--header-height) + 10px);
   left: 0;
-  width: min(286px, calc(100vw - 12px));
+  width: var(--weather-panel-width);
   max-height: calc(
     100dvh - var(--header-height) - var(--footer-height) - 18px
   );
@@ -18,6 +22,47 @@
   backdrop-filter: blur(20px) saturate(140%);
   z-index: 2;
   color: var(--app-text);
+  visibility: visible;
+  transition:
+    transform 220ms ease,
+    opacity 180ms ease,
+    visibility 0s;
+}
+
+.weather-panel-region.is-collapsed .weather-panel {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-100%);
+  transition:
+    transform 220ms ease,
+    opacity 180ms ease,
+    visibility 0s 220ms;
+}
+
+.weather-panel-toggle {
+  position: fixed !important;
+  top: calc(var(--header-height) + 20px);
+  left: var(--weather-panel-width);
+  z-index: 3;
+  width: 30px !important;
+  height: 42px !important;
+  border: 1px solid var(--glass-line) !important;
+  border-left: 0 !important;
+  border-radius: 0 9px 9px 0 !important;
+  background: var(--app-surface-strong) !important;
+  box-shadow: 8px 8px 24px rgba(0, 0, 0, 0.24);
+  color: #bdefff !important;
+  transition: left 220ms ease, background 160ms ease !important;
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+.weather-panel-toggle:hover {
+  background: rgba(18, 39, 49, 0.94) !important;
+}
+
+.weather-panel-toggle.is-collapsed {
+  left: 0;
 }
 
 .severe-weather-alert {

@@ -74,7 +74,12 @@ export function WeatherDashboard({
   }, [ecmwfForecast, t, weather])
 
   return (
-    <Box component="aside" className="weather-panel" aria-label={t('forecast.panelAria')}>
+    <Box
+      id="weather-panel"
+      component="aside"
+      className="weather-panel"
+      aria-label={t('forecast.panelAria')}
+    >
       <Stack spacing={1.25}>
         <SevereWeatherAlerts
           weather={alertWeather}

@@ -8,6 +8,7 @@ import type {
 const STORED_LOCATION_KEY = 'aether:location'
 const RADAR_OPACITY_KEY = 'aether:radar-opacity'
 const ANIMATION_QUALITY_KEY = 'aether:animation-quality'
+const WEATHER_PANEL_COLLAPSED_KEY = 'aether:weather-panel-collapsed'
 const ANIMATION_QUALITIES: readonly AnimationQuality[] = [
   'low',
   'balanced',
@@ -102,6 +103,25 @@ export function loadAnimationQuality(): AnimationQuality {
 export function persistAnimationQuality(quality: AnimationQuality) {
   try {
     window.localStorage.setItem(ANIMATION_QUALITY_KEY, quality)
+  } catch {
+    return
+  }
+}
+
+export function loadWeatherPanelCollapsed() {
+  try {
+    return window.localStorage.getItem(WEATHER_PANEL_COLLAPSED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+export function persistWeatherPanelCollapsed(collapsed: boolean) {
+  try {
+    window.localStorage.setItem(
+      WEATHER_PANEL_COLLAPSED_KEY,
+      String(collapsed)
+    )
   } catch {
     return
   }
