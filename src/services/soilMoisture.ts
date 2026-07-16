@@ -5,6 +5,7 @@ import {
   parseResponseJson,
   soilMoistureResponseSchema
 } from '../schemas/serverResponses'
+import { readValidatedCacheRecords } from './cacheValidation'
 
 const CACHE_KEY = getClientCacheKey('soil-moisture')
 const CACHE_TTL = 24 * 60 * 60 * 1000
@@ -65,11 +66,10 @@ type CacheRecord = {
 }
 
 function readCache(): Record<string, CacheRecord> {
-  try {
-    return JSON.parse(window.localStorage.getItem(CACHE_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
+  return readValidatedCacheRecords(
+    window.localStorage.getItem(CACHE_KEY),
+    soilMoistureResponseSchema.is
+  )
 }
 
 function writeCache(locationKey: string, payload: SoilMoistureReading) {

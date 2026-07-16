@@ -5,6 +5,7 @@ import {
   parseResponseJson,
   temperatureRecordsResponseSchema
 } from '../schemas/serverResponses'
+import { readValidatedCacheRecords } from './cacheValidation'
 
 const CACHE_KEY = getClientCacheKey('temperature-records')
 const CACHE_TTL = 32 * 24 * 60 * 60 * 1000
@@ -54,11 +55,10 @@ function getLocationKey(location: WeatherLocation) {
 }
 
 function readCache(): Record<string, CacheRecord> {
-  try {
-    return JSON.parse(window.localStorage.getItem(CACHE_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
+  return readValidatedCacheRecords(
+    window.localStorage.getItem(CACHE_KEY),
+    temperatureRecordsResponseSchema.is
+  )
 }
 
 function writeCache(locationKey: string, payload: TemperatureRecords) {

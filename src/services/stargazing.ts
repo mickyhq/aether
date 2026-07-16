@@ -5,6 +5,7 @@ import {
   parseResponseJson,
   stargazingResponseSchema
 } from '../schemas/serverResponses'
+import { readValidatedCacheRecords } from './cacheValidation'
 
 const CACHE_KEY = getClientCacheKey('stargazing')
 const CACHE_TTL = 3 * 60 * 60 * 1000
@@ -48,11 +49,10 @@ type CacheRecord = {
 }
 
 function readCache(): Record<string, CacheRecord> {
-  try {
-    return JSON.parse(window.localStorage.getItem(CACHE_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
+  return readValidatedCacheRecords(
+    window.localStorage.getItem(CACHE_KEY),
+    stargazingResponseSchema.is
+  )
 }
 
 function writeCache(locationKey: string, payload: StargazingForecast) {

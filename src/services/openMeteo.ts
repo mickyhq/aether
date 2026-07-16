@@ -4,6 +4,7 @@ import { getClientCacheKey } from '../../shared/cacheVersion.js'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 import { openMeteoResponseSchema } from '../schemas/serverResponses'
+import { readValidatedCacheRecords } from './cacheValidation'
 
 const OPEN_METEO_ENDPOINT = '/api/weather'
 const FORECAST_CACHE_KEY = getClientCacheKey('forecast')
@@ -156,15 +157,12 @@ function getLocationCacheKey(location: WeatherLocation) {
 }
 
 function readCachedForecast(cacheKey: string): ForecastCacheRecord | null {
-  try {
-    const cache = JSON.parse(
-      window.localStorage.getItem(FORECAST_CACHE_KEY) ?? '{}'
-    ) as Record<string, ForecastCacheRecord>
+  const cache = readValidatedCacheRecords(
+    window.localStorage.getItem(FORECAST_CACHE_KEY),
+    isSingleOpenMeteoResponse
+  )
 
-    return cache[cacheKey] ?? null
-  } catch {
-    return null
-  }
+  return cache[cacheKey] ?? null
 }
 
 function writeCachedForecast(
@@ -173,9 +171,10 @@ function writeCachedForecast(
   refreshedAt: number
 ) {
   try {
-    const cache = JSON.parse(
-      window.localStorage.getItem(FORECAST_CACHE_KEY) ?? '{}'
-    ) as Record<string, ForecastCacheRecord>
+    const cache = readValidatedCacheRecords(
+      window.localStorage.getItem(FORECAST_CACHE_KEY),
+      isSingleOpenMeteoResponse
+    )
     const records = Object.entries({
       ...cache,
       [cacheKey]: {
@@ -193,4 +192,10 @@ function writeCachedForecast(
   } catch {
     return
   }
+}
+
+function isSingleOpenMeteoResponse(
+  value: unknown
+): value is OpenMeteoResponse {
+  return !Array.isArray(value) && openMeteoResponseSchema.is(value)
 }

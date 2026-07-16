@@ -1,6 +1,7 @@
 import type { WeatherMapSample } from '../types/weather'
 import { normalizeLongitude } from '../utils/geo'
 import { openStorage } from './storage'
+import { isWeatherMapSample } from '../schemas/cachePayloads'
 
 type WeatherCacheRecord = {
   key: string
@@ -25,7 +26,8 @@ export async function loadPersistedWeatherSamples() {
 
     request.onsuccess = () => {
       const now = Date.now()
-      const records = (request.result as WeatherCacheRecord[])
+      const records = (request.result as unknown[])
+        .filter(isWeatherCacheRecord)
         .filter(record => now - record.updatedAt <= MAX_CACHE_AGE)
         .map(record => ({
           ...record.sample,
@@ -53,7 +55,8 @@ export async function persistWeatherSamples(samples: WeatherMapSample[]) {
 
     request.onsuccess = () => {
       const records = new Map(
-        (request.result as WeatherCacheRecord[])
+        (request.result as unknown[])
+          .filter(isWeatherCacheRecord)
           .filter(record => Date.now() - record.updatedAt <= MAX_CACHE_AGE)
           .map(record => [record.key, record])
       )
@@ -89,4 +92,17 @@ export async function persistWeatherSamples(samples: WeatherMapSample[]) {
 
 export function getWeatherCacheKey(latitude: number, longitude: number) {
   return `${latitude.toFixed(3)}:${normalizeLongitude(longitude).toFixed(3)}`
+}
+
+function isWeatherCacheRecord(value: unknown): value is WeatherCacheRecord {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+
+  const record = value as Partial<WeatherCacheRecord>
+
+  return typeof record.key === 'string' &&
+    typeof record.updatedAt === 'number' &&
+    Number.isFinite(record.updatedAt) &&
+    isWeatherMapSample(record.sample)
 }

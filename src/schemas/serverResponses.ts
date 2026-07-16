@@ -319,6 +319,28 @@ export const fireLayerStatusResponseSchema = createSchema<FireLayerStatusRespons
   value => isRecord(value) && isBoolean(value.firmsConfigured)
 )
 
+export const runtimeResponseSchemas = {
+  searchGeocode: searchGeocodeResponseSchema,
+  reverseGeocode: reverseGeocodeResponseSchema,
+  ecmwf: ecmwfResponseSchema,
+  openMeteo: openMeteoResponseSchema,
+  airQuality: airQualityResponseSchema,
+  jetStream: jetStreamResponseSchema,
+  heatAlerts: heatAlertsResponseSchema,
+  stargazing: stargazingResponseSchema,
+  soilMoisture: soilMoistureResponseSchema,
+  temperatureRecords: temperatureRecordsResponseSchema,
+  webcam: webcamResponseSchema,
+  nearbyWebcams: nearbyWebcamsResponseSchema,
+  oceanCurrent: oceanCurrentResponseSchema,
+  reportedFires: reportedFiresResponseSchema,
+  volcanoActivity: volcanoActivityResponseSchema,
+  radarMetadata: radarMetadataResponseSchema,
+  fireLayerStatus: fireLayerStatusResponseSchema
+} as const
+
+export type RuntimeResponseSchemaName = keyof typeof runtimeResponseSchemas
+
 export async function parseResponseJson<T>(
   response: Response,
   schema: RuntimeSchema<T>,

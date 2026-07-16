@@ -13,6 +13,7 @@ import { distanceInKilometers, inverseDistanceWeight } from '../utils/geo'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 import { airQualityResponseSchema } from '../schemas/serverResponses'
+import { isAirQualityMapSample } from '../schemas/cachePayloads'
 
 const AIR_QUALITY_ENDPOINT = '/api/air-quality'
 const CURRENT_FIELDS = [
@@ -250,17 +251,17 @@ async function loadCache() {
       return
     }
 
-    const records = await new Promise<AirQualityMapSample[]>(resolve => {
+    const records = await new Promise<unknown[]>(resolve => {
       const transaction = database.transaction(STORE_NAME, 'readonly')
       const request = transaction.objectStore(STORE_NAME).getAll()
 
-      request.onsuccess = () => resolve(request.result as AirQualityMapSample[])
+      request.onsuccess = () => resolve(request.result as unknown[])
       request.onerror = () => resolve([])
     })
 
     const now = Date.now()
 
-    for (const sample of records) {
+    for (const sample of records.filter(isAirQualityMapSample)) {
       if (now - sample.updatedAt <= MAX_CACHE_AGE) {
         sampleCache.set(getWeatherCacheKey(sample.latitude, sample.longitude), sample)
       }
