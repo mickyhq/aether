@@ -6,17 +6,24 @@ export type ScreenVector = {
   temperature?: number
 }
 
+type ScreenVectorGridOptions = {
+  preserveNullBoundaries?: boolean
+}
+
 export class ScreenVectorGrid {
   private readonly columns: number
   private readonly rows: number
   private readonly values: Array<ScreenVector | null>
+  private readonly preserveNullBoundaries: boolean
 
   constructor(
     private readonly width: number,
     private readonly height: number,
     private readonly spacing: number,
-    sample: (x: number, y: number) => ScreenVector | null
+    sample: (x: number, y: number) => ScreenVector | null,
+    options: ScreenVectorGridOptions = {}
   ) {
+    this.preserveNullBoundaries = options.preserveNullBoundaries ?? false
     this.columns = Math.max(2, Math.ceil(width / spacing) + 1)
     this.rows = Math.max(2, Math.ceil(height / spacing) + 1)
     this.values = []
@@ -51,6 +58,16 @@ export class ScreenVectorGrid {
     const bottomY = Math.min(bottom * this.spacing, this.height)
     const horizontal = (clampedX - leftX) / Math.max(1, rightX - leftX)
     const vertical = (clampedY - topY) / Math.max(1, bottomY - topY)
+
+    if (this.preserveNullBoundaries) {
+      const nearestColumn = horizontal < 0.5 ? left : right
+      const nearestRow = vertical < 0.5 ? top : bottom
+
+      if (!this.read(nearestColumn, nearestRow)) {
+        return null
+      }
+    }
+
     const points = [
       {
         value: this.read(left, top),

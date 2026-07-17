@@ -8,13 +8,11 @@ import type {
   Particle,
   ProjectedOceanCurrentSample
 } from '../weatherAnimationTypes'
-import {
-  ParticleModeRenderer,
-  VECTOR_GRID_SPACING
-} from './ParticleModeRenderer'
+import { ParticleModeRenderer } from './ParticleModeRenderer'
 
 const LEGEND_BOTTOM_INSET = 42
 const OCEAN_SPEED_STOPS = [0.3, 0.8]
+const OCEAN_VECTOR_GRID_SPACING = 32
 
 export class OceanCurrentParticleRenderer extends ParticleModeRenderer {
   private vectorGrid: ScreenVectorGrid | null = null
@@ -74,9 +72,24 @@ export class OceanCurrentParticleRenderer extends ParticleModeRenderer {
 
       const speed = 18 + Math.min(field.speed, 3) * 78
       const tail = 7 + Math.min(field.speed, 3) * 18
+      const nextX = particle.x + field.x * speed * deltaTime
+      const nextY = particle.y + field.y * speed * deltaTime
+      const tailX = nextX - field.x * tail
+      const tailY = nextY - field.y * tail
+      const middleX = (nextX + tailX) / 2
+      const middleY = (nextY + tailY) / 2
 
-      particle.x += field.x * speed * deltaTime
-      particle.y += field.y * speed * deltaTime
+      if (
+        !vectorGrid.at(nextX, nextY) ||
+        !vectorGrid.at(middleX, middleY) ||
+        !vectorGrid.at(tailX, tailY)
+      ) {
+        particle.life = 0
+        continue
+      }
+
+      particle.x = nextX
+      particle.y = nextY
       particle.life -= deltaTime
 
       const bucket = oceanTemperatureBucket(field.temperature)
@@ -157,8 +170,9 @@ export class OceanCurrentParticleRenderer extends ParticleModeRenderer {
       this.vectorGrid = new ScreenVectorGrid(
         this.width,
         this.height,
-        VECTOR_GRID_SPACING,
-        (x, y) => oceanCurrentFieldAt(x, y, samples)
+        OCEAN_VECTOR_GRID_SPACING,
+        (x, y) => oceanCurrentFieldAt(x, y, samples),
+        { preserveNullBoundaries: true }
       )
     }
 
