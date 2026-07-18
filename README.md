@@ -2,7 +2,7 @@
 
 [![Tests and build](https://img.shields.io/github/actions/workflow/status/mickyhq/aether/regression.yml?branch=main&label=tests%20%2B%20build)](https://github.com/mickyhq/aether/actions/workflows/regression.yml)
 [![Live demo](https://img.shields.io/website?url=https%3A%2F%2Faether-five-rose.vercel.app&label=live%20demo)](https://aether-five-rose.vercel.app)
-![Version](https://img.shields.io/badge/version-0.3.32-2563eb)
+![Version](https://img.shields.io/badge/version-0.3.33-2563eb)
 ![PWA](https://img.shields.io/badge/PWA-ready-5a0fc8)
 ![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.19-339933?logo=nodedotjs&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)

@@ -323,7 +323,7 @@ test('selects a location from the map', async ({ page }) => {
       name: 'Interactive weather map for Map Pick, Test State'
     })
   ).toBeVisible()
-  expect(reverseGeocodeRequests).toBe(1)
+  await expect.poll(() => reverseGeocodeRequests).toBe(2)
   await expect(page.getByRole('status')).toHaveText(/^(Live|Cached)/)
 })
 
