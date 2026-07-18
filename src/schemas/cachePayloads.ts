@@ -1,5 +1,6 @@
 import type {
   AirQualityMapSample,
+  JetStreamSample,
   WeatherEvolutionFrame,
   WeatherMapSample
 } from '../types/weather'
@@ -24,6 +25,7 @@ export function isWeatherMapSample(value: unknown): value is WeatherMapSample {
     optional(value.sunset, item => item === null || isTimestamp(item)) &&
     isFiniteNumber(value.temperature) &&
     isFiniteNumber(value.precipitation) &&
+    optional(value.pressureMsl, isFiniteNumber) &&
     isFiniteNumber(value.snowfall) &&
     isFiniteNumber(value.weatherCode) &&
     isFiniteNumber(value.windSpeed) &&
@@ -49,6 +51,18 @@ export function isAirQualityMapSample(
     isFiniteNumber(value.ozone)
 }
 
+export function isJetStreamSample(value: unknown): value is JetStreamSample {
+  return isRecord(value) &&
+    isFiniteNumber(value.latitude) &&
+    isFiniteNumber(value.longitude) &&
+    isFiniteNumber(value.updatedAt) &&
+    isTimestamp(value.observedAt) &&
+    isFiniteNumber(value.speed) &&
+    isFiniteNumber(value.angle) &&
+    isFiniteNumber(value.eastward) &&
+    isFiniteNumber(value.northward)
+}
+
 function isWeatherEvolutionFrame(
   value: unknown
 ): value is WeatherEvolutionFrame {
@@ -56,6 +70,7 @@ function isWeatherEvolutionFrame(
     isTimestamp(value.time) &&
     isFiniteNumber(value.temperature) &&
     isFiniteNumber(value.precipitation) &&
+    optional(value.pressureMsl, isFiniteNumber) &&
     isFiniteNumber(value.snowfall) &&
     isFiniteNumber(value.weatherCode) &&
     isFiniteNumber(value.cloudOpacity) &&

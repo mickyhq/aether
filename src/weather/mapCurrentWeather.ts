@@ -17,6 +17,7 @@ export function mapCurrentWeather(
   return {
     temperature: current.temperature_2m,
     precipitation,
+    pressureMsl: current.pressure_msl,
     snowfall: current.snowfall,
     weatherCode: current.weather_code,
     windSpeed: clamp(rawWindSpeed / 80, 0, 1),

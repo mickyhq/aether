@@ -26,6 +26,16 @@ const DATA_SOURCES: Array<{
     url: 'https://open-meteo.com/'
   },
   {
+    name: 'MET Norway',
+    kind: 'source.weather',
+    url: 'https://api.met.no/'
+  },
+  {
+    name: 'Earth Nullschool / NOAA GFS',
+    kind: 'source.weather',
+    url: 'https://earth.nullschool.net/about'
+  },
+  {
     name: 'ECMWF',
     kind: 'source.ifs',
     url: 'https://www.ecmwf.int/'

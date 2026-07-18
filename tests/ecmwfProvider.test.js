@@ -19,6 +19,7 @@ test('requests only the ECMWF IFS model', async () => {
       snowfall: [0],
       weather_code: [1],
       cloud_cover: [20],
+      pressure_msl: [1018],
       wind_speed_10m: [12],
       wind_direction_10m: [180]
     }
@@ -34,6 +35,7 @@ test('requests only the ECMWF IFS model', async () => {
   expect(url.pathname).toBe('/v1/forecast')
   expect(url.searchParams.has('apikey')).toBe(false)
   expect(url.searchParams.get('models')).toBe('ecmwf_ifs')
+  expect(url.searchParams.get('hourly')).toContain('pressure_msl')
 })
 
 test('uses ECMWF key on the customer endpoint when present', async () => {
@@ -47,6 +49,7 @@ test('uses ECMWF key on the customer endpoint when present', async () => {
       snowfall: [0],
       weather_code: [1],
       cloud_cover: [20],
+      pressure_msl: [1018],
       wind_speed_10m: [12],
       wind_direction_10m: [180]
     }
@@ -79,6 +82,7 @@ test('falls back to standard Open-Meteo forecast when ECMWF is rejected', async 
         snowfall: [0],
         weather_code: [2],
         cloud_cover: [40],
+        pressure_msl: [1004],
         wind_speed_10m: [10],
         wind_direction_10m: [90]
       }

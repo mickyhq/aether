@@ -32,6 +32,7 @@ const CURRENT_FIELDS = [
   'snowfall',
   'weather_code',
   'cloud_cover',
+  'pressure_msl',
   'wind_speed_10m',
   'wind_direction_10m'
 ]
@@ -42,6 +43,7 @@ const HOURLY_FIELDS = [
   'snowfall',
   'weather_code',
   'cloud_cover',
+  'pressure_msl',
   'wind_speed_10m',
   'wind_direction_10m'
 ]
@@ -144,6 +146,7 @@ export function cacheWeatherSample(location: WeatherLocation, weather: WeatherCo
     sunset: weather.sunset,
     temperature: weather.temperature,
     precipitation: weather.precipitation,
+    pressureMsl: weather.pressureMsl,
     snowfall: weather.snowfall,
     weatherCode: weather.weatherCode,
     windSpeed: weather.windSpeed,
@@ -179,6 +182,7 @@ export async function getCachedWeatherForLocation(location: WeatherLocation): Pr
     weatherCode: nearbySample.weatherCode,
     description: describeWeatherCode(nearbySample.weatherCode),
     precipitation: nearbySample.precipitation,
+    pressureMsl: nearbySample.pressureMsl,
     snowfall: nearbySample.snowfall,
     windSpeed: nearbySample.windSpeed,
     rawWindSpeed: nearbySample.rawWindSpeed,
@@ -235,6 +239,7 @@ export function interpolateWeatherAt(
     longitude,
     temperature: weighted(sample => sample.temperature),
     precipitation: weighted(sample => sample.precipitation),
+    ...optionalPressure(nearbySamples),
     rawWindSpeed: wind.speed,
     windAngle: wind.angle,
     cloudOpacity: weighted(sample => sample.cloudOpacity),
@@ -267,6 +272,7 @@ export function getWeatherMapSamplesAtTime(
       ...sample,
       temperature: frame.temperature,
       precipitation: frame.precipitation,
+      pressureMsl: frame.pressureMsl ?? sample.pressureMsl,
       snowfall: frame.snowfall,
       weatherCode: frame.weatherCode,
       windSpeed: frame.windSpeed,
@@ -478,6 +484,7 @@ function estimateSample(point: GridPoint): WeatherMapSample | null {
     observedAt: nearest.observedAt,
     temperature: weighted(sample => sample.temperature),
     precipitation: weighted(sample => sample.precipitation),
+    ...optionalPressure(nearbySamples),
     snowfall: weighted(sample => sample.snowfall),
     weatherCode: nearest.weatherCode,
     windSpeed: clamp(wind.speed / 80, 0, 1),
@@ -486,6 +493,32 @@ function estimateSample(point: GridPoint): WeatherMapSample | null {
     cloudOpacity: weighted(sample => sample.cloudOpacity),
     isThunderstorm: nearest.isThunderstorm
   }
+}
+
+function optionalPressure(
+  samples: Array<{ sample: WeatherMapSample, distance: number }>
+) {
+  const available = samples.filter(item => (
+    typeof item.sample.pressureMsl === 'number' &&
+    Number.isFinite(item.sample.pressureMsl)
+  ))
+
+  if (available.length === 0) {
+    return {}
+  }
+
+  const totalWeight = available.reduce(
+    (sum, item) => sum + inverseDistanceWeight(item.distance),
+    0
+  )
+  const pressureMsl = available.reduce(
+    (sum, item) => (
+      sum + (item.sample.pressureMsl ?? 0) * inverseDistanceWeight(item.distance)
+    ),
+    0
+  ) / totalWeight
+
+  return { pressureMsl }
 }
 
 function rememberSamples(samples: WeatherMapSample[]) {

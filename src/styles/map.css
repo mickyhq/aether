@@ -241,7 +241,7 @@
 
 .map-weather-tooltip {
   position: fixed;
-  z-index: 4;
+  z-index: 1;
   display: grid;
   gap: 7px;
   width: min(220px, calc(100vw - 24px));

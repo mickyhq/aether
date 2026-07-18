@@ -36,8 +36,12 @@ import { handleSoilMoisture } from '../server/soilMoisture.js'
 import { handleWebcams } from '../server/webcams.js'
 import { handleStargazing } from '../server/stargazing.js'
 import { logBackoffDiagnostic } from '../server/providerDiagnostics.js'
+import { fetchMetNorwayWeather } from '../server/metNorwayWeather.js'
+import { fetchNullschoolJetStream } from '../server/nullschoolJetStream.js'
 
 const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
+const OPEN_METEO_CUSTOMER_ENDPOINT =
+  'https://customer-api.open-meteo.com/v1/forecast'
 
 export default async function handler(request, response) {
   if (request.method !== 'GET') {
@@ -92,7 +96,7 @@ export default async function handler(request, response) {
   const blockedFor = getRemainingBlockSeconds(blockedUntil)
 
   if (blockedFor > 0) {
-    const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
+    const stale = await readStaleWeather(sharedCache, params)
 
     setBackoffHeaders(response, 'active', blockedFor)
 
@@ -104,8 +108,7 @@ export default async function handler(request, response) {
       cacheFallback: stale ? 'stale' : 'none'
     })
 
-    if (stale) {
-      sendWeather(response, stale, 'stale')
+    if (await sendWeatherRecovery(response, sharedCache, params, stale)) {
       return
     }
 
@@ -154,7 +157,7 @@ export default async function handler(request, response) {
       )
     }
 
-    const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
+    const stale = await readStaleWeather(sharedCache, params)
 
     if (retryAfter) {
       setBackoffHeaders(response, 'started', retryAfter)
@@ -167,8 +170,7 @@ export default async function handler(request, response) {
       })
     }
 
-    if (stale) {
-      sendWeather(response, stale, 'stale')
+    if (await sendWeatherRecovery(response, sharedCache, params, stale)) {
       return
     }
 
@@ -188,14 +190,194 @@ export default async function handler(request, response) {
     sendBudgetHeaders(response, upstream)
     response.send(body)
   } catch {
-    const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
+    const stale = await readStaleWeather(sharedCache, params)
 
-    if (stale) {
-      sendWeather(response, stale, 'stale')
+    if (await sendWeatherRecovery(response, sharedCache, params, stale)) {
       return
     }
 
     response.status(502).json({ error: 'Weather provider unavailable' })
+  }
+}
+
+async function sendWeatherRecovery(
+  response,
+  sharedCache,
+  params,
+  stale
+) {
+  if (stale && staleIncludesRequestedPressure(stale, params)) {
+    sendWeather(response, stale, 'stale')
+    return true
+  }
+
+  const fallback = await readNullschoolJetStreamFallback(
+    sharedCache,
+    params
+  ) ?? await readCustomerJetStreamFallback(
+    sharedCache,
+    params
+  ) ?? await readMetNorwayFallback(sharedCache, params)
+
+  if (fallback) {
+    sendWeather(response, fallback, 'upstream')
+    return true
+  }
+
+  if (stale) {
+    sendWeather(response, stale, 'stale')
+    return true
+  }
+
+  return false
+}
+
+function staleIncludesRequestedPressure(record, params) {
+  const needsCurrent = params.get('current')?.split(',').includes(
+    'pressure_msl'
+  ) ?? false
+  const needsHourly = params.get('hourly')?.split(',').includes(
+    'pressure_msl'
+  ) ?? false
+
+  if (!needsCurrent && !needsHourly) {
+    return true
+  }
+
+  try {
+    const parsed = JSON.parse(record.body)
+    const payloads = Array.isArray(parsed) ? parsed : [parsed]
+
+    return payloads.every(payload => (
+      (!needsCurrent || Number.isFinite(payload?.current?.pressure_msl)) &&
+      (!needsHourly || Array.isArray(payload?.hourly?.pressure_msl))
+    ))
+  } catch {
+    return false
+  }
+}
+
+async function readNullschoolJetStreamFallback(sharedCache, params) {
+  if (!isJetStreamRequest(params)) {
+    return null
+  }
+
+  try {
+    const record = await fetchNullschoolJetStream(params)
+
+    if (!record) {
+      return null
+    }
+
+    const cacheKey = params.toString()
+
+    await Promise.all([
+      writeSharedCache(
+        sharedCache,
+        `fresh:${cacheKey}`,
+        record,
+        WEATHER_FRESH_CACHE_TTL
+      ),
+      writeSharedCache(
+        sharedCache,
+        `stale:${cacheKey}`,
+        record,
+        STALE_CACHE_TTL
+      )
+    ])
+
+    return record
+  } catch {
+    return null
+  }
+}
+
+async function readCustomerJetStreamFallback(sharedCache, params) {
+  const apiKey = process.env.ECMWF_KEY?.trim()
+
+  if (!apiKey || !isJetStreamRequest(params)) {
+    return null
+  }
+
+  try {
+    const customerParams = new URLSearchParams(params)
+    const cacheKey = params.toString()
+
+    customerParams.set('models', 'ecmwf_ifs')
+    customerParams.set('apikey', apiKey)
+
+    const upstream = await fetchCoalesced(
+      `jet-stream:customer:${cacheKey}`,
+      `${OPEN_METEO_CUSTOMER_ENDPOINT}?${customerParams}`,
+      'Aether Jet Stream',
+      {},
+      'jet-stream'
+    )
+
+    if (!upstream.ok || !parseProviderBody(upstream.body, isJetStreamResponse)) {
+      return null
+    }
+
+    const record = {
+      body: upstream.body,
+      contentType: upstream.contentType,
+      rateLimitLimit: upstream.rateLimitLimit,
+      rateLimitRemaining: upstream.rateLimitRemaining
+    }
+
+    await Promise.all([
+      writeSharedCache(
+        sharedCache,
+        `fresh:${cacheKey}`,
+        record,
+        WEATHER_FRESH_CACHE_TTL
+      ),
+      writeSharedCache(
+        sharedCache,
+        `stale:${cacheKey}`,
+        record,
+        STALE_CACHE_TTL
+      )
+    ])
+
+    return record
+  } catch {
+    return null
+  }
+}
+
+async function readMetNorwayFallback(sharedCache, params) {
+  if (isJetStreamRequest(params)) {
+    return null
+  }
+
+  try {
+    const record = await fetchMetNorwayWeather(params)
+
+    if (!record) {
+      return null
+    }
+
+    const cacheKey = params.toString()
+
+    await Promise.all([
+      writeSharedCache(
+        sharedCache,
+        `fresh:${cacheKey}`,
+        record,
+        WEATHER_FRESH_CACHE_TTL
+      ),
+      writeSharedCache(
+        sharedCache,
+        `stale:${cacheKey}`,
+        record,
+        STALE_CACHE_TTL
+      )
+    ])
+
+    return record
+  } catch {
+    return null
   }
 }
 
@@ -208,6 +390,35 @@ function isJetStreamRequest(params) {
     current.includes('wind_direction_250hPa') &&
     !params.has('hourly')
   )
+}
+
+async function readStaleWeather(sharedCache, params) {
+  const cacheKey = params.toString()
+  const stale = await readSharedCache(sharedCache, `stale:${cacheKey}`)
+
+  if (stale) {
+    return stale
+  }
+
+  const legacyParams = new URLSearchParams(params)
+
+  removeField(legacyParams, 'current', 'pressure_msl')
+  removeField(legacyParams, 'hourly', 'pressure_msl')
+
+  const legacyKey = legacyParams.toString()
+
+  return legacyKey === cacheKey
+    ? null
+    : readSharedCache(sharedCache, `stale:${legacyKey}`)
+}
+
+function removeField(params, parameter, field) {
+  const fields = params.get(parameter)?.split(',') ?? []
+  const filtered = fields.filter(value => value !== field)
+
+  if (filtered.length > 0 && filtered.length !== fields.length) {
+    params.set(parameter, filtered.join(','))
+  }
 }
 
 function sendWeather(response, record, cacheStatus) {

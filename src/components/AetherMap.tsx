@@ -235,7 +235,10 @@ export function AetherMap({
       map,
       mapElement,
       t('ocean.seaTemperature'),
-      t('precipitation.legend')
+      t('precipitation.legend'),
+      t('pressure.legend'),
+      t('pressure.highShort'),
+      t('pressure.lowShort')
     )
     animation.start()
     animationRef.current = animation

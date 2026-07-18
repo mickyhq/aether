@@ -20,6 +20,7 @@ describe('interpolateWeatherAt', () => {
 
     expect(result?.temperature).toBeCloseTo(20)
     expect(result?.precipitation).toBeCloseTo(2)
+    expect(result?.pressureMsl).toBeCloseTo(1013)
     expect(result?.cloudOpacity).toBeCloseTo(0.5)
     expect(result?.isThunderstorm).toBe(false)
   })
@@ -45,10 +46,10 @@ describe('interpolateWeatherAt', () => {
     const second = buildSample(1, 20, 0, 0.4, false)
 
     first.evolution = [
-      buildFrame('2026-07-02T12:00:00.000Z', 30, 25, 90)
+      buildFrame('2026-07-02T12:00:00.000Z', 30, 25, 90, 998)
     ]
     second.evolution = [
-      buildFrame('2026-07-02T12:00:00.000Z', 5, 60, 270)
+      buildFrame('2026-07-02T12:00:00.000Z', 5, 60, 270, 1024)
     ]
 
     const displayed = getWeatherMapSamplesAtTime(
@@ -58,10 +59,12 @@ describe('interpolateWeatherAt', () => {
 
     expect(displayed[0]).toMatchObject({
       temperature: 30,
+      pressureMsl: 998,
       rawWindSpeed: 25
     })
     expect(displayed[1]).toMatchObject({
       temperature: 5,
+      pressureMsl: 1024,
       rawWindSpeed: 60
     })
     expect(first.temperature).toBe(10)
@@ -83,6 +86,7 @@ function buildSample(
     longitude,
     temperature,
     precipitation,
+    pressureMsl: 1013 + longitude,
     snowfall: 0,
     weatherCode: isThunderstorm ? 95 : 0,
     windSpeed: 0.25,
@@ -97,12 +101,14 @@ function buildFrame(
   time: string,
   temperature: number,
   rawWindSpeed: number,
-  windDirection: number
+  windDirection: number,
+  pressureMsl: number
 ) {
   return {
     time,
     temperature,
     precipitation: 2,
+    pressureMsl,
     snowfall: 0,
     weatherCode: 3,
     windSpeed: rawWindSpeed / 80,

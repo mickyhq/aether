@@ -18,6 +18,7 @@ export const WEATHER_PARAMETER_CONFIG = {
     'snowfall',
     'temperature_2m',
     'weather_code',
+    'pressure_msl',
     'wind_direction_250hPa',
     'wind_direction_10m',
     'wind_speed_250hPa',
@@ -29,6 +30,7 @@ export const WEATHER_PARAMETER_CONFIG = {
     'snowfall',
     'temperature_2m',
     'weather_code',
+    'pressure_msl',
     'wind_direction_10m',
     'wind_speed_10m'
   ]),

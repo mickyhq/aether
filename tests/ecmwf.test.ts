@@ -20,6 +20,7 @@ test('maps ECMWF hourly data into visual forecast frames', async () => {
       snowfall: [0],
       weather_code: [95],
       cloud_cover: [80],
+      pressure_msl: [996],
       wind_speed_10m: [32],
       wind_direction_10m: [180]
     },
@@ -44,6 +45,7 @@ test('maps ECMWF hourly data into visual forecast frames', async () => {
     time: '2026-06-29T10:00:00.000Z',
     temperature: 24,
     precipitation: 1.2,
+    pressureMsl: 996,
     rawWindSpeed: 32,
     isThunderstorm: true
   })

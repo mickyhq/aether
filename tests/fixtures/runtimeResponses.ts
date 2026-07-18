@@ -7,6 +7,7 @@ const hourly = {
   snowfall: [0],
   weather_code: [1],
   cloud_cover: [20],
+  pressure_msl: [1016],
   wind_speed_10m: [14],
   wind_direction_10m: [220]
 }
@@ -31,6 +32,7 @@ export const validRuntimeResponseFixtures = {
       temperature_2m: 21,
       weather_code: 1,
       cloud_cover: 20,
+      pressure_msl: 1016,
       wind_speed_10m: 14,
       wind_direction_10m: 220
     },

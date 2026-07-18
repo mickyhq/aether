@@ -231,6 +231,9 @@ test('loads the selected location forecast', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveText('Live')
   await expect(page.getByRole('button', { name: 'Temp: 21°C' })).toBeVisible()
   await expect(
+    page.getByRole('button', { name: 'Wind: 18 km/h · 1016 hPa' })
+  ).toBeVisible()
+  await expect(
     page.getByRole('img', {
       name: '12-hour temperature and precipitation forecast'
     })
@@ -325,6 +328,30 @@ test('selects a location from the map', async ({ page }) => {
   ).toBeVisible()
   await expect.poll(() => reverseGeocodeRequests).toBe(2)
   await expect(page.getByRole('status')).toHaveText(/^(Live|Cached)/)
+})
+
+test('changes weather mode while map details are open', async ({ page }) => {
+  await page.goto('/')
+
+  await page.locator('.aether-map').evaluate(element => {
+    const bounds = element.getBoundingClientRect()
+
+    element.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+      clientX: bounds.left + 700,
+      clientY: bounds.top + 350
+    }))
+  })
+
+  await expect(page.locator('.map-weather-tooltip')).toBeVisible()
+
+  const windButton = page.getByRole('button', { name: /^Wind:/ })
+
+  await windButton.click()
+
+  await expect(windButton).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.map-weather-tooltip')).toHaveCount(0)
+  await expect(page).toHaveURL(/mode=wind/)
 })
 
 test('opens the map layer menu', async ({ page }) => {
@@ -559,6 +586,7 @@ function buildForecast(latitude: number, longitude: number) {
       snowfall: 0,
       weather_code: 1,
       cloud_cover: 25,
+      pressure_msl: 1016,
       wind_speed_10m: 18,
       wind_direction_10m: 240
     },
@@ -572,6 +600,10 @@ function buildForecast(latitude: number, longitude: number) {
       snowfall: Array.from({ length: 12 }, () => 0),
       weather_code: Array.from({ length: 12 }, () => 1),
       cloud_cover: Array.from({ length: 12 }, () => 25),
+      pressure_msl: Array.from(
+        { length: 12 },
+        (_, index) => 1016 - index / 2
+      ),
       wind_speed_10m: Array.from({ length: 12 }, () => 18),
       wind_direction_10m: Array.from({ length: 12 }, () => 240)
     },

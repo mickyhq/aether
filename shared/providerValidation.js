@@ -26,8 +26,10 @@ export function isWeatherResponse(value) {
     isRecord(payload) &&
     isRecord(payload.current) &&
     WEATHER_CURRENT_FIELDS.every(field => Number.isFinite(payload.current[field])) &&
+    optionalFiniteNumber(payload.current.pressure_msl) &&
     isRecord(payload.hourly) &&
-    WEATHER_HOURLY_FIELDS.every(field => Array.isArray(payload.hourly[field]))
+    WEATHER_HOURLY_FIELDS.every(field => Array.isArray(payload.hourly[field])) &&
+    optionalArray(payload.hourly.pressure_msl)
   ))
 }
 
@@ -64,4 +66,12 @@ export function parseProviderBody(body, validate) {
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function optionalFiniteNumber(value) {
+  return value === undefined || Number.isFinite(value)
+}
+
+function optionalArray(value) {
+  return value === undefined || Array.isArray(value)
 }

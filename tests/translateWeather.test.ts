@@ -13,6 +13,7 @@ describe('translateWeather', () => {
     expect(weather.zone).toBe('Test Valley')
     expect(weather.description).toBe('Thunderstorm')
     expect(weather.precipitation).toBe(4)
+    expect(weather.pressureMsl).toBe(998)
     expect(weather.windSpeed).toBe(1)
     expect(weather.windAngle).toBeCloseTo(Math.PI / 2)
     expect(weather.cloudOpacity).toBe(1)
@@ -24,6 +25,7 @@ describe('translateWeather', () => {
     expect(weather.evolution[1]).toMatchObject({
       weatherCode: 71,
       cloudOpacity: 0,
+      pressureMsl: 1002,
       windSpeed: 0.5,
       isThunderstorm: false
     })
@@ -58,6 +60,7 @@ function buildPayload(): OpenMeteoResponse {
       snowfall: 0,
       weather_code: 95,
       cloud_cover: 130,
+      pressure_msl: 998,
       wind_speed_10m: 100,
       wind_direction_10m: 90
     },
@@ -68,6 +71,7 @@ function buildPayload(): OpenMeteoResponse {
       snowfall: [0, 1],
       weather_code: [95, 71],
       cloud_cover: [120, -20],
+      pressure_msl: [998, 1002],
       wind_speed_10m: [80, 40],
       wind_direction_10m: [90, 180]
     },

@@ -17,6 +17,11 @@ import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 import { jetStreamResponseSchema } from '../schemas/serverResponses'
 import { recordProviderFailure } from './clientTelemetry'
 import { normalizeOpenMeteoTime } from '../weather/translateWeather'
+import {
+  getJetStreamCacheKey,
+  loadPersistedJetStreamSamples,
+  persistJetStreamSamples
+} from './jetStreamCache'
 
 const OPEN_METEO_ENDPOINT = '/api/weather'
 const CURRENT_FIELDS = 'wind_speed_250hPa,wind_direction_250hPa'
@@ -25,6 +30,7 @@ const FRESHNESS = SOURCE_REFRESH_MS
 const MINIMUM_LATITUDE_SPAN = 20
 const MINIMUM_LONGITUDE_SPAN = 30
 const sampleCache = new Map<string, JetStreamSample>()
+let persistentCachePromise: Promise<void> | null = null
 
 export const JET_STREAM_REFRESH_INTERVAL = FRESHNESS
 
@@ -32,6 +38,9 @@ export async function fetchJetStreamSamples(
   viewport: WeatherViewport,
   signal?: AbortSignal
 ) {
+  await loadPersistentCache()
+  signal?.throwIfAborted()
+
   const points = buildJetStreamGrid(viewport)
   const now = Date.now()
   const missing = points.filter(point => {
@@ -77,6 +86,8 @@ export async function fetchJetStreamSamples(
     const payloads = Array.isArray(body) ? body : [body]
     const updatedAt = Date.now()
 
+    const freshSamples: JetStreamSample[] = []
+
     for (let payloadIndex = 0; payloadIndex < payloads.length; payloadIndex += 1) {
       const point = batch[payloadIndex]
       const current = payloads[payloadIndex]?.current
@@ -99,11 +110,19 @@ export async function fetchJetStreamSamples(
       }
 
       sampleCache.set(getKey(point.latitude, point.longitude), sample)
+      freshSamples.push(sample)
     }
+
+    void persistJetStreamSamples(freshSamples)
   }
 
+  const cachedSamples = Array.from(sampleCache.values())
+
   return points
-    .map(point => sampleCache.get(getKey(point.latitude, point.longitude)))
+    .map(point => (
+      sampleCache.get(getKey(point.latitude, point.longitude)) ??
+      estimateCachedSample(point, cachedSamples)
+    ))
     .filter((sample): sample is JetStreamSample => Boolean(sample))
 }
 
@@ -203,5 +222,60 @@ function buildJetStreamGrid(viewport: WeatherViewport) {
 }
 
 function getKey(latitude: number, longitude: number) {
-  return `${latitude.toFixed(4)}:${normalizeLongitude(longitude).toFixed(4)}`
+  return getJetStreamCacheKey(latitude, longitude)
+}
+
+function estimateCachedSample(
+  point: { latitude: number, longitude: number },
+  cachedSamples: JetStreamSample[]
+): JetStreamSample | null {
+  const nearestDistance = Math.min(
+    ...cachedSamples.map(sample => geographicDistanceSquared(
+      point.latitude,
+      point.longitude,
+      sample.latitude,
+      sample.longitude
+    ))
+  )
+
+  if (!Number.isFinite(nearestDistance) || nearestDistance > 2500 ** 2) {
+    return null
+  }
+
+  const interpolated = interpolateJetStreamAt(
+    point.latitude,
+    point.longitude,
+    cachedSamples
+  )
+  const newest = cachedSamples.reduce((latest, sample) => (
+    sample.updatedAt > latest.updatedAt ? sample : latest
+  ))
+
+  if (!interpolated) {
+    return null
+  }
+
+  return {
+    ...point,
+    updatedAt: newest.updatedAt,
+    observedAt: newest.observedAt,
+    speed: interpolated.jetStreamSpeed,
+    angle: interpolated.jetStreamAngle,
+    eastward: -interpolated.jetStreamSpeed * Math.sin(
+      interpolated.jetStreamAngle
+    ),
+    northward: -interpolated.jetStreamSpeed * Math.cos(
+      interpolated.jetStreamAngle
+    )
+  }
+}
+
+async function loadPersistentCache() {
+  persistentCachePromise ??= loadPersistedJetStreamSamples().then(samples => {
+    for (const sample of samples) {
+      sampleCache.set(getKey(sample.latitude, sample.longitude), sample)
+    }
+  })
+
+  await persistentCachePromise
 }

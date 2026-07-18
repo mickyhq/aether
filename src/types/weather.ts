@@ -105,6 +105,7 @@ export type OpenMeteoCurrent = {
   snowfall: number
   weather_code: number
   cloud_cover: number
+  pressure_msl?: number
   wind_speed_10m: number
   wind_direction_10m: number
 }
@@ -116,6 +117,7 @@ export type OpenMeteoHourly = {
   snowfall: number[]
   weather_code: number[]
   cloud_cover: number[]
+  pressure_msl?: number[]
   wind_speed_10m: number[]
   wind_direction_10m: number[]
 }
@@ -235,6 +237,7 @@ export type WeatherEvolutionFrame = {
   snowfall: number
   weatherCode: number
   cloudOpacity: number
+  pressureMsl?: number
   windSpeed: number
   rawWindSpeed: number
   windAngle: number
@@ -255,6 +258,7 @@ export type WeatherConfig = {
   weatherCode: number
   description: string
   precipitation: number
+  pressureMsl?: number
   snowfall: number
   windSpeed: number
   rawWindSpeed: number
@@ -282,6 +286,7 @@ export type WeatherMapSample = {
   sunset?: string | null
   temperature: number
   precipitation: number
+  pressureMsl?: number
   snowfall: number
   weatherCode: number
   windSpeed: number
@@ -435,6 +440,7 @@ export type MapWeatherPointer = {
   placeLabel?: string
   temperature: number
   precipitation: number
+  pressureMsl?: number
   snowfall?: number
   rawWindSpeed: number
   windAngle: number

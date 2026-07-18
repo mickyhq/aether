@@ -377,7 +377,15 @@ function formatAnomaly(value?: number) {
 }
 
 function formatWind(weather: WeatherConfig | null) {
-  return weather ? `${Math.round(weather.rawWindSpeed)} km/h` : '--'
+  if (!weather) {
+    return '--'
+  }
+
+  const wind = `${Math.round(weather.rawWindSpeed)} km/h`
+
+  return weather.pressureMsl === undefined
+    ? wind
+    : `${wind} · ${Math.round(weather.pressureMsl)} hPa`
 }
 
 function formatPrecipitation(

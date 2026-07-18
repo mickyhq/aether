@@ -222,16 +222,19 @@ export default function App() {
       return mapProvenance
     }
 
-    const surface = mapProvenance.precipitation
+    const surface = mapProvenance.wind
+    const forecast = {
+      observedAt: ecmwfPlaybackTime,
+      refreshedAt: surface?.refreshedAt ?? null,
+      source: 'Open-Meteo forecast',
+      resolution: surface?.resolution ?? 'Model-dependent grid'
+    }
 
     return {
       ...mapProvenance,
-      precipitation: {
-        observedAt: ecmwfPlaybackTime,
-        refreshedAt: surface?.refreshedAt ?? null,
-        source: 'Open-Meteo forecast',
-        resolution: surface?.resolution ?? 'Model-dependent grid'
-      }
+      temperature: forecast,
+      wind: forecast,
+      precipitation: forecast
     }
   }, [ecmwfPlaybackTime, mapProvenance])
   useEffect(() => {
@@ -276,6 +279,11 @@ export default function App() {
   function handleMapPopupClose() {
     handlePointerWeatherChange(null)
     setMapPopupDismissToken(current => current + 1)
+  }
+
+  function handleWeatherModeChange(mode: WeatherMode) {
+    setWeatherMode(mode)
+    handleMapPopupClose()
   }
 
   return (
@@ -369,7 +377,7 @@ export default function App() {
                 location={dashboardLocation}
                 mode={weatherMode}
                 provenance={dashboardProvenance}
-                onModeChange={setWeatherMode}
+                onModeChange={handleWeatherModeChange}
               />
             </Suspense>
           </div>
@@ -469,6 +477,7 @@ function weatherFromEvolutionFrame(
     ...weather,
     temperature: frame.temperature,
     precipitation: frame.precipitation,
+    pressureMsl: frame.pressureMsl ?? weather.pressureMsl,
     snowfall: frame.snowfall,
     weatherCode: frame.weatherCode,
     description: describeWeatherCode(frame.weatherCode),

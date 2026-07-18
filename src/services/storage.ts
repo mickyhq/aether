@@ -7,8 +7,12 @@
 import { getCacheNamespace } from '../../shared/cacheVersion.js'
 
 const DATABASE_NAME = getCacheNamespace('data')
-const DATABASE_VERSION = 1
-const STORES = ['weather-samples', 'air-quality-samples'] as const
+const DATABASE_VERSION = 2
+const STORES = [
+  'weather-samples',
+  'air-quality-samples',
+  'jet-stream-samples'
+] as const
 
 let databasePromise: Promise<IDBDatabase | null> | null = null
 

@@ -18,6 +18,7 @@ const CURRENT_FIELDS = [
   'snowfall',
   'weather_code',
   'cloud_cover',
+  'pressure_msl',
   'wind_speed_10m',
   'wind_direction_10m'
 ]
@@ -27,6 +28,7 @@ const HOURLY_FIELDS = [
   'snowfall',
   'weather_code',
   'cloud_cover',
+  'pressure_msl',
   'wind_speed_10m',
   'wind_direction_10m'
 ]

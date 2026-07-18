@@ -614,7 +614,7 @@ function isOpenMeteoHourly(value: unknown): value is OpenMeteoHourly {
     value.cloud_cover,
     value.wind_speed_10m,
     value.wind_direction_10m
-  ].every(Array.isArray)
+  ].every(Array.isArray) && optional(value.pressure_msl, Array.isArray)
 }
 
 function isOfficialWarning(value: unknown): value is OfficialWarning {

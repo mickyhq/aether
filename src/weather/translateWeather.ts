@@ -131,6 +131,7 @@ export function buildWeatherEvolution(
       time: normalizeForecastTime(hourly.time[index], utcOffsetSeconds),
       temperature: hourly.temperature_2m[index] ?? 0,
       precipitation: hourly.precipitation[index] ?? 0,
+      pressureMsl: hourly.pressure_msl?.[index],
       snowfall: hourly.snowfall[index] ?? 0,
       weatherCode,
       cloudOpacity: clamp((hourly.cloud_cover[index] ?? 0) / 100, 0, 1),

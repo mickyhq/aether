@@ -9,6 +9,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn'
 import RadarIcon from '@mui/icons-material/Radar'
 import AcUnitIcon from '@mui/icons-material/AcUnit'
 import SensorsIcon from '@mui/icons-material/Sensors'
+import SpeedIcon from '@mui/icons-material/Speed'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import WavesIcon from '@mui/icons-material/Waves'
 import { useLayoutEffect, useRef } from 'react'
@@ -154,6 +155,17 @@ export function MapWeatherTooltip({ reading, onClose }: MapWeatherTooltipProps) 
           {Math.round(reading.rawWindSpeed)} km/h {formatWindDirection(reading.windAngle)}
         </span>
       </div>
+
+      {reading.pressureMsl !== undefined && (
+        <div className="map-weather-tooltip-row">
+          <SpeedIcon />
+          <span>
+            {t('map.pressure', {
+              pressure: Math.round(reading.pressureMsl)
+            })}
+          </span>
+        </div>
+      )}
 
       <div className="map-weather-tooltip-row">
         <WaterDropIcon />

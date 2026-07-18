@@ -31,6 +31,7 @@ describe('weather time and snow regressions', () => {
     expect(weather.sunrise).toBe('2026-01-15T06:45:00.000Z')
     expect(weather.sunset).toBe('2026-01-15T15:50:00.000Z')
     expect(weather.evolution[0].snowfall).toBe(0.8)
+    expect(weather.evolution[0].pressureMsl).toBe(1007)
   })
 
   test('keeps snow visually distinct from rain', () => {
@@ -41,6 +42,23 @@ describe('weather time and snow regressions', () => {
     expect(snowfallForecastStyle(2).alpha).toBeGreaterThan(
       snowfallForecastStyle(0.05).alpha
     )
+  })
+
+  test('keeps weather available when an older cache has no pressure', () => {
+    const payload = buildPayload()
+
+    delete payload.current.pressure_msl
+    delete payload.hourly.pressure_msl
+
+    const weather = translateWeather(payload, {
+      label: 'Cached Town',
+      latitude: 46,
+      longitude: 7
+    })
+
+    expect(weather.temperature).toBe(-2)
+    expect(weather.pressureMsl).toBeUndefined()
+    expect(weather.evolution[0].pressureMsl).toBeUndefined()
   })
 })
 
@@ -59,6 +77,7 @@ function buildPayload(): OpenMeteoResponse {
       snowfall: 0.8,
       weather_code: 71,
       cloud_cover: 100,
+      pressure_msl: 1007,
       wind_speed_10m: 12,
       wind_direction_10m: 20
     },
@@ -69,6 +88,7 @@ function buildPayload(): OpenMeteoResponse {
       snowfall: [0.8],
       weather_code: [71],
       cloud_cover: [100],
+      pressure_msl: [1007],
       wind_speed_10m: [12],
       wind_direction_10m: [20]
     },

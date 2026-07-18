@@ -2,7 +2,7 @@
 
 [![Tests and build](https://img.shields.io/github/actions/workflow/status/mickyhq/aether/regression.yml?branch=main&label=tests%20%2B%20build)](https://github.com/mickyhq/aether/actions/workflows/regression.yml)
 [![Live demo](https://img.shields.io/website?url=https%3A%2F%2Faether-five-rose.vercel.app&label=live%20demo)](https://aether-five-rose.vercel.app)
-![Version](https://img.shields.io/badge/version-0.3.33-2563eb)
+![Version](https://img.shields.io/badge/version-0.3.37-2563eb)
 ![PWA](https://img.shields.io/badge/PWA-ready-5a0fc8)
 ![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.19-339933?logo=nodedotjs&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
@@ -20,6 +20,7 @@ Aether is a full-screen weather and environmental map built with React, TypeScri
 - Interpolated temperature field with a color legend
 - Land temperature-anomaly field comparing current conditions with the 1991–2020 ERA5-Land normal for the same UTC hour and calendar day
 - Animated wind particles colored by speed
+- Mean sea-level pressure in the Wind view with 4 hPa isobars, high/low centers, forecast movement, and click values
 - Animated precipitation particles and RainViewer radar
 - Combined precipitation and storm mode with radar, rain, storm signals, and lightning
 - European AQI field with AQI and PM2.5 pointer values
@@ -112,6 +113,8 @@ The weekly report is preliminary and intentionally not comprehensive. Rapidly de
 | Source | Used for |
 | --- | --- |
 | [Open-Meteo](https://open-meteo.com/) | Current weather, hourly and daily forecasts, map weather fields, Jet Stream wind, ERA5-Land historical normals, and forecast fallback |
+| [MET Norway](https://api.met.no/) | Worldwide pressure and surface-weather fallback when the primary weather provider is temporarily unavailable |
+| [Earth Nullschool / NOAA GFS](https://earth.nullschool.net/about) | Current global 250 hPa wind fallback for Jet Stream animation |
 | [ECMWF](https://www.ecmwf.int/) | IFS 9 km forecast selected through the Open-Meteo forecast API |
 | [Copernicus CAMS](https://atmosphere.copernicus.eu/) | Air-quality data delivered through the Open-Meteo Air Quality API |
 | [NOAA NESDIS CoastWatch](https://coastwatch.noaa.gov/) | Daily global geostrophic surface currents |
@@ -135,7 +138,7 @@ The weekly report is preliminary and intentionally not comprehensive. Rapidly de
 | [World Atlas of Artificial Night Sky Brightness](https://doi.org/10.1126/sciadv.1600377) | Estimated light-pollution class for the stargazing index |
 | [Windy Webcams](https://www.windy.com/webcams) | Nearby public webcam players |
 
-Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). CAMS and Open-Meteo attribution is required for air-quality data. RainViewer requires attribution and limits use of its free API. OpenFreeMap requires attribution and provides its public instance without an SLA; self-host or choose a supported provider when production requirements demand one. Review every provider's current terms before commercial or high-traffic deployment.
+Open-Meteo data is licensed under [CC BY 4.0](https://open-meteo.com/en/license). MET Norway data is distributed under [CC BY 4.0](https://api.met.no/doc/TermsOfService). CAMS and Open-Meteo attribution is required for air-quality data. RainViewer requires attribution and limits use of its free API. OpenFreeMap requires attribution and provides its public instance without an SLA; self-host or choose a supported provider when production requirements demand one. Review every provider's current terms before commercial or high-traffic deployment.
 
 The stargazing rating is guidance, not an observatory forecast. Its Bortle value is estimated from a static artificial-sky-brightness class, and 7Timer permits free non-commercial redistribution under its published terms.
 

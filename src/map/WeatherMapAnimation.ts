@@ -10,6 +10,7 @@ import type {
   WeatherMode
 } from '../types/weather'
 import { WeatherFieldRenderer } from './WeatherFieldRenderer'
+import { PressureFieldRenderer } from './PressureFieldRenderer'
 import { WeatherParticleRenderer } from './WeatherParticleRenderer'
 import type {
   ProjectedAirQualitySample,
@@ -29,6 +30,7 @@ export class WeatherMapAnimation {
   private readonly canvas: HTMLCanvasElement
   private readonly context: CanvasRenderingContext2D
   private readonly fieldRenderer: WeatherFieldRenderer
+  private readonly pressureRenderer: PressureFieldRenderer
   private readonly particleRenderer: WeatherParticleRenderer
   private readonly performanceController = new AnimationPerformanceController(
     window.devicePixelRatio || 1
@@ -79,7 +81,10 @@ export class WeatherMapAnimation {
     map: L.Map,
     container: HTMLElement,
     seaTemperatureLabel: string,
-    precipitationLegendLabel: string
+    precipitationLegendLabel: string,
+    pressureLegendLabel: string,
+    highPressureLabel: string,
+    lowPressureLabel: string
   ) {
     this.map = map
     this.canvas = document.createElement('canvas')
@@ -97,6 +102,12 @@ export class WeatherMapAnimation {
       this.canvas,
       context,
       precipitationLegendLabel
+    )
+    this.pressureRenderer = new PressureFieldRenderer(
+      context,
+      pressureLegendLabel,
+      highPressureLabel,
+      lowPressureLabel
     )
     this.particleRenderer = new WeatherParticleRenderer(
       map,
@@ -207,6 +218,7 @@ export class WeatherMapAnimation {
       airQualityChanged,
       temperatureAnomalyChanged
     )
+    this.pressureRenderer.markDataChanged(samplesChanged)
 
     if (this.reducedMotion && this.pageVisible) {
       this.render(0, 0)
@@ -216,6 +228,7 @@ export class WeatherMapAnimation {
   invalidate() {
     this.particleRenderer.reset()
     this.fieldRenderer.invalidate()
+    this.pressureRenderer.invalidate()
     this.invalidateProjectedSamples()
     this.clearBeforeNextRender = true
 
@@ -304,6 +317,11 @@ export class WeatherMapAnimation {
       this.height,
       this.reducedMotion
     )
+    this.pressureRenderer.setViewport(
+      this.width,
+      this.height,
+      this.pixelRatio
+    )
     this.particleRenderer.setViewport(
       this.width,
       this.height,
@@ -357,6 +375,7 @@ export class WeatherMapAnimation {
 
     if (this.mode === 'wind') {
       this.particleRenderer.drawWind(projectedSamples, deltaTime)
+      this.pressureRenderer.draw(projectedSamples)
       return
     }
 
