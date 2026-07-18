@@ -1,7 +1,7 @@
 {
   "name": "aether",
   "private": true,
-  "version": "0.3.23",
+  "version": "0.3.24",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -9,12 +9,13 @@
   "scripts": {
     "dev": "nodemon",
     "start": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run translations:check && tsc && vite build",
     "postbuild": "node scripts/warmWeatherCache.js",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "verify": "tsc -p tsconfig.verify.json && tsc -p tsconfig.server.json && npm test && vite build && node scripts/verifyPwa.js"
+    "translations:check": "node scripts/checkTranslationCatalogs.mjs",
+    "verify": "npm run translations:check && tsc -p tsconfig.verify.json && tsc -p tsconfig.server.json && npm test && vite build && node scripts/verifyPwa.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
