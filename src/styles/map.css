@@ -192,6 +192,43 @@
   color: #8fe5ff;
 }
 
+.tropical-cyclone-forecast-track {
+  animation: tropical-cyclone-trail 1.15s linear infinite;
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 4px rgba(34, 211, 238, 0.85));
+}
+
+.tropical-cyclone-forecast-hit {
+  cursor: pointer;
+}
+
+.tropical-cyclone-popup {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+  max-width: 290px;
+}
+
+.tropical-cyclone-popup p,
+.tropical-cyclone-popup ul {
+  margin: 0;
+}
+
+.tropical-cyclone-popup ul {
+  display: grid;
+  gap: 3px;
+  max-height: 220px;
+  padding-left: 18px;
+  overflow-y: auto;
+}
+
+@keyframes tropical-cyclone-trail {
+  to {
+    stroke-dashoffset: -30px;
+  }
+}
+
 .weather-map-animation-canvas {
   position: absolute;
   inset: 0;

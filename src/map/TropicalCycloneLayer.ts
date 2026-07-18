@@ -198,16 +198,7 @@ export class TropicalCycloneLayer {
         weight: 2
       }
     )
-    addTrack(
-      this.layer,
-      [storm.current, ...storm.forecast],
-      {
-        color,
-        dashArray: '7 7',
-        opacity: grace ? 0.55 : 0.95,
-        weight: 2.5
-      }
-    )
+    this.addForecastTrack(storm, payload, color, grace)
 
     for (const point of storm.forecast) {
       const marker = L.circleMarker(
@@ -257,6 +248,53 @@ export class TropicalCycloneLayer {
     currentMarker.addTo(this.layer)
   }
 
+  private addForecastTrack(
+    storm: TropicalCyclone,
+    payload: TropicalCyclonesResponse,
+    color: string,
+    grace: boolean
+  ) {
+    const points = [storm.current, ...storm.forecast]
+
+    for (const segment of splitTrack(points)) {
+      if (segment.length < 2) {
+        continue
+      }
+
+      L.polyline(segment, {
+        className: 'tropical-cyclone-forecast-track-base',
+        color,
+        interactive: false,
+        opacity: grace ? 0.42 : 0.8,
+        weight: 3
+      }).addTo(this.layer)
+
+      L.polyline(segment, {
+        className: 'tropical-cyclone-forecast-track',
+        color: '#ffffff',
+        dashArray: '1 14',
+        interactive: false,
+        lineCap: 'round',
+        opacity: grace ? 0.48 : 0.95,
+        weight: 4.5
+      }).addTo(this.layer)
+
+      const hitTrack = L.polyline(segment, {
+        className: 'tropical-cyclone-forecast-hit',
+        color,
+        opacity: 0.001,
+        weight: 18
+      })
+
+      hitTrack.bindTooltip(
+        this.t('cyclone.trailTooltip', { name: storm.name }),
+        { sticky: true }
+      )
+      hitTrack.bindPopup(() => this.createForecastPopup(storm, payload))
+      hitTrack.addTo(this.layer)
+    }
+  }
+
   private createPopup(
     storm: TropicalCyclone,
     point: TropicalCycloneTrackPoint,
@@ -302,6 +340,48 @@ export class TropicalCycloneLayer {
     source.rel = 'noreferrer'
     source.textContent = payload.source
     container.append(title, timing, intensity, advisory, notice, source)
+
+    return container
+  }
+
+  private createForecastPopup(
+    storm: TropicalCyclone,
+    payload: TropicalCyclonesResponse
+  ) {
+    const container = document.createElement('div')
+    const title = document.createElement('strong')
+    const label = document.createElement('p')
+    const points = document.createElement('ul')
+    const notice = document.createElement('p')
+    const source = document.createElement('a')
+
+    container.className = 'map-event-popup tropical-cyclone-popup'
+    title.textContent = storm.name
+    label.textContent = this.t('cyclone.forecastTrail')
+
+    for (const point of [storm.current, ...storm.forecast]) {
+      const item = document.createElement('li')
+      const position = point.hours === 0
+        ? this.t('cyclone.currentPosition')
+        : this.t('cyclone.forecastPosition', {
+            hours: point.hours,
+            time: formatDate(point.validAt, this.language)
+          })
+
+      item.textContent = `${position} · ${this.t('cyclone.wind', {
+        wind: Math.round(point.windKnots)
+      })}`
+      points.append(item)
+    }
+
+    notice.textContent = payload.cacheState === 'grace'
+      ? this.t('cyclone.staleNotice')
+      : this.t('cyclone.notice')
+    source.href = payload.sourceUrl
+    source.target = '_blank'
+    source.rel = 'noreferrer'
+    source.textContent = payload.source
+    container.append(title, label, points, notice, source)
 
     return container
   }

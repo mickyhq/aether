@@ -36,7 +36,7 @@ Aether is a full-screen weather and environmental map built with React, TypeScri
 - Forecast playback updates the temperature, wind, precipitation, and storm map layers
 - Official NWS and MeteoAlarm-member warnings for storms, floods, wind, snow, fire weather, extreme temperatures, air quality, and other issued hazards
 - Warning polygons with severity, certainty, effective/expiry times, instructions, source, update age, and a visible 15-minute stale grace state
-- Worldwide current hurricanes, typhoons, and cyclones with observed tracks, official forecast points, and NHC forecast cones or JTWC danger areas
+- Worldwide current hurricanes, typhoons, and cyclones with clickable animated forecast tracks, official forecast points, and NHC forecast cones or JTWC danger areas
 - Deduplicated official updates, shown separately from Aether forecast notices for heat, thunderstorms, heavy rain, and snow
 - Dismissible severe-weather alerts
 
