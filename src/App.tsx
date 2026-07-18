@@ -72,6 +72,7 @@ export default function App() {
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation>(
     loadInitialLocation
   )
+  const [locationFocusToken, setLocationFocusToken] = useState(0)
   const {
     weather,
     status,
@@ -124,7 +125,10 @@ export default function App() {
     setLocation: setSelectedLocation,
     setStatus,
     setForecastReady: setSelectedForecastReady,
-    getCachedPlace
+    getCachedPlace,
+    onLocationNavigation: () => {
+      setLocationFocusToken(current => current + 1)
+    }
   })
   const [radarOpacity, setRadarOpacity] = useState(loadRadarOpacity)
   const [mapPopupDismissToken, setMapPopupDismissToken] = useState(0)
@@ -285,6 +289,7 @@ export default function App() {
           <Suspense fallback={<div className="map-loading">{t('app.loadingMap')}</div>}>
             <AetherMap
               location={selectedLocation}
+              locationFocusToken={locationFocusToken}
               mapLanguage={language}
               mode={mapWeatherMode}
               samples={displayedSamples}

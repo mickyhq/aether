@@ -51,9 +51,11 @@ const REGIONAL_VIEW_BOUNDS = L.latLngBounds(
   [72, 40]
 )
 const ABSOLUTE_MIN_ZOOM = 2
-const CITY_MAX_ZOOM = 12
+const CITY_FOCUS_ZOOM = 12
+const MAX_MAP_ZOOM = 16
 type AetherMapProps = {
   location: WeatherLocation
+  locationFocusToken: number
   mapLanguage: string
   mode: WeatherMode
   samples: WeatherMapSample[]
@@ -74,6 +76,7 @@ type AetherMapProps = {
 
 export function AetherMap({
   location,
+  locationFocusToken,
   mapLanguage,
   mode,
   samples,
@@ -110,8 +113,12 @@ export function AetherMap({
   const provenanceRef = useRef(provenance)
   const pointerCallbackRef = useRef(onPointerWeatherChange)
   const clickCallbackRef = useRef(onMapClick)
-  const clickedLatRef = useRef(0)
-  const clickedLngRef = useRef(0)
+  const clickedLatRef = useRef(Number.NaN)
+  const clickedLngRef = useRef(Number.NaN)
+  const clickedFocusTokenRef = useRef(0)
+  const locationFocusTokenRef = useRef(locationFocusToken)
+  const handledFocusTokenRef = useRef(locationFocusToken)
+  locationFocusTokenRef.current = locationFocusToken
   const pointerRefreshRef = useRef<() => void>(() => {})
   const lastPointerRef = useRef<{
     latitude: number
@@ -191,14 +198,14 @@ export function AetherMap({
       center: [initialLocation.latitude, initialLocation.longitude],
       fadeAnimation: !reducedMotion,
       inertia: !reducedMotion,
-      zoom: 10,
+      zoom: CITY_FOCUS_ZOOM,
       zoomAnimation: !reducedMotion,
       markerZoomAnimation: !reducedMotion,
       zoomControl: true,
       attributionControl: false,
       keyboard: true,
       keyboardPanDelta: 80,
-      maxZoom: CITY_MAX_ZOOM,
+      maxZoom: MAX_MAP_ZOOM,
       maxBounds: WORLD_BOUNDS,
       maxBoundsViscosity: 1,
       worldCopyJump: false
@@ -345,6 +352,7 @@ export function AetherMap({
       emitPointerWeather()
       clickedLatRef.current = event.latlng.lat
       clickedLngRef.current = event.latlng.lng
+      clickedFocusTokenRef.current = locationFocusTokenRef.current
       clickCallbackRef.current({
         label: `${event.latlng.lat.toFixed(3)}, ${event.latlng.lng.toFixed(3)}`,
         latitude: event.latlng.lat,
@@ -419,9 +427,13 @@ export function AetherMap({
 
     const nextCenter: L.LatLngExpression = [location.latitude, location.longitude]
     const currentCenter = map.getCenter()
+    const cityFocusRequested = handledFocusTokenRef.current !== locationFocusToken
+
+    handledFocusTokenRef.current = locationFocusToken
     if (
       Math.abs(clickedLatRef.current - location.latitude) < 0.0001 &&
-      Math.abs(clickedLngRef.current - location.longitude) < 0.0001
+      Math.abs(clickedLngRef.current - location.longitude) < 0.0001 &&
+      clickedFocusTokenRef.current === locationFocusToken
     ) {
       return
     }
@@ -429,11 +441,16 @@ export function AetherMap({
     const latDelta = Math.abs(currentCenter.lat - location.latitude)
     const lngDelta = Math.abs(currentCenter.lng - location.longitude)
 
-    if (latDelta < 0.1 && lngDelta < 0.1) {
+    if (
+      latDelta < 0.1 &&
+      lngDelta < 0.1 &&
+      map.getZoom() >= CITY_FOCUS_ZOOM &&
+      !cityFocusRequested
+    ) {
       return
     }
 
-    const nextZoom = Math.max(map.getZoom(), 10)
+    const nextZoom = CITY_FOCUS_ZOOM
 
     if (prefersReducedMotion()) {
       map.setView(nextCenter, nextZoom, { animate: false })
@@ -443,7 +460,7 @@ export function AetherMap({
         duration: 1.1
       })
     }
-  }, [location])
+  }, [location, locationFocusToken])
 
   useEffect(() => {
     const badgeLayer = badgeLayerRef.current
@@ -536,8 +553,9 @@ export function AetherMap({
 
       const selectedLocation = locationRef.current
 
-      map.panTo(
+      map.setView(
         [selectedLocation.latitude, selectedLocation.longitude],
+        CITY_FOCUS_ZOOM,
         { animate: !prefersReducedMotion() }
       )
     }

@@ -91,7 +91,7 @@ projects above and have not been replaced by this roadmap.
 - [ ] Convert the remaining `api`, `server`, and `shared` JavaScript modules to TypeScript, remove the remaining handwritten declarations, and enable strict server type checking in stages.
 - [ ] Extract one typed provider-response pipeline for cache lookup, stale fallback, coalescing, timeout, backoff, quota diagnostics, schema validation, and response headers to remove repeated route logic.
 - [ ] Split `weatherGrid`, `AetherMap`, and large provider modules into focused acquisition, normalization, interpolation, rendering, and UI orchestration units with narrow contracts.
-- [ ] Move each language into its own translation catalog and add automated key and interpolation-placeholder parity checks before adding more locales.
+- [x] Move each language into its own translation catalog and add automated key and interpolation-placeholder parity checks before adding more locales.
 
 ### Offline data and measurable quality
 

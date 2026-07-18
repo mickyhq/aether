@@ -11,13 +11,15 @@ type LocationSelectionOptions = {
   setStatus: Dispatch<SetStateAction<string>>
   setForecastReady: Dispatch<SetStateAction<boolean>>
   getCachedPlace: (location: WeatherLocation) => string | null
+  onLocationNavigation: () => void
 }
 
 export function useLocationSelection({
   setLocation,
   setStatus,
   setForecastReady,
-  getCachedPlace
+  getCachedPlace,
+  onLocationNavigation
 }: LocationSelectionOptions) {
   const abortRef = useRef<AbortController | null>(null)
   const timeoutRef = useRef(0)
@@ -93,20 +95,34 @@ export function useLocationSelection({
       setStatus('Searching city')
       const nextLocation = await searchCity(query)
 
+      onLocationNavigation()
       setForecastReady(false)
       setLocation(nextLocation)
     } catch (error) {
       recordProviderRequestError('geocoding', error)
       setStatus(error instanceof Error ? error.message : 'City search failed')
     }
-  }, [cancelPendingReverseGeocode, setForecastReady, setLocation, setStatus])
+  }, [
+    cancelPendingReverseGeocode,
+    onLocationNavigation,
+    setForecastReady,
+    setLocation,
+    setStatus
+  ])
 
   const handleSavedLocationSelect = useCallback((location: WeatherLocation) => {
     cancelPendingReverseGeocode()
+    onLocationNavigation()
     setForecastReady(false)
     setLocation(location)
     setStatus('Reading sky')
-  }, [cancelPendingReverseGeocode, setForecastReady, setLocation, setStatus])
+  }, [
+    cancelPendingReverseGeocode,
+    onLocationNavigation,
+    setForecastReady,
+    setLocation,
+    setStatus
+  ])
 
   return {
     handleMapClick,
