@@ -15,6 +15,7 @@ import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 import { airQualityResponseSchema } from '../schemas/serverResponses'
 import { isAirQualityMapSample } from '../schemas/cachePayloads'
 import { recordProviderRequestError } from './clientTelemetry'
+import { normalizeOpenMeteoTime } from '../weather/translateWeather'
 
 const AIR_QUALITY_ENDPOINT = '/api/air-quality'
 const CURRENT_FIELDS = [
@@ -199,7 +200,7 @@ function mapAirQualitySample(
     latitude: point.latitude,
     longitude: point.longitude,
     updatedAt,
-    observedAt: current.time ?? new Date(updatedAt).toISOString(),
+    observedAt: normalizeOpenMeteoTime(current.time) ?? new Date(updatedAt).toISOString(),
     europeanAqi: current.european_aqi,
     pm2_5: current.pm2_5,
     pm10: current.pm10,

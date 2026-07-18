@@ -11,7 +11,10 @@ import { getMapSampleLimit, observeUpstreamBudget } from './upstreamBudget'
 import { clamp, degreesToRadians, distanceInKilometers, interpolateWindVectors, inverseDistanceWeight, normalizeLongitude, radiansToDegrees } from '../utils/geo'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { mapCurrentWeather } from '../weather/mapCurrentWeather'
-import { buildWeatherEvolution } from '../weather/translateWeather'
+import {
+  buildWeatherEvolution,
+  normalizeOpenMeteoTime
+} from '../weather/translateWeather'
 import { describeWeatherCode } from '../weather/weatherCode'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 import { openMeteoResponseSchema } from '../schemas/serverResponses'
@@ -329,7 +332,10 @@ function mapWeatherSample(point: GridPoint | undefined, payload: OpenMeteoRespon
     latitude: point.latitude,
     longitude: point.longitude,
     updatedAt,
-    observedAt: payload.current.time ?? new Date(updatedAt).toISOString(),
+    observedAt: normalizeOpenMeteoTime(
+      payload.current.time,
+      payload.utc_offset_seconds
+    ) ?? new Date(updatedAt).toISOString(),
     showBadge: false,
     evolution: buildWeatherEvolution(
       payload.hourly,

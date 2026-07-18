@@ -103,7 +103,7 @@ export function StargazingIndex({ location }: { location: WeatherLocation | null
                 className={nightIndex === index ? 'is-selected' : ''}
                 onClick={() => setNightIndex(index)}
               >
-                {formatNight(item.date, language)}
+                {formatNight(item.bestTime, language)}
                 <strong>{item.score}</strong>
               </button>
             ))}
@@ -141,7 +141,7 @@ export function StargazingIndex({ location }: { location: WeatherLocation | null
 
           {night && (
             <Typography variant="caption" className="stargazing-best-time">
-              {t('stars.bestTime', { time: formatUtcTime(night, language) })}
+              {t('stars.bestTime', { time: formatLocalTime(night, language) })}
             </Typography>
           )}
         </>
@@ -163,16 +163,14 @@ function formatNight(value: string, language: string) {
   return new Intl.DateTimeFormat(language, {
     weekday: 'short',
     day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC'
-  }).format(new Date(`${value}T12:00:00Z`))
+    month: 'short'
+  }).format(new Date(value))
 }
 
-function formatUtcTime(night: StargazingNight, language: string) {
+function formatLocalTime(night: StargazingNight, language: string) {
   return new Intl.DateTimeFormat(language, {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC'
-  }).format(new Date(night.bestTime)) + ' UTC'
+    timeZoneName: 'short'
+  }).format(new Date(night.bestTime))
 }

@@ -14,14 +14,14 @@ export function isWeatherMapSample(value: unknown): value is WeatherMapSample {
     isFiniteNumber(value.latitude) &&
     isFiniteNumber(value.longitude) &&
     optional(value.updatedAt, isFiniteNumber) &&
-    optional(value.observedAt, isString) &&
+    optional(value.observedAt, isTimestamp) &&
     optional(value.showBadge, isBoolean) &&
     optional(value.estimated, isBoolean) &&
     optional(value.evolution, item => (
       Array.isArray(item) && item.every(isWeatherEvolutionFrame)
     )) &&
-    optional(value.sunrise, item => item === null || isString(item)) &&
-    optional(value.sunset, item => item === null || isString(item)) &&
+    optional(value.sunrise, item => item === null || isTimestamp(item)) &&
+    optional(value.sunset, item => item === null || isTimestamp(item)) &&
     isFiniteNumber(value.temperature) &&
     isFiniteNumber(value.precipitation) &&
     isFiniteNumber(value.snowfall) &&
@@ -41,7 +41,7 @@ export function isAirQualityMapSample(
     isFiniteNumber(value.latitude) &&
     isFiniteNumber(value.longitude) &&
     isFiniteNumber(value.updatedAt) &&
-    isString(value.observedAt) &&
+    isTimestamp(value.observedAt) &&
     isFiniteNumber(value.europeanAqi) &&
     isFiniteNumber(value.pm2_5) &&
     isFiniteNumber(value.pm10) &&
@@ -53,7 +53,7 @@ function isWeatherEvolutionFrame(
   value: unknown
 ): value is WeatherEvolutionFrame {
   return isRecord(value) &&
-    isString(value.time) &&
+    isTimestamp(value.time) &&
     isFiniteNumber(value.temperature) &&
     isFiniteNumber(value.precipitation) &&
     isFiniteNumber(value.snowfall) &&
@@ -71,6 +71,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isString(value: unknown): value is string {
   return typeof value === 'string'
+}
+
+function isTimestamp(value: unknown): value is string {
+  return isString(value) && /[zZ]$|[+-]\d{2}:\d{2}$/.test(value)
 }
 
 function isBoolean(value: unknown): value is boolean {

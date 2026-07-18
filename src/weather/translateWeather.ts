@@ -22,11 +22,20 @@ export function translateWeather(
       payload.hourly,
       payload.utc_offset_seconds
     ),
-    sunrise: payload.daily?.sunrise?.[0] ?? null,
-    sunset: payload.daily?.sunset?.[0] ?? null,
+    sunrise: normalizeOpenMeteoTime(
+      payload.daily?.sunrise?.[0],
+      payload.utc_offset_seconds
+    ),
+    sunset: normalizeOpenMeteoTime(
+      payload.daily?.sunset?.[0],
+      payload.utc_offset_seconds
+    ),
     heatRisk: buildHeatRisk(payload),
     provenance: {
-      observedAt: current.time ?? refreshedAt,
+      observedAt: normalizeOpenMeteoTime(
+        current.time,
+        payload.utc_offset_seconds
+      ) ?? refreshedAt,
       refreshedAt,
       source: 'Open-Meteo',
       resolution: 'Model-dependent grid'
@@ -133,7 +142,14 @@ export function buildWeatherEvolution(
   })
 }
 
-function normalizeForecastTime(value: string, utcOffsetSeconds: number) {
+export function normalizeOpenMeteoTime(
+  value: string | null | undefined,
+  utcOffsetSeconds = 0
+) {
+  if (!value) {
+    return null
+  }
+
   if (/[zZ]$|[+-]\d{2}:\d{2}$/.test(value)) {
     return value
   }
@@ -145,4 +161,8 @@ function normalizeForecastTime(value: string, utcOffsetSeconds: number) {
   }
 
   return new Date(wallClockTime - utcOffsetSeconds * 1000).toISOString()
+}
+
+function normalizeForecastTime(value: string, utcOffsetSeconds: number) {
+  return normalizeOpenMeteoTime(value, utcOffsetSeconds) ?? value
 }

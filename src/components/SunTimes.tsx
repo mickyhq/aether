@@ -9,19 +9,19 @@ type SunTimesProps = {
 }
 
 export function SunTimes({ sunrise, sunset }: SunTimesProps) {
-  const { t } = useI18n()
+  const { language, t } = useI18n()
 
   return (
     <Box className="sun-times">
       <SunTime
         icon={<LightModeIcon />}
         label={t('sun.sunrise')}
-        value={formatSunTime(sunrise)}
+        value={formatSunTime(sunrise, language)}
       />
       <SunTime
         icon={<DarkModeIcon />}
         label={t('sun.sunset')}
-        value={formatSunTime(sunset)}
+        value={formatSunTime(sunset, language)}
       />
     </Box>
   )
@@ -45,12 +45,20 @@ function SunTime({ icon, label, value }: SunTimeProps) {
   )
 }
 
-function formatSunTime(value: string | null) {
+function formatSunTime(value: string | null, language: string) {
   if (!value) {
     return '--'
   }
 
-  const time = value.split('T')[1]
+  const date = new Date(value)
 
-  return time?.slice(0, 5) || '--'
+  if (!Number.isFinite(date.getTime())) {
+    return '--'
+  }
+
+  return new Intl.DateTimeFormat(language, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  }).format(date)
 }
