@@ -890,6 +890,22 @@
   color: #47cfe5;
 }
 
+.map-weather-tooltip-air-quality {
+  display: grid;
+  gap: 3px;
+  padding: 7px 9px;
+  border: 1px solid rgba(147, 197, 253, 0.24);
+  border-radius: 6px;
+  background: rgba(30, 58, 82, 0.42);
+  color: rgba(224, 245, 255, 0.78);
+  font-size: 11px;
+}
+
+.map-weather-tooltip-air-quality .map-weather-tooltip-row {
+  color: #effaff;
+  font-size: 12px;
+}
+
 .map-weather-tooltip-fire .map-weather-tooltip-row {
   color: #fff4ee;
   font-size: 12px;

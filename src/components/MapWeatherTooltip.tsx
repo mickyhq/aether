@@ -176,11 +176,25 @@ export function MapWeatherTooltip({ reading, onClose }: MapWeatherTooltipProps) 
       )}
 
       {reading.europeanAqi !== undefined && (
-        <div className="map-weather-tooltip-row">
-          <BlurOnIcon />
-          <span>
-            AQI {Math.round(reading.europeanAqi)} · PM2.5 {reading.pm2_5?.toFixed(1)} µg/m³
-          </span>
+        <div className="map-weather-tooltip-air-quality">
+          <div className="map-weather-tooltip-row">
+            <BlurOnIcon />
+            <strong>
+              {t('map.airQualityIndex', {
+                value: Math.round(reading.europeanAqi)
+              })}
+            </strong>
+          </div>
+          {reading.pm2_5 !== undefined && (
+            <span>
+              {t('map.pm25', { value: reading.pm2_5.toFixed(1) })}
+            </span>
+          )}
+          {reading.pm10 !== undefined && (
+            <span>
+              {t('map.pm10', { value: reading.pm10.toFixed(1) })}
+            </span>
+          )}
         </div>
       )}
 
