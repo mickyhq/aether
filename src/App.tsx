@@ -30,6 +30,7 @@ import { describeWeatherCode } from './weather/weatherCode'
 import type {
   AnimationQuality,
   DataProvenance,
+  PrecipitationPlayback,
   WeatherConfig,
   WeatherEvolutionFrame,
   WeatherLocation,
@@ -86,6 +87,9 @@ export default function App() {
     retry: retryWeather
   } = useLocationWeather(selectedLocation)
   const [ecmwfPlaybackTime, setEcmwfPlaybackTime] = useState<string | null>(null)
+  const [precipitationPlayback, setPrecipitationPlayback] = useState<
+    PrecipitationPlayback
+  >({ kind: 'automatic' })
   const [weatherMode, setWeatherMode] = useState<WeatherMode>(readUrlMode)
   const mapWeatherMode = useDeferredValue(weatherMode)
   const [viewport, setViewport] = useState<WeatherViewport | null>(null)
@@ -209,6 +213,23 @@ export default function App() {
     () => getWeatherMapSamplesAtTime(mapSamples, ecmwfPlaybackTime),
     [ecmwfPlaybackTime, mapSamples]
   )
+  const displayedMapProvenance = useMemo(() => {
+    if (!ecmwfPlaybackTime) {
+      return mapProvenance
+    }
+
+    const surface = mapProvenance.precipitation
+
+    return {
+      ...mapProvenance,
+      precipitation: {
+        observedAt: ecmwfPlaybackTime,
+        refreshedAt: surface?.refreshedAt ?? null,
+        source: 'Open-Meteo forecast',
+        resolution: surface?.resolution ?? 'Model-dependent grid'
+      }
+    }
+  }, [ecmwfPlaybackTime, mapProvenance])
   useEffect(() => {
     updateUrlLocation(selectedLocation, weatherMode)
   }, [selectedLocation, weatherMode])
@@ -216,6 +237,12 @@ export default function App() {
   useEffect(() => {
     if (weatherMode === 'temperature-anomaly') {
       setEcmwfPlaybackTime(null)
+    }
+
+    if (weatherMode !== 'precipitation') {
+      setPrecipitationPlayback(current => (
+        current.kind === 'automatic' ? current : { kind: 'automatic' }
+      ))
     }
   }, [weatherMode])
 
@@ -266,10 +293,11 @@ export default function App() {
               oceanCurrentSamples={oceanCurrentData?.samples ?? []}
               temperatureAnomalySamples={temperatureAnomalySamples}
               officialWarnings={officialWarnings?.warnings ?? []}
-              provenance={mapProvenance}
+              provenance={displayedMapProvenance}
               radarOpacity={radarOpacity}
               animationQuality={animationQuality}
               pointerDismissToken={mapPopupDismissToken}
+              precipitationPlayback={precipitationPlayback}
               onViewportChange={handleViewportChange}
               onPointerWeatherChange={handlePointerWeatherChange}
               onMapClick={handleMapClick}
@@ -296,7 +324,12 @@ export default function App() {
           onAnimationQualityChange={handleAnimationQualityChange}
           onWeatherRetry={retryWeather}
         />
-        <ForecastDateLabel time={ecmwfPlaybackTime} />
+        <ForecastDateLabel
+          time={precipitationPlayback.kind === 'radar'
+            ? precipitationPlayback.time
+            : ecmwfPlaybackTime}
+          kind={precipitationPlayback.kind === 'radar' ? 'radar' : 'forecast'}
+        />
         <WeatherErrorBoundary
           area="forecast"
           resetKey={`${selectedLocation.latitude}:${selectedLocation.longitude}:${weatherMode}`}
@@ -317,6 +350,7 @@ export default function App() {
                     : setEcmwfFrame
                 }
                 onEcmwfPlaybackChange={setEcmwfPlaybackTime}
+                onPrecipitationPlaybackChange={setPrecipitationPlayback}
                 airQuality={selectedAirQuality}
                 temperatureAnomaly={selectedTemperatureAnomaly
                   ? {

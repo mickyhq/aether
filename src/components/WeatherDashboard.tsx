@@ -7,9 +7,10 @@ import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import WavesIcon from '@mui/icons-material/Waves'
 import { Box, Stack, Typography } from '@mui/material'
 import { useMemo, type ReactNode } from 'react'
-import type { AirQualityReading, DataProvenance as DataProvenanceValue, EcmwfForecast, OfficialWarningsData, WeatherConfig, WeatherEvolutionFrame, WeatherMode, WeatherModeProvenance } from '../types/weather'
+import type { AirQualityReading, DataProvenance as DataProvenanceValue, EcmwfForecast, OfficialWarningsData, PrecipitationPlayback, WeatherConfig, WeatherEvolutionFrame, WeatherMode, WeatherModeProvenance } from '../types/weather'
 import type { WeatherLocation } from '../types/weather'
 import { EcmwfForecastTimeline } from './EcmwfForecastTimeline'
+import { PrecipitationForecastTimeline } from './PrecipitationForecastTimeline'
 import { SevereWeatherAlerts } from './SevereWeatherAlerts'
 import { SunTimes } from './SunTimes'
 import { TemperatureRecords } from './TemperatureRecords'
@@ -26,6 +27,7 @@ type WeatherDashboardProps = {
   ecmwfLoading: boolean
   onEcmwfFrameChange: ((frame: EcmwfForecast['frames'][number] | null) => void) | null
   onEcmwfPlaybackChange: (time: string | null) => void
+  onPrecipitationPlaybackChange: (playback: PrecipitationPlayback) => void
   airQuality: AirQualityReading | null
   temperatureAnomaly: {
     normalTemperature: number
@@ -46,6 +48,7 @@ export function WeatherDashboard({
   ecmwfLoading,
   onEcmwfFrameChange,
   onEcmwfPlaybackChange,
+  onPrecipitationPlaybackChange,
   airQuality,
   temperatureAnomaly,
   officialWarnings,
@@ -60,7 +63,7 @@ export function WeatherDashboard({
       return ecmwfForecast
     }
 
-    if (!weather?.evolution.length) {
+    if (!alertWeather?.evolution.length) {
       return null
     }
 
@@ -68,9 +71,9 @@ export function WeatherDashboard({
       model: t('forecast.standard'),
       latitude: 0,
       longitude: 0,
-      frames: weather.evolution
+      frames: alertWeather.evolution
     }
-  }, [ecmwfForecast, t, weather])
+  }, [alertWeather, ecmwfForecast, t])
 
   return (
     <Box
@@ -155,12 +158,22 @@ export function WeatherDashboard({
           sunset={weather?.sunset ?? null}
         />
         <StargazingIndex location={location} />
-        <EcmwfForecastTimeline
-          forecast={visualForecast}
-          loading={ecmwfLoading && !visualForecast}
-          onFrameChange={onEcmwfFrameChange ?? undefined}
-          onPlaybackChange={onEcmwfPlaybackChange}
-        />
+        {mode === 'precipitation' ? (
+          <PrecipitationForecastTimeline
+            forecast={visualForecast}
+            loading={ecmwfLoading && !visualForecast}
+            onFrameChange={onEcmwfFrameChange ?? undefined}
+            onPlaybackChange={onEcmwfPlaybackChange}
+            onPrecipitationPlaybackChange={onPrecipitationPlaybackChange}
+          />
+        ) : (
+          <EcmwfForecastTimeline
+            forecast={visualForecast}
+            loading={ecmwfLoading && !visualForecast}
+            onFrameChange={onEcmwfFrameChange ?? undefined}
+            onPlaybackChange={onEcmwfPlaybackChange}
+          />
+        )}
         <HourlyForecast frames={weather?.evolution ?? []} />
       </Stack>
     </Box>

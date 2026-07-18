@@ -77,6 +77,38 @@ export function temperatureAnomalyColor(anomaly: number) {
   ])
 }
 
+export function precipitationForecastStyle(precipitation: number) {
+  if (precipitation < 0.08) {
+    return { r: 0, g: 0, b: 0, alpha: 0 }
+  }
+
+  if (precipitation < 0.3) {
+    return { r: 82, g: 151, b: 255, alpha: 132 }
+  }
+
+  if (precipitation < 1) {
+    return { r: 41, g: 205, b: 255, alpha: 168 }
+  }
+
+  if (precipitation < 2.5) {
+    return { r: 45, g: 220, b: 133, alpha: 190 }
+  }
+
+  if (precipitation < 5) {
+    return { r: 238, g: 220, b: 62, alpha: 210 }
+  }
+
+  if (precipitation < 10) {
+    return { r: 255, g: 139, b: 49, alpha: 224 }
+  }
+
+  if (precipitation < 20) {
+    return { r: 255, g: 73, b: 83, alpha: 236 }
+  }
+
+  return { r: 211, g: 70, b: 255, alpha: 244 }
+}
+
 type ColorStop = {
   value: number
   r: number

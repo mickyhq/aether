@@ -3,9 +3,13 @@ import { useI18n } from '../i18n/I18nContext'
 
 type ForecastDateLabelProps = {
   time: string | null
+  kind?: 'forecast' | 'radar'
 }
 
-export function ForecastDateLabel({ time }: ForecastDateLabelProps) {
+export function ForecastDateLabel({
+  time,
+  kind = 'forecast'
+}: ForecastDateLabelProps) {
   const { language, t } = useI18n()
 
   if (!time) {
@@ -15,10 +19,12 @@ export function ForecastDateLabel({ time }: ForecastDateLabelProps) {
   return (
     <Typography
       className="forecast-date-label"
-      aria-label={t('forecast.dateAria')}
+      aria-label={t(kind === 'radar' ? 'radar.dateAria' : 'forecast.dateAria')}
       aria-live="polite"
     >
-      {t('forecast.date', { date: formatForecastDate(time, language) })}
+      {t(kind === 'radar' ? 'radar.date' : 'forecast.date', {
+        date: formatForecastDate(time, language)
+      })}
     </Typography>
   )
 }

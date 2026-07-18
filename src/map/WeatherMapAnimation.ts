@@ -38,6 +38,7 @@ export class WeatherMapAnimation {
   private jetStreamSamples: JetStreamSample[] = []
   private oceanCurrentSamples: OceanCurrentSample[] = []
   private temperatureAnomalySamples: TemperatureAnomalySample[] = []
+  private precipitationForecast = false
   private projectedSamples: ProjectedSample[] | null = null
   private projectedAirQualitySamples: ProjectedAirQualitySample[] | null = null
   private projectedOceanCurrentSamples: ProjectedOceanCurrentSample[] | null = null
@@ -77,7 +78,8 @@ export class WeatherMapAnimation {
   constructor(
     map: L.Map,
     container: HTMLElement,
-    seaTemperatureLabel: string
+    seaTemperatureLabel: string,
+    precipitationLegendLabel: string
   ) {
     this.map = map
     this.canvas = document.createElement('canvas')
@@ -91,7 +93,11 @@ export class WeatherMapAnimation {
     }
 
     this.context = context
-    this.fieldRenderer = new WeatherFieldRenderer(this.canvas, context)
+    this.fieldRenderer = new WeatherFieldRenderer(
+      this.canvas,
+      context,
+      precipitationLegendLabel
+    )
     this.particleRenderer = new WeatherParticleRenderer(
       map,
       context,
@@ -148,13 +154,15 @@ export class WeatherMapAnimation {
     airQualitySamples: AirQualityMapSample[],
     jetStreamSamples: JetStreamSample[],
     oceanCurrentSamples: OceanCurrentSample[],
-    temperatureAnomalySamples: TemperatureAnomalySample[]
+    temperatureAnomalySamples: TemperatureAnomalySample[],
+    precipitationForecast: boolean
   ) {
     const samplesChanged = samples !== this.samples
     const airQualityChanged = airQualitySamples !== this.airQualitySamples
     const jetStreamChanged = jetStreamSamples !== this.jetStreamSamples
     const oceanCurrentChanged = oceanCurrentSamples !== this.oceanCurrentSamples
     const temperatureAnomalyChanged = temperatureAnomalySamples !== this.temperatureAnomalySamples
+    const precipitationForecastChanged = precipitationForecast !== this.precipitationForecast
     const activeDataChanged = mode === 'jet-stream'
       ? jetStreamChanged
       : mode === 'air-quality'
@@ -163,7 +171,7 @@ export class WeatherMapAnimation {
           ? oceanCurrentChanged
         : mode === 'temperature-anomaly'
             ? temperatureAnomalyChanged
-            : samplesChanged
+            : samplesChanged || precipitationForecastChanged
 
     if (mode !== this.mode || activeDataChanged) {
       this.particleRenderer.reset()
@@ -175,6 +183,7 @@ export class WeatherMapAnimation {
     this.jetStreamSamples = jetStreamSamples
     this.oceanCurrentSamples = oceanCurrentSamples
     this.temperatureAnomalySamples = temperatureAnomalySamples
+    this.precipitationForecast = precipitationForecast
 
     if (samplesChanged) {
       this.projectedSamples = null
@@ -194,7 +203,7 @@ export class WeatherMapAnimation {
 
     this.mode = mode
     this.fieldRenderer.markDataChanged(
-      samplesChanged,
+      samplesChanged || precipitationForecastChanged,
       airQualityChanged,
       temperatureAnomalyChanged
     )
@@ -352,11 +361,19 @@ export class WeatherMapAnimation {
     }
 
     if (this.mode === 'precipitation') {
+      if (this.precipitationForecast) {
+        this.fieldRenderer.drawPrecipitationForecast(projectedSamples)
+      }
+
       this.particleRenderer.drawPrecipitation(
         projectedSamples,
         deltaTime,
         time
       )
+
+      if (this.precipitationForecast) {
+        this.fieldRenderer.drawPrecipitationForecastLegend()
+      }
     }
   }
 

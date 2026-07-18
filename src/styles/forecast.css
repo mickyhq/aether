@@ -829,6 +829,51 @@
   accent-color: #8fe5ff;
 }
 
+.precipitation-forecast-timeline {
+  border-color: rgba(84, 190, 255, 0.38);
+  background:
+    linear-gradient(135deg, rgba(39, 133, 197, 0.12), transparent 55%),
+    var(--app-surface);
+}
+
+.precipitation-timeline-source {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.precipitation-timeline-source.is-radar {
+  color: #8fe5ff;
+}
+
+.precipitation-timeline-source.is-forecast {
+  color: #ffe59b;
+}
+
+.precipitation-timeline-scale {
+  display: flex;
+  gap: 3px;
+  color: var(--app-text-muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.precipitation-timeline-scale span {
+  min-width: 0;
+  padding-top: 4px;
+  border-top: 2px solid rgba(143, 229, 255, 0.62);
+}
+
+.precipitation-timeline-scale span:last-child {
+  border-top-color: rgba(255, 229, 155, 0.72);
+  text-align: right;
+}
+
+.precipitation-time-slider {
+  accent-color: #ffe59b;
+}
+
 .hourly-forecast-label {
   display: block;
   margin-bottom: 6px;

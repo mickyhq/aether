@@ -33,6 +33,7 @@ import type {
   TemperatureAnomalySample,
   MapWeatherPointer,
   OfficialWarning,
+  PrecipitationPlayback,
   WeatherLocation,
   WeatherMapSample,
   WeatherMode,
@@ -64,6 +65,7 @@ type AetherMapProps = {
   radarOpacity: number
   animationQuality: AnimationQuality
   pointerDismissToken: number
+  precipitationPlayback: PrecipitationPlayback
   onViewportChange: (viewport: WeatherViewport) => void
   onPointerWeatherChange: (reading: MapWeatherPointer | null) => void
   onMapClick: (location: WeatherLocation) => void
@@ -83,6 +85,7 @@ export function AetherMap({
   radarOpacity,
   animationQuality,
   pointerDismissToken,
+  precipitationPlayback,
   onViewportChange,
   onPointerWeatherChange,
   onMapClick
@@ -219,7 +222,8 @@ export function AetherMap({
     const animation = new WeatherMapAnimation(
       map,
       mapElement,
-      t('ocean.seaTemperature')
+      t('ocean.seaTemperature'),
+      t('precipitation.legend')
     )
     animation.start()
     animationRef.current = animation
@@ -479,10 +483,15 @@ export function AetherMap({
       airQualitySamples,
       jetStreamSamples,
       oceanCurrentSamples,
-      temperatureAnomalySamples
+      temperatureAnomalySamples,
+      precipitationPlayback.kind === 'forecast'
     )
     animationRef.current?.setQuality(animationQuality)
-    layersRef.current?.setWeatherMode(mode, radarOpacity)
+    layersRef.current?.setWeatherMode(
+      mode,
+      radarOpacity,
+      precipitationPlayback
+    )
   }, [
     airQualitySamples,
     animationQuality,
@@ -491,6 +500,7 @@ export function AetherMap({
     temperatureAnomalySamples,
     samples,
     mode,
+    precipitationPlayback,
     radarOpacity
   ])
 

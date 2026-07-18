@@ -1,5 +1,6 @@
 import {
   airQualityColor,
+  precipitationForecastStyle,
   temperatureAnomalyColor,
   temperatureColor
 } from './weatherPalette'
@@ -20,16 +21,20 @@ export class WeatherFieldRenderer {
   private readonly airQualityContext: CanvasRenderingContext2D
   private readonly anomalyCanvas = document.createElement('canvas')
   private readonly anomalyContext: CanvasRenderingContext2D
+  private readonly precipitationCanvas = document.createElement('canvas')
+  private readonly precipitationContext: CanvasRenderingContext2D
   private temperatureTextureDirty = true
   private airQualityTextureDirty = true
   private anomalyTextureDirty = true
+  private precipitationTextureDirty = true
   private width = 1
   private height = 1
   private reducedMotion = false
 
   constructor(
     targetCanvas: HTMLCanvasElement,
-    context: CanvasRenderingContext2D
+    context: CanvasRenderingContext2D,
+    private readonly precipitationLegendLabel: string
   ) {
     this.targetCanvas = targetCanvas
     this.context = context
@@ -42,6 +47,7 @@ export class WeatherFieldRenderer {
 
     const airQualityContext = this.airQualityCanvas.getContext('2d')
     const anomalyContext = this.anomalyCanvas.getContext('2d')
+    const precipitationContext = this.precipitationCanvas.getContext('2d')
 
     if (!airQualityContext) {
       throw new Error('Air quality canvas unavailable')
@@ -51,9 +57,14 @@ export class WeatherFieldRenderer {
       throw new Error('Temperature anomaly canvas unavailable')
     }
 
+    if (!precipitationContext) {
+      throw new Error('Precipitation forecast canvas unavailable')
+    }
+
     this.temperatureContext = temperatureContext
     this.airQualityContext = airQualityContext
     this.anomalyContext = anomalyContext
+    this.precipitationContext = precipitationContext
   }
 
   setViewport(width: number, height: number, reducedMotion: boolean) {
@@ -69,6 +80,7 @@ export class WeatherFieldRenderer {
   ) {
     if (temperatureChanged) {
       this.temperatureTextureDirty = true
+      this.precipitationTextureDirty = true
     }
 
     if (airQualityChanged) {
@@ -84,6 +96,7 @@ export class WeatherFieldRenderer {
     this.temperatureTextureDirty = true
     this.airQualityTextureDirty = true
     this.anomalyTextureDirty = true
+    this.precipitationTextureDirty = true
   }
 
   drawTemperature(samples: ProjectedSample[], time: number) {
@@ -127,6 +140,61 @@ export class WeatherFieldRenderer {
     this.context.drawImage(this.anomalyCanvas, 0, 0, this.width, this.height)
     this.context.restore()
     this.drawTemperatureAnomalyLegend()
+  }
+
+  drawPrecipitationForecast(samples: ProjectedSample[]) {
+    if (this.precipitationTextureDirty) {
+      this.renderPrecipitationTexture(samples)
+    }
+
+    this.context.save()
+    this.context.globalAlpha = 0.82
+    this.context.imageSmoothingEnabled = true
+    this.context.drawImage(
+      this.precipitationCanvas,
+      0,
+      0,
+      this.width,
+      this.height
+    )
+    this.context.restore()
+  }
+
+  drawPrecipitationForecastLegend() {
+    const values = [0.1, 0.3, 1, 2.5, 5, 10, 20]
+    const labels = ['0.1', '0.3', '1', '2.5', '5', '10', '20+']
+    const legendWidth = Math.min(440, this.width - 48)
+    const segmentWidth = legendWidth / values.length
+    const x = (this.width - legendWidth) / 2
+    const y = this.height - 38
+
+    this.context.save()
+    this.context.fillStyle = 'rgba(4, 10, 15, 0.82)'
+    this.context.beginPath()
+    this.context.roundRect(x - 12, y - 28, legendWidth + 24, 60, 8)
+    this.context.fill()
+    this.context.fillStyle = 'rgba(247, 252, 255, 0.94)'
+    this.context.font = '700 10px Inter, system-ui, sans-serif'
+    this.context.textAlign = 'left'
+    this.context.fillText(this.precipitationLegendLabel, x, y - 11)
+
+    for (let index = 0; index < values.length; index += 1) {
+      const style = precipitationForecastStyle(values[index])
+      const segmentX = x + index * segmentWidth
+
+      this.context.fillStyle = `rgb(${style.r}, ${style.g}, ${style.b})`
+      this.context.fillRect(segmentX, y - 4, segmentWidth + 0.5, 12)
+      this.context.fillStyle = 'rgba(247, 252, 255, 0.9)'
+      this.context.font = '650 9px Inter, system-ui, sans-serif'
+      this.context.textAlign = 'center'
+      this.context.fillText(
+        labels[index],
+        segmentX + segmentWidth / 2,
+        y + 23
+      )
+    }
+
+    this.context.restore()
   }
 
   private renderTemperatureTexture(samples: ProjectedSample[]) {
@@ -252,6 +320,49 @@ export class WeatherFieldRenderer {
     this.anomalyContext.putImageData(image, 0, 0)
     this.anomalyTextureDirty = false
     this.targetCanvas.dataset.temperatureAnomalyTextureMs = (
+      performance.now() - startedAt
+    ).toFixed(1)
+  }
+
+  private renderPrecipitationTexture(samples: ProjectedSample[]) {
+    const startedAt = performance.now()
+    const scale = 6
+    const width = Math.max(1, Math.ceil(this.width / scale))
+    const height = Math.max(1, Math.ceil(this.height / scale))
+    const valueSamples = samples.map(projected => ({
+      x: projected.x,
+      y: projected.y,
+      value: projected.sample.precipitation
+    }))
+
+    this.precipitationCanvas.width = width
+    this.precipitationCanvas.height = height
+
+    const image = this.precipitationContext.createImageData(width, height)
+
+    for (let row = 0; row < height; row += 1) {
+      const screenY = (row + 0.5) * this.height / height
+
+      for (let column = 0; column < width; column += 1) {
+        const screenX = (column + 0.5) * this.width / width
+        const precipitation = interpolateNearestFour(
+          screenX,
+          screenY,
+          valueSamples
+        )
+        const style = precipitationForecastStyle(precipitation)
+        const offset = (row * width + column) * 4
+
+        image.data[offset] = style.r
+        image.data[offset + 1] = style.g
+        image.data[offset + 2] = style.b
+        image.data[offset + 3] = style.alpha
+      }
+    }
+
+    this.precipitationContext.putImageData(image, 0, 0)
+    this.precipitationTextureDirty = false
+    this.targetCanvas.dataset.precipitationTextureMs = (
       performance.now() - startedAt
     ).toFixed(1)
   }

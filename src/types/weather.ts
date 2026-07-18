@@ -422,6 +422,11 @@ export type RadarRainReading = {
   observedAt?: string
 }
 
+export type PrecipitationPlayback =
+  | { kind: 'automatic' }
+  | { kind: 'radar'; path: string; time: string }
+  | { kind: 'forecast'; time: string }
+
 export type MapWeatherPointer = {
   screenX: number
   screenY: number

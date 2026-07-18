@@ -4,6 +4,7 @@ import type {
   MapEarthquakePointer,
   MapFirePointer,
   MapVolcanoPointer,
+  PrecipitationPlayback,
   WeatherMode
 } from '../types/weather'
 import {
@@ -48,7 +49,11 @@ export type AetherMapLayers = {
   findFireAtPoint: (point: L.Point) => MapFirePointer | null
   findVolcanoesAtPoint: (point: L.Point) => MapVolcanoPointer[]
   setMapLanguage: (language: string) => void
-  setWeatherMode: (mode: WeatherMode, radarOpacity: number) => void
+  setWeatherMode: (
+    mode: WeatherMode,
+    radarOpacity: number,
+    precipitationPlayback: PrecipitationPlayback
+  ) => void
 }
 
 export function createAetherMapLayers({
@@ -357,7 +362,8 @@ export function createAetherMapLayers({
       { layer: fireTiles, info: firmsPointerInfo }
     ]),
     setMapLanguage: baseMap.setLanguage,
-    setWeatherMode: (mode, radarOpacity) => {
+    setWeatherMode: (mode, radarOpacity, precipitationPlayback) => {
+      radar.setPlayback(precipitationPlayback)
       radar.setMode(mode)
       radar.setOpacity(radarOpacity)
     },
