@@ -821,6 +821,11 @@
   color: #8fe5ff;
 }
 
+.map-weather-tooltip-snow,
+.map-weather-tooltip-snow svg {
+  color: #ddd4ff;
+}
+
 .map-weather-tooltip-anomaly {
   display: grid;
   gap: 2px;

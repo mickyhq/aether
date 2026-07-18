@@ -176,6 +176,7 @@ export function PrecipitationForecastTimeline({
 
   const forecastSelected = selected.kind === 'forecast'
   const storm = forecastSelected && selected.frame.isThunderstorm
+  const snow = forecastSelected && selected.frame.snowfall >= 0.02
 
   return (
     <Box
@@ -198,10 +199,18 @@ export function PrecipitationForecastTimeline({
       <Box className="ecmwf-forecast-values">
         {forecastSelected ? (
           <>
-            <span>{selected.frame.precipitation.toFixed(1)} mm</span>
+            <span>
+              {snow
+                ? t('precipitation.snowAmount', {
+                    amount: selected.frame.snowfall.toFixed(1)
+                  })
+                : `${selected.frame.precipitation.toFixed(1)} mm`}
+            </span>
             <span>{t(storm
               ? 'precipitation.stormRisk'
-              : 'precipitation.modelForecast')}</span>
+              : snow
+                ? 'precipitation.snowForecast'
+                : 'precipitation.modelForecast')}</span>
           </>
         ) : (
           <span>{t('precipitation.measuredRadar')}</span>

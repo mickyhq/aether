@@ -7,6 +7,7 @@ import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 import LandscapeIcon from '@mui/icons-material/Landscape'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import RadarIcon from '@mui/icons-material/Radar'
+import AcUnitIcon from '@mui/icons-material/AcUnit'
 import SensorsIcon from '@mui/icons-material/Sensors'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import WavesIcon from '@mui/icons-material/Waves'
@@ -158,6 +159,17 @@ export function MapWeatherTooltip({ reading, onClose }: MapWeatherTooltipProps) 
         <WaterDropIcon />
         <span>{reading.precipitation.toFixed(1)} mm</span>
       </div>
+
+      {reading.snowfall !== undefined && reading.snowfall >= 0.02 && (
+        <div className="map-weather-tooltip-row map-weather-tooltip-snow">
+          <AcUnitIcon />
+          <span>
+            {t('precipitation.snowAmount', {
+              amount: reading.snowfall.toFixed(1)
+            })}
+          </span>
+        </div>
+      )}
 
       {reading.radarRain && (
         <div className={`map-weather-tooltip-radar is-${reading.radarRain.status}`}>

@@ -12,6 +12,7 @@ export type Particle = {
   maxLife: number
   seed: number
   strength: number
+  kind: 'rain' | 'snow'
 }
 
 export type ProjectedSample = {

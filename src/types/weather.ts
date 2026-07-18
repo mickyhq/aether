@@ -435,6 +435,7 @@ export type MapWeatherPointer = {
   placeLabel?: string
   temperature: number
   precipitation: number
+  snowfall?: number
   rawWindSpeed: number
   windAngle: number
   jetStreamSpeed?: number

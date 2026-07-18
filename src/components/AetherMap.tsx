@@ -468,7 +468,12 @@ export function AetherMap({
         interactive: false,
         icon: L.divIcon({
           className: 'weather-badge-marker',
-          html: renderWeatherBadge(sample, mode, t('mode.storm')),
+          html: renderWeatherBadge(
+            sample,
+            mode,
+            t('mode.storm'),
+            t('weather.snow')
+          ),
           iconSize: [112, 46],
           iconAnchor: [-8, 36]
         })

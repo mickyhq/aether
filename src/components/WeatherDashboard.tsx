@@ -124,7 +124,11 @@ export function WeatherDashboard({
           <Metric
             icon={<WaterDropIcon />}
             label={t('mode.precipitation')}
-            value={formatPrecipitation(weather, t('mode.storm'))}
+            value={formatPrecipitation(
+              weather,
+              t('mode.storm'),
+              t('weather.snow')
+            )}
             selected={mode === 'precipitation'}
             onClick={() => onModeChange('precipitation')}
             provenance={provenance.precipitation}
@@ -378,13 +382,18 @@ function formatWind(weather: WeatherConfig | null) {
 
 function formatPrecipitation(
   weather: WeatherConfig | null,
-  stormLabel: string
+  stormLabel: string,
+  snowLabel: string
 ) {
   if (!weather) {
     return '--'
   }
 
   const amount = `${weather.precipitation.toFixed(1)} mm`
+
+  if (weather.snowfall >= 0.02) {
+    return `${snowLabel} · ${weather.snowfall.toFixed(1)} cm`
+  }
 
   return weather.isThunderstorm ? `${stormLabel} · ${amount}` : amount
 }

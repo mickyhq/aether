@@ -109,6 +109,26 @@ export function precipitationForecastStyle(precipitation: number) {
   return { r: 211, g: 70, b: 255, alpha: 244 }
 }
 
+export function snowfallForecastStyle(snowfall: number) {
+  if (snowfall < 0.02) {
+    return { r: 0, g: 0, b: 0, alpha: 0 }
+  }
+
+  if (snowfall < 0.1) {
+    return { r: 224, g: 246, b: 255, alpha: 158 }
+  }
+
+  if (snowfall < 0.5) {
+    return { r: 190, g: 226, b: 255, alpha: 194 }
+  }
+
+  if (snowfall < 1.5) {
+    return { r: 170, g: 191, b: 255, alpha: 220 }
+  }
+
+  return { r: 211, g: 174, b: 255, alpha: 238 }
+}
+
 type ColorStop = {
   value: number
   r: number

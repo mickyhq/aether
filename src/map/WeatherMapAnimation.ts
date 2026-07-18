@@ -363,6 +363,8 @@ export class WeatherMapAnimation {
     if (this.mode === 'precipitation') {
       if (this.precipitationForecast) {
         this.fieldRenderer.drawPrecipitationForecast(projectedSamples)
+      } else {
+        this.fieldRenderer.drawSnowfall(projectedSamples)
       }
 
       this.particleRenderer.drawPrecipitation(

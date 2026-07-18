@@ -1,6 +1,7 @@
 import {
   airQualityColor,
   precipitationForecastStyle,
+  snowfallForecastStyle,
   temperatureAnomalyColor,
   temperatureColor
 } from './weatherPalette'
@@ -149,6 +150,24 @@ export class WeatherFieldRenderer {
 
     this.context.save()
     this.context.globalAlpha = 0.82
+    this.context.imageSmoothingEnabled = true
+    this.context.drawImage(
+      this.precipitationCanvas,
+      0,
+      0,
+      this.width,
+      this.height
+    )
+    this.context.restore()
+  }
+
+  drawSnowfall(samples: ProjectedSample[]) {
+    if (this.precipitationTextureDirty) {
+      this.renderPrecipitationTexture(samples, true)
+    }
+
+    this.context.save()
+    this.context.globalAlpha = 0.72
     this.context.imageSmoothingEnabled = true
     this.context.drawImage(
       this.precipitationCanvas,
@@ -324,15 +343,23 @@ export class WeatherFieldRenderer {
     ).toFixed(1)
   }
 
-  private renderPrecipitationTexture(samples: ProjectedSample[]) {
+  private renderPrecipitationTexture(
+    samples: ProjectedSample[],
+    snowOnly = false
+  ) {
     const startedAt = performance.now()
     const scale = 6
     const width = Math.max(1, Math.ceil(this.width / scale))
     const height = Math.max(1, Math.ceil(this.height / scale))
-    const valueSamples = samples.map(projected => ({
+    const precipitationSamples = samples.map(projected => ({
       x: projected.x,
       y: projected.y,
       value: projected.sample.precipitation
+    }))
+    const snowfallSamples = samples.map(projected => ({
+      x: projected.x,
+      y: projected.y,
+      value: projected.sample.snowfall
     }))
 
     this.precipitationCanvas.width = width
@@ -348,9 +375,18 @@ export class WeatherFieldRenderer {
         const precipitation = interpolateNearestFour(
           screenX,
           screenY,
-          valueSamples
+          precipitationSamples
         )
-        const style = precipitationForecastStyle(precipitation)
+        const snowfall = interpolateNearestFour(
+          screenX,
+          screenY,
+          snowfallSamples
+        )
+        const style = snowfall >= 0.02
+          ? snowfallForecastStyle(snowfall)
+          : snowOnly
+            ? { r: 0, g: 0, b: 0, alpha: 0 }
+            : precipitationForecastStyle(precipitation)
         const offset = (row * width + column) * 4
 
         image.data[offset] = style.r

@@ -21,7 +21,8 @@ export class ParticleModeRenderer {
       life: 0,
       maxLife: 1,
       seed: Math.random() * 1000,
-      strength: 0
+      strength: 0,
+      kind: 'rain'
     }))
   }
 

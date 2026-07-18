@@ -37,12 +37,12 @@ export class PrecipitationParticleRenderer extends ParticleModeRenderer {
       Math.min(PARTICLE_COUNT, Math.round(totalStrength * 130))
     )
     const vectorGrid = this.getVectorGrid(samples)
+    const rainPath = new Path2D()
+    const snowPath = new Path2D()
 
     this.context.save()
     this.context.lineCap = 'round'
     this.context.lineWidth = 1.15
-    this.context.strokeStyle = 'rgba(194, 232, 255, 0.72)'
-    this.context.beginPath()
 
     for (let index = 0; index < activeCount; index += 1) {
       const particle = this.particles[index]
@@ -58,21 +58,35 @@ export class PrecipitationParticleRenderer extends ParticleModeRenderer {
         continue
       }
 
-      const fallSpeed = 130 + particle.strength * 390
-      const drift = field.x * (22 + field.speed * 0.45)
+      const snowing = particle.kind === 'snow'
+      const fallSpeed = snowing
+        ? 24 + particle.strength * 42
+        : 130 + particle.strength * 390
+      const flutter = snowing ? Math.sin(particle.seed + particle.life * 8) * 18 : 0
+      const drift = field.x * (22 + field.speed * 0.45) + flutter
 
       particle.x += drift * deltaTime
       particle.y += fallSpeed * deltaTime
       particle.life -= deltaTime
 
-      this.context.moveTo(particle.x, particle.y)
-      this.context.lineTo(
-        particle.x - drift * 0.045,
-        particle.y - 9 - particle.strength * 12
-      )
+      if (snowing) {
+        const radius = 1.2 + particle.strength * 1.8
+
+        snowPath.moveTo(particle.x + radius, particle.y)
+        snowPath.arc(particle.x, particle.y, radius, 0, Math.PI * 2)
+      } else {
+        rainPath.moveTo(particle.x, particle.y)
+        rainPath.lineTo(
+          particle.x - drift * 0.045,
+          particle.y - 9 - particle.strength * 12
+        )
+      }
     }
 
-    this.context.stroke()
+    this.context.strokeStyle = 'rgba(194, 232, 255, 0.72)'
+    this.context.stroke(rainPath)
+    this.context.fillStyle = 'rgba(242, 248, 255, 0.88)'
+    this.context.fill(snowPath)
     this.context.restore()
   }
 
@@ -85,7 +99,10 @@ export class PrecipitationParticleRenderer extends ParticleModeRenderer {
     particle.x = source.x + Math.cos(angle) * distance
     particle.y = source.y + Math.sin(angle) * distance - 80
     particle.strength = strength
-    particle.maxLife = 0.55 + Math.random() * 1.1
+    particle.kind = source.sample.snowfall > 0.02 ? 'snow' : 'rain'
+    particle.maxLife = particle.kind === 'snow'
+      ? 1.5 + Math.random() * 2.2
+      : 0.55 + Math.random() * 1.1
     particle.life = particle.maxLife
   }
 
