@@ -123,6 +123,7 @@ export default function App() {
     getCachedPlace
   })
   const [radarOpacity, setRadarOpacity] = useState(loadRadarOpacity)
+  const [mapPopupDismissToken, setMapPopupDismissToken] = useState(0)
   const [animationQuality, setAnimationQuality] = useState<AnimationQuality>(
     loadAnimationQuality
   )
@@ -241,6 +242,11 @@ export default function App() {
     })
   }
 
+  function handleMapPopupClose() {
+    handlePointerWeatherChange(null)
+    setMapPopupDismissToken(current => current + 1)
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -263,6 +269,7 @@ export default function App() {
               provenance={mapProvenance}
               radarOpacity={radarOpacity}
               animationQuality={animationQuality}
+              pointerDismissToken={mapPopupDismissToken}
               onViewportChange={handleViewportChange}
               onPointerWeatherChange={handlePointerWeatherChange}
               onMapClick={handleMapClick}
@@ -273,7 +280,10 @@ export default function App() {
             opacity={radarOpacity}
             onChange={handleRadarOpacityChange}
           />
-          <MapWeatherTooltip reading={pointerWeather} />
+          <MapWeatherTooltip
+            reading={pointerWeather}
+            onClose={handleMapPopupClose}
+          />
         </WeatherErrorBoundary>
         <OfflineStatus />
         <AetherHeader

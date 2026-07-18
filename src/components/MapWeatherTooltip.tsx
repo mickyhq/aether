@@ -1,5 +1,6 @@
 import AirIcon from '@mui/icons-material/Air'
 import BlurOnIcon from '@mui/icons-material/BlurOn'
+import CloseIcon from '@mui/icons-material/Close'
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat'
 import FlightIcon from '@mui/icons-material/Flight'
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
@@ -17,9 +18,10 @@ import { DataProvenance } from './DataProvenance'
 
 type MapWeatherTooltipProps = {
   reading: MapWeatherPointer | null
+  onClose: () => void
 }
 
-export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
+export function MapWeatherTooltip({ reading, onClose }: MapWeatherTooltipProps) {
   const { t } = useI18n()
   const tooltipRef = useRef<HTMLElement | null>(null)
 
@@ -67,6 +69,16 @@ export function MapWeatherTooltip({ reading }: MapWeatherTooltipProps) {
       }}
       aria-live="polite"
     >
+      <button
+        type="button"
+        className="map-weather-tooltip-close"
+        aria-label={t('common.close')}
+        title={t('common.close')}
+        onClick={onClose}
+      >
+        <CloseIcon />
+      </button>
+
       {reading.placeLabel && (
         <div className="map-weather-tooltip-place">
           <LocationOnIcon />

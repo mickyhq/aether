@@ -63,6 +63,7 @@ type AetherMapProps = {
   provenance: WeatherModeProvenance
   radarOpacity: number
   animationQuality: AnimationQuality
+  pointerDismissToken: number
   onViewportChange: (viewport: WeatherViewport) => void
   onPointerWeatherChange: (reading: MapWeatherPointer | null) => void
   onMapClick: (location: WeatherLocation) => void
@@ -81,6 +82,7 @@ export function AetherMap({
   provenance,
   radarOpacity,
   animationQuality,
+  pointerDismissToken,
   onViewportChange,
   onPointerWeatherChange,
   onMapClick
@@ -157,6 +159,11 @@ export function AetherMap({
     pointerCallbackRef.current = onPointerWeatherChange
     clickCallbackRef.current = onMapClick
   }, [onPointerWeatherChange, onMapClick])
+
+  useEffect(() => {
+    lastPointerRef.current = null
+    pointerCallbackRef.current(null)
+  }, [pointerDismissToken])
 
   useEffect(() => {
     const mapElement = elementRef.current
