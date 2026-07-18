@@ -11,19 +11,21 @@ import {
   isPageVisible,
   subscribeToPageVisibility
 } from '../utils/pageVisibility'
+import { UpscaledRadarTileLayer } from './UpscaledRadarTileLayer'
 
 const METADATA_URL = '/api/radar'
 const METADATA_REFRESH = 5 * 60 * 1000
 const FRAME_COUNT = 6
 const PANE_NAME = 'weather-radar-pane'
 const MIN_NATIVE_ZOOM = 2
+const MAX_DISPLAY_ZOOM = 24
 
 export class WeatherRadarLayer {
   private map: L.Map
   private frames: RadarFrame[] = []
   private frameIndex = 0
-  private currentLayer: L.TileLayer | null = null
-  private loadingLayer: L.TileLayer | null = null
+  private currentLayer: L.GridLayer | null = null
+  private loadingLayer: L.GridLayer | null = null
   private metadataInterval = 0
   private metadataController: AbortController | null = null
   private visible = false
@@ -215,18 +217,12 @@ export class WeatherRadarLayer {
       return
     }
 
-    const url = [
-      '/api/radar',
-      `?path=${encodeURIComponent(frame.path)}`,
-      '&z={z}&x={x}&y={y}'
-    ].join('')
     let tileErrorCount = 0
-    const nextLayer = L.tileLayer(url, {
+    const nextLayer = new UpscaledRadarTileLayer(frame.path, {
       pane: PANE_NAME,
       opacity: 0,
       minNativeZoom: MIN_NATIVE_ZOOM,
-      maxNativeZoom: 7,
-      maxZoom: 19,
+      maxZoom: MAX_DISPLAY_ZOOM,
       noWrap: true,
       tileSize: 256,
       updateWhenZooming: false,

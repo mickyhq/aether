@@ -168,6 +168,8 @@ Radar appears in the combined Precipitation & storms mode. Its timeline joins th
 
 The map tooltip samples the newest unsmoothed RainViewer radar tile through Aether's same-origin proxy at the clicked coordinate. It reports rain only above a small reflectivity threshold, verifies radar coverage before reporting no rain, and shows the observation age. Click checks are debounced; metadata, decoded tiles, immutable frame tiles, and the coverage mask are cached separately to avoid repeated provider requests. Public RainViewer tiles are limited to zoom level 7, so this is the finest open composite cell available from this feed, not a rain-gauge measurement.
 
+At closer map zooms, Aether crops and enlarges the matching part of the finest zoom-7 radar tile into normal-size display tiles. This keeps radar visible without requesting unsupported RainViewer zoom levels; it does not create extra radar detail.
+
 ### Fire overlays
 
 NASA FIRMS uses a rolling 24-hour worldwide window and requires a server-side map key. EFFIS uses today and yesterday in UTC, which is a calendar window rather than an exact rolling 48 hours. EFFIS filters detections using confidence and land-cover information. Reported incidents are fetched independently, so remaining providers still work if one feed fails.
