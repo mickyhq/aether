@@ -428,8 +428,10 @@ test('changes and remembers the dialog language', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'À propos', exact: true })
   ).toBeVisible()
-  await expect(page.getByText('Sources de données')).toBeVisible()
-  await expect(page.getByText('Modèles et prévisions météorologiques')).toBeVisible()
+  await expect(page.getByText('Sources de données').first()).toBeVisible()
+  await expect(
+    page.getByText('Modèles et prévisions météorologiques').first()
+  ).toBeVisible()
 
   await expect.poll(() => page.evaluate(() => (
     window.localStorage.getItem('aether:language')
