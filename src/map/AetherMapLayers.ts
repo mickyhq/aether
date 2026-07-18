@@ -30,7 +30,6 @@ type AetherMapLayersOptions = {
   map: L.Map
   mapLanguage: string
   t: (key: TranslationKey, values?: Record<string, string | number>) => string
-  onReportedFirePointerChange: (blocked: boolean) => void
   updateFireLayerStatus: (
     id: FireLayerId,
     patch: FireLayerStatusPatch
@@ -39,7 +38,6 @@ type AetherMapLayersOptions = {
 
 export type AetherMapLayers = {
   badgeLayer: L.LayerGroup
-  controlContainer: HTMLElement | null
   destroy: () => void
   findFireAtPoint: (point: L.Point) => MapFirePointer | null
   setMapLanguage: (language: string) => void
@@ -50,20 +48,19 @@ export function createAetherMapLayers({
   map,
   mapLanguage,
   t,
-  onReportedFirePointerChange,
   updateFireLayerStatus
 }: AetherMapLayersOptions): AetherMapLayers {
-  const firmsHoverInfo: MapFirePointer = {
+  const firmsPointerInfo: MapFirePointer = {
     title: t('layers.worldwideDetection'),
     source: 'NASA FIRMS · VIIRS',
     detail: t('layers.lastDayDetail')
   }
-  const africaEffisHoverInfo: MapFirePointer = {
+  const africaEffisPointerInfo: MapFirePointer = {
     title: t('layers.africaDetection'),
     source: 'Copernicus EFFIS · VIIRS',
     detail: t('layers.twoDayDetail')
   }
-  const europeEffisHoverInfo: MapFirePointer = {
+  const europeEffisPointerInfo: MapFirePointer = {
     title: t('layers.europeDetection'),
     source: 'Copernicus EFFIS · VIIRS',
     detail: t('layers.twoDayDetail')
@@ -71,7 +68,6 @@ export function createAetherMapLayers({
   const reportedFires = new ReportedFireLayer(
     map,
     status => updateFireLayerStatus('reported-wildfires', status),
-    fire => onReportedFirePointerChange(Boolean(fire)),
     t
   )
   const volcanoActivity = new VolcanoActivityLayer(map, t)
@@ -334,19 +330,18 @@ export function createAetherMapLayers({
 
   return {
     badgeLayer,
-    controlContainer: layerControl.getContainer() ?? null,
     findFireAtPoint: point => findFireTileAtPoint(map, point, [
       {
         layer: africaFireTiles,
-        info: africaEffisHoverInfo,
+        info: africaEffisPointerInfo,
         bounds: AFRICA_FIRE_BOUNDS
       },
       {
         layer: europeFireTiles,
-        info: europeEffisHoverInfo,
+        info: europeEffisPointerInfo,
         bounds: EUROPE_FIRE_BOUNDS
       },
-      { layer: fireTiles, info: firmsHoverInfo }
+      { layer: fireTiles, info: firmsPointerInfo }
     ]),
     setMapLanguage: baseMap.setLanguage,
     setWeatherMode: (mode, radarOpacity) => {

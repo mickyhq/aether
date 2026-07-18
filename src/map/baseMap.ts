@@ -28,7 +28,11 @@ export function addBaseMap(
     attributionControl: {
       customAttribution: BASE_MAP_ATTRIBUTION
     }
-  }).addTo(map)
+  })
+  const layerOptions = layer.options as L.LayerOptions & { padding: number }
+
+  layerOptions.padding = 0
+  layer.addTo(map)
   const vectorMap = layer.getMaplibreMap()
   const container = layer.getContainer()
 

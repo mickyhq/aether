@@ -50,20 +50,6 @@ const REGIONAL_VIEW_BOUNDS = L.latLngBounds(
   [72, 40]
 )
 const ABSOLUTE_MIN_ZOOM = 2
-const MAP_POINTER_BLOCK_SELECTOR = [
-  '.aether-header',
-  '.fire-layer-status',
-  '.leaflet-control',
-  '.leaflet-marker-icon',
-  '.leaflet-interactive',
-  '.leaflet-popup',
-  '.leaflet-tooltip',
-  '.offline-status',
-  '.radar-opacity-control',
-  '.weather-panel',
-  '.weather-panel-toggle'
-].join(', ')
-
 type AetherMapProps = {
   location: WeatherLocation
   mapLanguage: string
@@ -128,8 +114,6 @@ export function AetherMap({
     y: number
   } | null>(null)
   const frameRef = useRef(0)
-  const pointerFrameRef = useRef(0)
-  const reportedFirePointerBlockedRef = useRef(false)
   const [fireLayerStatuses, setFireLayerStatuses] = useState(
     INITIAL_FIRE_LAYER_STATUSES
   )
@@ -221,15 +205,6 @@ export function AetherMap({
       mapLanguage,
       t,
       updateFireLayerStatus,
-      onReportedFirePointerChange: blocked => {
-        reportedFirePointerBlockedRef.current = blocked
-
-        if (blocked) {
-          pointerCallbackRef.current(null)
-        } else {
-          pointerRefreshRef.current()
-        }
-      }
     })
 
     badgeLayerRef.current = layers.badgeLayer
@@ -263,15 +238,10 @@ export function AetherMap({
       window.cancelAnimationFrame(frameRef.current)
       frameRef.current = window.requestAnimationFrame(emitViewport)
     }
-    let pointerWeatherBlocked = false
     const emitPointerWeather = () => {
       const pointer = lastPointerRef.current
 
-      if (
-        pointerWeatherBlocked ||
-        reportedFirePointerBlockedRef.current ||
-        !pointer
-      ) {
+      if (!pointer) {
         pointerCallbackRef.current(null)
         return
       }
@@ -333,75 +303,18 @@ export function AetherMap({
         screenY: Math.max(12, Math.min(pointer.y + 16, size.y - 330))
       })
     }
-    const handleMouseMove = (event: MouseEvent) => {
-      const target = event.target
-
-      if (
-        target instanceof Element &&
-        target.closest(MAP_POINTER_BLOCK_SELECTOR)
-      ) {
-        clearPointerWeather()
-        return
-      }
-
-      const containerPoint = map.mouseEventToContainerPoint(event)
-      const latlng = map.containerPointToLatLng(containerPoint)
-
-      lastPointerRef.current = {
-        latitude: latlng.lat,
-        longitude: latlng.lng,
-        x: containerPoint.x,
-        y: containerPoint.y
-      }
-      window.cancelAnimationFrame(pointerFrameRef.current)
-      pointerFrameRef.current = window.requestAnimationFrame(emitPointerWeather)
-    }
     const clearPointerWeather = () => {
-      window.cancelAnimationFrame(pointerFrameRef.current)
       lastPointerRef.current = null
-      reportedFirePointerBlockedRef.current = false
       pointerCallbackRef.current(null)
     }
-    const handleMapMouseLeave = (event: MouseEvent) => {
-      const nextTarget = event.relatedTarget
-
-      if (
-        nextTarget instanceof Element &&
-        nextTarget.closest('.map-weather-tooltip')
-      ) {
-        return
-      }
-
-      clearPointerWeather()
-    }
-    const handleWindowMouseMove = (event: MouseEvent) => {
-      const target = event.target
-
-      if (
-        target instanceof Element &&
-        target.closest(MAP_POINTER_BLOCK_SELECTOR)
-      ) {
-        clearPointerWeather()
-      }
-    }
-    const pointerBlockingControls = [
-      layers.controlContainer,
-      map.zoomControl.getContainer()
-    ]
-    const blockPointerWeather = () => {
-      pointerWeatherBlocked = true
-      clearPointerWeather()
-    }
-    const unblockPointerWeather = () => {
-      pointerWeatherBlocked = false
-    }
-
-    for (const control of pointerBlockingControls) {
-      control?.addEventListener('mouseenter', blockPointerWeather)
-      control?.addEventListener('mouseleave', unblockPointerWeather)
-    }
-
     const handleMapClick = (event: L.LeafletMouseEvent) => {
+      lastPointerRef.current = {
+        latitude: event.latlng.lat,
+        longitude: event.latlng.lng,
+        x: event.containerPoint.x,
+        y: event.containerPoint.y
+      }
+      emitPointerWeather()
       clickedLatRef.current = event.latlng.lat
       clickedLngRef.current = event.latlng.lng
       clickCallbackRef.current({
@@ -431,37 +344,20 @@ export function AetherMap({
     map.on('resize', updateMinimumZoom)
     map.on('click', handleMapClick)
     map.on('movestart zoomstart', clearPointerWeather)
-    mapElement.addEventListener('mousemove', handleMouseMove, {
-      capture: true,
-      passive: true
-    })
-    mapElement.addEventListener('mouseleave', handleMapMouseLeave)
     window.addEventListener('resize', handleWindowResize)
-    window.addEventListener('mousemove', handleWindowMouseMove, {
-      capture: true,
-      passive: true
-    })
     motionQuery.addEventListener('change', handleMotionPreferenceChange)
     emitViewport()
     mapRef.current = map
 
     return () => {
       window.cancelAnimationFrame(frameRef.current)
-      window.cancelAnimationFrame(pointerFrameRef.current)
       window.removeEventListener('resize', handleWindowResize)
-      window.removeEventListener('mousemove', handleWindowMouseMove, true)
       motionQuery.removeEventListener('change', handleMotionPreferenceChange)
-      for (const control of pointerBlockingControls) {
-        control?.removeEventListener('mouseenter', blockPointerWeather)
-        control?.removeEventListener('mouseleave', unblockPointerWeather)
-      }
       map.off('moveend zoomend resize', scheduleViewport)
       map.off('moveend zoomend resize', animation.invalidate, animation)
       map.off('resize', updateMinimumZoom)
       map.off('click', handleMapClick)
       map.off('movestart zoomstart', clearPointerWeather)
-      mapElement.removeEventListener('mousemove', handleMouseMove, true)
-      mapElement.removeEventListener('mouseleave', handleMapMouseLeave)
       pointerRefreshRef.current = () => {}
       pointerCallbackRef.current(null)
       animation.destroy()

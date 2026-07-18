@@ -20,10 +20,10 @@ Aether is a full-screen weather and environmental map built with React, TypeScri
 - Separate latitude-band outlines for northern and southern polar and subtropical jets
 - Worldwide animated geostrophic ocean currents
 - Ocean particles colored by NOAA sea-surface temperature
-- Ocean hover values for current speed, direction, temperature, and OISST anomaly
-- Weather, air quality, Jet Stream, ocean, and fire details at the pointer
-- Latest radar check for rain at the exact hovered map cell
-- Nearest place name after pausing over the map
+- Ocean click values for current speed, direction, temperature, and OISST anomaly
+- Weather, air quality, Jet Stream, ocean, and fire details at the clicked point
+- Latest radar check for rain at the exact clicked map cell
+- Nearest place name after clicking the map
 - Always-light vector base map with English labels
 
 ### Forecast and alerts
@@ -161,7 +161,7 @@ This product does not show tides, waves, rip currents, or detailed coastal flow.
 
 Radar appears in the combined Precipitation & storms mode. Aether animates the six latest RainViewer frames, supports saved opacity, and shows only the latest frame when reduced motion is enabled. Visual tiles load directly from RainViewer's CDN and are cached by the service worker; failed or incomplete frames never replace the last complete frame. World views scale the more detailed zoom-2 source tiles down and hold the latest complete frame instead of animating sparse zoom-0 tiles.
 
-The map tooltip samples the newest unsmoothed RainViewer radar tile through Aether's same-origin proxy at the hovered coordinate. It reports rain only above a small reflectivity threshold, verifies radar coverage before reporting no rain, and shows the observation age. Hover checks are debounced; metadata, decoded tiles, immutable frame tiles, and the coverage mask are cached separately to avoid repeated provider requests. Public RainViewer tiles are limited to zoom level 7, so this is the finest open composite cell available from this feed, not a rain-gauge measurement.
+The map tooltip samples the newest unsmoothed RainViewer radar tile through Aether's same-origin proxy at the clicked coordinate. It reports rain only above a small reflectivity threshold, verifies radar coverage before reporting no rain, and shows the observation age. Click checks are debounced; metadata, decoded tiles, immutable frame tiles, and the coverage mask are cached separately to avoid repeated provider requests. Public RainViewer tiles are limited to zoom level 7, so this is the finest open composite cell available from this feed, not a rain-gauge measurement.
 
 ### Fire overlays
 

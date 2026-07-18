@@ -98,3 +98,7 @@ projects above and have not been replaced by this roadmap.
 - [ ] Replace service-specific `localStorage` caches with one versioned IndexedDB repository that enforces schemas, TTLs, size limits, migration, and old-record cleanup.
 - [ ] Add locally enforced performance budgets for initial JavaScript, lazy map/dashboard chunks, animation frame time, and map-data fetch volume, and report meaningful regressions from `verify:all`.
 - [ ] Add automated accessibility checks and keyboard-only Playwright journeys for map controls, dialogs, layer controls, charts, alerts, and reduced-motion behavior.
+
+
+### Bugs
+- [x] When zoomed out, panning makes the volcanos, quakes and other elements move and drift away from they real position.

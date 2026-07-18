@@ -9,8 +9,8 @@ import type {
 import { usePageVisibility } from './usePageVisibility'
 import { recordProviderRequestError } from '../services/clientTelemetry'
 
-const HOVER_GEOCODE_DEBOUNCE_MS = 650
-const HOVER_RADAR_DEBOUNCE_MS = 1000
+const CLICK_GEOCODE_DEBOUNCE_MS = 650
+const CLICK_RADAR_DEBOUNCE_MS = 1000
 
 export function useMapPointerWeather() {
   const pageVisible = usePageVisibility()
@@ -133,7 +133,7 @@ export function useMapPointerWeather() {
         setPointerWeather(current => current
           ? { ...current, radarRain }
           : current)
-      }, HOVER_RADAR_DEBOUNCE_MS)
+      }, CLICK_RADAR_DEBOUNCE_MS)
     }
 
     if (
@@ -176,7 +176,7 @@ export function useMapPointerWeather() {
           geocodeAbortRef.current = null
         }
       }
-    }, HOVER_GEOCODE_DEBOUNCE_MS)
+    }, CLICK_GEOCODE_DEBOUNCE_MS)
   }, [pageVisible])
 
   const getCachedPlace = useCallback((location: WeatherLocation) => (

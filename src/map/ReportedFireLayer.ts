@@ -2,7 +2,6 @@ import L from 'leaflet'
 import { fetchWithTimeout } from '../../shared/fetchTimeout.js'
 import { recordProviderFailure, recordProviderRequestError } from '../services/clientTelemetry'
 import type { FireLayerStatusPatch } from './fireLayerStatus'
-import type { MapFirePointer } from '../types/weather'
 import { createReportedFireIcon } from './reportedFireMarker'
 import { SOURCE_REFRESH_MS } from '../../shared/cachePolicy.js'
 import {
@@ -24,7 +23,6 @@ export class ReportedFireLayer {
   private readonly compactRenderer = L.canvas({ padding: 0.5 })
   private readonly map: L.Map
   private readonly onStatusChange: (status: FireLayerStatusPatch) => void
-  private readonly onFireHover: (fire: MapFirePointer | null) => void
   private readonly t: (
     key: TranslationKey,
     values?: Record<string, string | number>
@@ -38,12 +36,10 @@ export class ReportedFireLayer {
   constructor(
     map: L.Map,
     onStatusChange: (status: FireLayerStatusPatch) => void,
-    onFireHover: (fire: MapFirePointer | null) => void,
     t: ReportedFireLayer['t']
   ) {
     this.map = map
     this.onStatusChange = onStatusChange
-    this.onFireHover = onFireHover
     this.t = t
   }
 
@@ -67,7 +63,6 @@ export class ReportedFireLayer {
     this.unsubscribeVisibility?.()
     this.unsubscribeVisibility = null
     this.stopRefresh()
-    this.onFireHover(null)
     this.layer.clearLayers()
   }
 
@@ -80,7 +75,6 @@ export class ReportedFireLayer {
   private readonly handleOverlayRemove = (event: L.LayersControlEvent) => {
     if (event.layer === this.layer) {
       this.stopRefresh()
-      this.onFireHover(null)
     }
   }
 
@@ -162,8 +156,6 @@ export class ReportedFireLayer {
       const marker = this.createMarker(fire, index)
 
       marker.bindPopup(buildPopup(fire, this.t), { maxWidth: 280 })
-      marker.on('mouseover', () => this.onFireHover(buildHoverInfo(fire, this.t)))
-      marker.on('mouseout', () => this.onFireHover(null))
       marker.addTo(this.layer)
     })
 
@@ -205,22 +197,6 @@ export class ReportedFireLayer {
     } else if (this.map.hasLayer(this.layer)) {
       void this.load()
     }
-  }
-}
-
-function buildHoverInfo(fire: ReportedFire, t: ReportedFireLayer['t']): MapFirePointer {
-  const details = [
-    fire.magnitude,
-    fire.reportedAt
-      ? t('report.reportedAt', { date: new Date(fire.reportedAt).toLocaleString() })
-      : null,
-    fire.description
-  ].filter(Boolean)
-
-  return {
-    title: fire.title,
-    source: `${fire.source} · ${t('report.wildfire')}`,
-    detail: details.join(' · ') || t('report.openWildfire')
   }
 }
 
