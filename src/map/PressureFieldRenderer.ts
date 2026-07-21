@@ -97,7 +97,7 @@ export class PressureFieldRenderer {
 
       this.targetContext.save()
       this.targetContext.beginPath()
-      this.targetContext.rect(0, 0, this.width, Math.max(1, this.height - 72))
+      this.targetContext.rect(0, 0, this.width, this.height)
       this.targetContext.clip()
       this.targetContext.drawImage(
         this.canvas,
